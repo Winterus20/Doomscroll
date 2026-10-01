@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build cache / logs
+*.log
+npm-debug.log*
+.vite/
+.cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Yerel gizli dosyalar
+.env
+.env.local

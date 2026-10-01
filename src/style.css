@@ -1,0 +1,345 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#08090d] text-slate-100 selection:bg-purple-500/20 selection:text-purple-300;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid rgba(168, 85, 247, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+/* ==========================================================================
+   Doomscroll Unified Design System — "Obsidian Dock"
+   Tek dil: white-alpha paneller, tek ritim, tek tipografi, tek aksiyon dili.
+   Renk sözlüğü (sabit anlam):
+     Mor (purple)   → Reels / Üretim / Format
+     Zümrüt (emerald) → Lab / Büyüme / Onay
+     Camgöbeği (cyan) → Kriz / Enerji / Bilgi
+     Mavi (blue)    → Bot / Otomasyon
+     Amber (amber)  → Şafak / Prestij / Plaket
+     Gül (rose)     → Vicdan / Risk / Tehlike
+   ========================================================================== */
+
+:root {
+  --ds-bg: #08090d;
+  --ds-panel: rgba(13, 16, 23, 0.72);
+  --ds-panel-strong: rgba(14, 18, 26, 0.85);
+  --ds-border: rgba(255, 255, 255, 0.07);
+  --ds-border-strong: rgba(255, 255, 255, 0.12);
+  --ds-track: rgba(0, 0, 0, 0.45);
+}
+
+/* --- Paneller (tek dil) --- */
+.glass-panel {
+  background: var(--ds-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--ds-border);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-glow {
+  background: var(--ds-panel-strong);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-card {
+  background: rgba(15, 18, 26, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.glass-panel-card:hover {
+  background: rgba(19, 24, 35, 0.75);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* --- Birleşik sekme kahramanı (TabHero altyapısı) --- */
+.panel-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(13, 16, 23, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+@media (min-width: 768px) {
+  .panel-hero {
+    padding: 1.25rem 1.5rem;
+  }
+}
+.hero-orb {
+  position: absolute;
+  right: -2rem;
+  top: -2rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 9999px;
+  filter: blur(48px);
+  pointer-events: none;
+}
+.hero-accent-purple { border-color: rgba(168, 85, 247, 0.28); }
+.hero-accent-purple .hero-orb { background: rgba(147, 51, 234, 0.12); }
+.hero-accent-emerald { border-color: rgba(16, 185, 129, 0.28); }
+.hero-accent-emerald .hero-orb { background: rgba(16, 185, 129, 0.1); }
+.hero-accent-cyan { border-color: rgba(6, 182, 212, 0.28); }
+.hero-accent-cyan .hero-orb { background: rgba(6, 182, 212, 0.1); }
+.hero-accent-blue { border-color: rgba(59, 130, 246, 0.28); }
+.hero-accent-blue .hero-orb { background: rgba(59, 130, 246, 0.12); }
+.hero-accent-amber { border-color: rgba(245, 158, 11, 0.28); }
+.hero-accent-amber .hero-orb { background: rgba(245, 158, 11, 0.1); }
+.hero-accent-rose { border-color: rgba(244, 63, 94, 0.28); }
+.hero-accent-rose .hero-orb { background: rgba(244, 63, 94, 0.1); }
+.hero-accent-slate { border-color: rgba(255, 255, 255, 0.07); }
+.hero-accent-slate .hero-orb { background: rgba(148, 163, 184, 0.08); }
+
+/* Hero içindeki sayaç / istatistik kutusu — tüm sekmelerde aynı */
+.stat-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  flex-shrink: 0;
+}
+.stat-box-label {
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+.stat-box-value {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+/* Bölüm başlıkları — tek tipografi */
+.section-label {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.section-hint {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+}
+
+/* Rozet — tek dil (kategori / durum etiketleri) */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+.ds-badge-purple { background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.35); color: #d8b4fe; }
+.ds-badge-emerald { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #6ee7b7; }
+.ds-badge-cyan { background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35); color: #67e8f9; }
+.ds-badge-blue { background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.35); color: #93c5fd; }
+.ds-badge-amber { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: #fcd34d; }
+.ds-badge-rose { background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.35); color: #fda4af; }
+
+/* --- İlerleme çubukları (tek dil, 3 boy) --- */
+.progress-track {
+  background: var(--ds-track);
+  border-radius: 9999px;
+  overflow: hidden;
+  width: 100%;
+}
+.progress-track-mini { height: 4px; }
+.progress-track-sm { height: 6px; }
+.progress-track-md { height: 8px; }
+.progress-track-bordered {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+.progress-fill-dawn { background: linear-gradient(to right, #a855f7, #ec4899, #fbbf24); }
+.progress-fill-purple { background: #a855f7; }
+.progress-fill-emerald { background: #10b981; }
+.progress-fill-cyan { background: linear-gradient(to right, #0891b2, #3b82f6, #a855f7); }
+.progress-fill-blue { background: #3b82f6; }
+.progress-fill-amber { background: linear-gradient(to right, #d97706, #fbbf24); }
+.progress-fill-rose { background: #f43f5e; }
+
+/* --- Sekme bildirim noktası (tek dil) --- */
+.tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  animation: tab-dot-pulse 2s ease-in-out infinite;
+}
+.tab-dot-purple { background: #c084fc; box-shadow: 0 0 6px rgba(168, 85, 247, 0.8); }
+.tab-dot-emerald { background: #34d399; box-shadow: 0 0 6px rgba(16, 185, 129, 0.8); }
+.tab-dot-amber { background: #fbbf24; box-shadow: 0 0 6px rgba(245, 158, 11, 0.8); }
+.tab-dot-rose { background: #fb7185; box-shadow: 0 0 6px rgba(244, 63, 94, 0.8); }
+.tab-dot-cyan { background: #22d3ee; box-shadow: 0 0 6px rgba(6, 182, 212, 0.8); }
+.tab-dot-blue { background: #60a5fa; box-shadow: 0 0 6px rgba(59, 130, 246, 0.8); }
+@keyframes tab-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+
+/* Subtle, Crisp Border Accents (geriye uyumlu) */
+.neon-border-purple { border-color: rgba(168, 85, 247, 0.4); }
+.neon-border-amber { border-color: rgba(245, 158, 11, 0.4); }
+.neon-border-cyan { border-color: rgba(6, 182, 212, 0.4); }
+.neon-border-rose { border-color: rgba(244, 63, 94, 0.4); }
+.neon-border-emerald { border-color: rgba(16, 185, 129, 0.4); }
+
+/* Alınabilirlik nabzı — tek animasyon, tüm "satın alınabilir" butonlarda */
+@keyframes affordance-pulse-anim {
+  0%, 100% { border-color: rgba(168, 85, 247, 0.35); }
+  50% { border-color: rgba(168, 85, 247, 0.75); }
+}
+.affordance-pulse {
+  animation: affordance-pulse-anim 2.4s ease-in-out infinite;
+}
+
+/* Tactile Mechanical Button States (Linear/Apple Quality) */
+.btn-tactile {
+  position: relative;
+  transition: transform 0.08s ease, filter 0.08s ease, border-color 0.12s ease;
+  user-select: none;
+}
+.btn-tactile:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.btn-tactile:active:not(:disabled) {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+.btn-tactile:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  filter: grayscale(0.5);
+}
+
+/* Birincil aksiyon butonları — renk + anlam eşleşmesi tek elden */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  transition: filter 0.1s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  filter: grayscale(0.5);
+}
+.btn-primary-purple { background: rgba(147, 51, 234, 0.25); border-color: rgba(168, 85, 247, 0.4); color: #e9d5ff; }
+.btn-primary-purple:not(:disabled):hover { background: rgba(147, 51, 234, 0.35); }
+.btn-primary-amber { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); color: #fde68a; }
+.btn-primary-amber:not(:disabled):hover { background: rgba(245, 158, 11, 0.3); }
+.btn-primary-cyan { background: rgba(6, 182, 212, 0.2); border-color: rgba(6, 182, 212, 0.4); color: #a5f3fc; }
+.btn-primary-cyan:not(:disabled):hover { background: rgba(6, 182, 212, 0.3); }
+.btn-primary-blue { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.4); color: #bfdbfe; }
+.btn-primary-blue:not(:disabled):hover { background: rgba(59, 130, 246, 0.3); }
+.btn-primary-emerald { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.4); color: #a7f3d0; }
+.btn-primary-emerald:not(:disabled):hover { background: rgba(16, 185, 129, 0.28); }
+.btn-primary-ghost { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.12); color: #e2e8f0; }
+.btn-primary-ghost:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+
+/* Screen Shake (Clean micro-shake) */
+@keyframes screen-shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+.screen-shake {
+  animation: screen-shake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Tabular Monospace (Zero Layout Jitter) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Katman sıralaması — tek elden senkron:
+   Oyun (0) < Anomali (40) < Juice parçacık (60) < Toast (70) < Modal (80) */
+.layer-anomaly { z-index: 40; }
+.layer-juice { z-index: 60; }
+.layer-toast { z-index: 70; }
+.layer-modal { z-index: 80; }
+
+/* Minimalist Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #08090d;
+}
+::-webkit-scrollbar-thumb {
+  background: #1b202e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2b334a;
+}
+
+/* Scrollbar Gizleme Yardımcısı */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .affordance-pulse,
+  .tab-dot,
+  .screen-shake {
+    animation: none;
+  }
+  .progress-fill {
+    transition: none;
+  }
+}
