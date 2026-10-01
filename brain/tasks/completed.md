@@ -1,5 +1,122 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-01] — UI/UX Kimlik Paketi: Display Font + Juice + Onboarding + Mobil Dock (v0.16.0 adayı)
+
+### Motivasyon:
+- Kullanıcı talebi: "UI/UX ve arayüzü en iyi hale getirmek için skill + web araştırması yap." `ui-ux-pro-max` ve `frontend-design` skill veritabanları + idle/clicker UI web araştırması sentezlendi. Ana bulgular: <50ms geri bildirim, floating ödül metinlerinin okunabilirliği, tipografik kimlik eksikliği, 0-state yönlendirme, mobil dokunma ergonomisi.
+
+### Yapılan İşler:
+1. **Tipografik kimlik (`index.html` + `tailwind.config.js` + `Header.vue`):** Chakra Petch (600/700) display font eklendi; hero Dopamin sayacı `font-display` ile imza öğeye dönüştürüldü (eski `font-mono font-black` yerine `font-display font-bold`).
+2. **Juice katmanı (`JuiceLayer.vue`):** floating +X metinlerine koyu kontur (`strokeText`, 3.5px) — her zeminde okunabilirlik; spawn noktasına ±14px yatay saçılım (üst üste yığın engeli); `color` ve `big` opsiyonları; font 700 Chakra Petch'e geçti.
+3. **Renk sözlüğü juice'a uygulandı (`DimensionsTab.vue`):** trend=cyan, yama=cyan, sıçrama=mor, küme=amber, sacrifice/sustur=gül, güneş=amber+big. Mevcut semantik renk tablosu artık ödül anlarında da okunuyor.
+4. **0-state onboarding (`Header.vue` + `style.css`):** ilk format alınana kadar (D1 bought=0) "Başparmağı hazırla" ipucu pill'i + Kaydır butonunda `.cta-beacon` nefes halkası + `.arrow-nudge` ok animasyonu. Her ikisi de `prefers-reduced-motion` ve `.reduce-anim` tarafından söndürülür.
+5. **Mobil alt dock (`App.vue`):** <768px'te nav alt sabit dock'a dönüşür (`max-md:fixed bottom-0`, safe-area inset desteği, koyu opak zemin); `main`'e `max-md:pb-28` payı.
+
+### Bilinçli Ertelenen (perf):
+- Pinia state'indeki Decimal'lerin deep-reactive proxy maliyeti (20 TPS döngüde ~25 atama noktası) ölçülmeden refactor edilmedi — `markRaw`/`shallowRef` dönüşümü ayrı, ölçümlü bir turda yapılmalı. 375px viewport testinde takılma gözlenmedi.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1636 modül, JS 494.16 kB / gzip 136.89 kB).
+- Canlı doğrulama: desktop 0-state ipucu + Chakra Petch sayaç, 375×812 mobil viewport'ta alt dock + safe-area, click akışı (sayaç artışı) gözlemlendi.
+
+## [2026-10-01] — Kapsamlı QoL Turu: P0 + P1 (v0.15.0 adayı)
+
+### Motivasyon:
+- Kullanıcı talebi: "QoL yapalım, farklı yerlere subagentlar gönder, internetten araştırma yapsınlar." Üç paralel denetim yapıldı (UI/UX kod denetimi, çekirdek sistem denetimi, web araştırması) ve P0+P1 paketinin tamamı uygulandı. ADR: `brain/decisions/0014-qol-pass-p0-p1.md`.
+
+### Kritik Bulgu (P0):
+- Arka plan sekmesinde oyun tamamen duruyordu: rAF gizli sekmede çalışmaz, delta 1000 ms ile sınırlıydı ve offline catch-up dalı ölü koddı. Idle oyun sekme arkasında sıfır üretiyordu.
+
+### Yapılan İşler:
+1. **`src/core/game-loop.ts`:** ham delta 5 sn'yi aşınca offline yakalamaya devir; `visibilitychange` ile gizlenen sekme anında kaydeder; negatif delta (saat sıçraması) güvenliği.
+2. **`src/stores/game.ts` (offline):** 24 saat cap + kademeli adımlar (5 dk × 0.1 sn → 1 saate kadar 1 sn → sonrası 10 sn); `OfflineReport` üretir; `offlineSimActive` ile ses/konfeti bastırılır; başarım kontrolü offline'da 120 adımda bir seyreltilir.
+3. **`src/components/WelcomeBackModal.vue` (yeni):** "Tekrar hoş geldin" — uzakta geçen süre, kazanılan dopamin, ortalama/sn, cap uyarısı.
+4. **`src/core/save.ts`:** yedek slot (`DOOMSCROLL_SAVE_V1_BAK`, ~1 dk rotasyon), üç kademeli yükleme (ana → yedek → legacy), bozuk kayıt artık silinmiyor, `loadDetailed()` + `lastSaveSucceeded`; `deserialize`'ta version okuyan sıralı migration kancası.
+5. **`src/components/ConfirmModal.vue` (yeni):** tek onay diyaloğu — Singularity (Header + SingularityTab + DimensionsTab), Power Nap, Önbellek Silme; `settings.confirmDialogs` ile kapatılabilir. Native `confirm()` kaldırıldı.
+6. **Satın alma modları:** ×10 / ×100 (geometrik seri maliyet — `getDimensionPackCost`) / Maks seçici DimensionsTab başında; `buyAmount` save v10'a eklendi. **`src/core/hold.ts` (yeni):** `v-hold` basılı tut tekrar direktifi (400 ms + 100 ms) — satın alma, Maks ve Hz butonlarında.
+7. **Kısayollar:** 1-8 sekme, M = Max All, Esc = modal kapat (input'ta devre dışı).
+8. **Rapor sekmesi:** Dopamin Çarpan Kırılımı paneli (`multiplierBreakdown`: başarımlar, kolektif, koloni, nap, duruş, buff, lab, D8 sacrifice) + 10 dakikalık saniyelik üretim sparkline'ı (`dpsHistory`, 600 örnek).
+9. **Bildirim noktaları:** Şafak — alınabilir Nöral Ağaç düğümü (`hasAffordableNeuralNode`); Botlar — alınabilir kilitli bot (`hasAffordableLockedBot`).
+10. **Ayarlar:** Onay Diyaloğu + Animasyonları Azalt toggle'ları (`.reduce-anim` CSS), kısayol rehberi, panoya kopyalama başarısızsa dosyaya indirme fallback'i, `alert()` yerine inline durum mesajları, import iki adımlı onay + üzerine yazar uyarısı.
+11. **Güvenlik üst sınırları:** `maxAll`/`buyMaxDimension` döngülerine 500 paket guard; anomali spawn aralığı mobil ekran güvenliğine çekildi; AutobuyersTab tetiklenme süresi ham çarpanla hesaplanır.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1636 modül, JS 493.22 kB / gzip 136.53 kB).
+
+## [2026-10-01] — Tekillik Sonrası Döngü: Şafak Botu + Break Singularity + Faz 2 (v0.14.0 adayı)
+
+### Yapılan İşler:
+- **Şafak Nöbeti Botu (Singularity Autobuyer):** 3 çöküş + 1.79e308 Dopamin kilidiyle açılan bot, marjinal kazanç optimizatörüyle çalışır (ExponentialIdle modeli): saniyelik `log10(matter)` örnekleri, 3-sn eğim kıyası, 3 saniyelik deceleration streak + min-SP tabanı (kullanıcı ayarlı, default 1) sağlandığında sessiz `singularityReset(false)`.
+- Optimizatör runtime state (`singularityBotSamples`, `singularityDecelStreak`, `singularityRunSeconds`, `singularitySampleAcc`) serialize edilmez; `dimensionShift`/`buyGalaxy`/`singularityReset` rampayı sıfırlar.
+- **Break Singularity (`break_singularity`, 8 SP):** alınmadığında Shift/Galaxy botları tekillikte bekler (`singularityHoldActive` getter), alındığında e308 üstünde normal çalışır. SingularityTab rozeti "Sınır Yıkıldı" durumuna geçer.
+- **Faz 2 kilometre taşı:** `nightWatchUnlocked` kalıcı flag, 1e4000 Dopamin eşiğinde konfeti ile açılır; SingularityTab'de kilitli/açık ilerleme kartı.
+- **Save (v9 payload genişletildi):** `singularities`, `nightWatchUnlocked` ve autobuyer subset'ine `minGainSp` eklendi; eski kayıtlarda `singularities` fallback'i `stats.singularityCount`'tan alınır; deserialize `minGainSp` yalnızca pozitif sayıda restore eder.
+- AutobuyersTab: Şafak Botu kartında mod seçici yerine min-SP girişi + optimizatör açıklaması; Header CTA tooltip'i Break durumuna göre değişir.
+- ADR: `brain/decisions/0013-singularity-autobuyer-break.md`; GDD §7.2 eklendi.
+
+### Doğrulama:
+- `npm run build`: **0 hata** (1631 modül).
+- Canlı AdminPanel enjeksiyon testi ve ekran görüntüsü doğrulaması yapıldı (bot kilidi, sessiz otomatik çöküş, kart ilerlemesi).
+
+## [2026-10-01] — İlk Prestij Pacing Recalibration (v0.13.1 adayı)
+
+### Yapılan İşler:
+- Boyut zinciri üst katman üretimi `1.0×` yerine referans modeldeki `0.1×` taban hızına getirildi.
+- Shift üretim/tıklama çarpanı `1.07^shifts` olarak kalibre edildi.
+- Dördüncü Shift sonrası D8 gereksinimi `25 × 100^(shifts - 4)` eğrisine geçirildi.
+- Tekrarlanabilir Lab/Kriz/Viral ödüllerinin önceki azaltılmış değerleri korundu.
+- ADR: `brain/decisions/0011-prestige-pacing-recalibration.md`.
+
+### Doğrulama:
+- `npm run build`: **0 hata** (1629 modül).
+- Temiz in-memory store, seeded RNG, `0.1s` simülasyon ve tüm yan güçlendirmelerle ilk Singularity: **13.938,0 sn / 3,872 saat**.
+- Simülasyon sonucu: `log10(Dopamin) ≈ 308.495`, 5 Shift, 2 galaxy.
+
+## [2026-10-01] — Ekonomi Dengeleme Uygulaması (v0.13.0 adayı)
+
+### Yapılan İşler:
+- Resolution ve Collective milestone çarpanları kümülatif çarpımdan en yüksek aktif milestone semantiğine geçirildi.
+- Power Nap kalıcı çarpanı üretim hesabına bağlandı ve ilk Toplu Uyku ödülü soft-cap’li eğriyle dengelendi.
+- Espresso ayrı bir Algoritma Frekansı buff’ı oldu; Fast Charge anomaly kapasitesine saygı duyuyor.
+- Lab/Kriz tekrar eden ödülleri azaltıldı; çoklu olgun hücre hasatları aktif bütçe ile sınırlandı.
+- Viral Kodeks yalnızca sentezlenen tarif sonuçlarını sayacak şekilde düzeltildi.
+- Save import Decimal, buff, seed ve timer doğrulamalarıyla güvenli hale getirildi.
+- Kombo banner’ı gerçek üretim/kaydırma kanallarını açıklıyor.
+
+### Doğrulama:
+- `npm run build`: **0 hata** (1629 modül).
+- Final aktif 5 dakika playtest: `244.71 Qa` toplam Dopamin, `6.37 Qa/s`, `1.290` kaydırma.
+- Önceki aynı aktif rota: `757.64 Qa`, `19.65 Qa/s`; üretim ivmesi belirgin biçimde azaltıldı.
+
+## [2026-10-01] — İlk Prestij Pacing Simülasyonu
+
+### Sonuç:
+- Temiz in-memory store, seeded RNG ve `0.1s` update adımıyla simülasyon yapıldı.
+- Aktif + tüm yan güçlendirmeler: **379.5 sn / 6.33 dk**.
+- Daha yavaş aktif + yan güçlendirmeler: **1842.5 sn / 30.71 dk**.
+- Yan güçlendirmesiz aktif rota: 2 saatte prestije ulaşamadı.
+
+### Sonuç değerlendirmesi:
+- Önceki 2–4 saatlik tahmin doğrulanmadı.
+- Lab, kriz, bot, anomaly, shift ve galaxy sistemleri birlikte çalıştığında ilk prestij dakikalar içinde geliyor.
+- Ayrıntılı ölçüm `brain/research/economy-balancing-research.md` dosyasına eklendi.
+
+## [2026-10-01] — Ekonomi Dengeleme Araştırması
+
+### Kapsam:
+- `src/stores/game.ts`, `src/game/unlocks.ts` ve 5 dakikalık playtest logları incelendi.
+- Antimatter Dimensions, Synergism, Cookie Clicker ve geliştirici kaynaklı incremental ekonomi modelleri karşılaştırıldı.
+
+### Bulgular:
+- Resolution ve Collective milestone çarpanları UI değerlerine rağmen kümülatif çarpılıyor; sırasıyla `×98.304` ve `×375.000` üst sınırlarına ulaşıyor.
+- `napMultiplier` kaydediliyor ve gösteriliyor ancak üretim hesabına uygulanmıyor.
+- Dört boyutun başlangıçta açık olması ve `Max All` kullanımı erken üretim zincirini aşırı hızlandırıyor.
+- Tekrarlanabilir Lab/Kriz ödülleri, yeterince sınırlandırılmazsa pasif üretimi gölgede bırakabiliyor.
+
+### Çıktı ve doğrulama:
+- Ayrıntılı rapor: `brain/research/economy-balancing-research.md`
+- Kaynak kodunda değişiklik yapılmadı; araştırma, mevcut playtest verileri ve kaynak bağlantılarıyla belgelendi.
+
 ## [2026-10-01] — 🧪 Algoritma Stüdyosu: Hibrit Viral Matris & Trend Reaktörü (v0.12.0)
 
 ### Kapsam & Motivasyon:
@@ -565,3 +682,32 @@ Projenin ilk geliştirme aşamasındaki prototiplerden (ofis/troll/sosyal medya 
    - [`AGENTS.md`](file:///data/data/com.termux/files/home/incremental/AGENTS.md): "Doomscroll: The Endless Reels" direktif başlığı ile hizalandı.
 6. **Doğrulama:**
    - `npm run build` (`vue-tsc && vite build`) sıfır hata ile tamamlandı (6.37s).
+
+---
+
+## [2026-10-01] - Nöral Ağaç (Neural Tree) + Combo Serisi (v0.7.0)
+
+### Neden Analizi:
+Düz SP dükkânı seçim yaratmıyordu; aktif (tıklama) oyun geç oyunda anlamsuzlaşıyordu (tıklama ≈ üretimin %2.5'i). Kullanıcı talebi: Cookie Clicker'ın Heavenly ağacı + Realm Grinder tarikat seçimi + tıklama dalı gibi farklı oynanış build'leri. Araştırma: `brain/research/economy-balancing-research.md` (aktif oyuncu idle'dan zayıf kalıyor), Realm Grinder/Synergism/Cookie Clicker web araştırması. Karar: `brain/decisions/0012-neural-tree.md`.
+
+### Uygulanan Adımlar:
+1. **Tip ve State:**
+   - [`types.ts`](src/models/types.ts): `NeuralBranch`, `NeuralNode`, `NeuralEffects` tipleri; state'e `neuralNodesBought: Record<string, number>` ve `clickCombo: { count, lastClickAt }` eklendi.
+2. **Ağaç Verisi ve Efekt Entegrasyonu:**
+   - [`stores/game.ts`](src/stores/game.ts): `NEURAL_TREE` (22 düğüm: kök + Uyku/Başparmak dalları + hibrit köprüler + 2 ikili `choiceGroup` seçim çifti); `computeNeuralEffects()` toplayıcısı; üretim, tıklama gücü, bot frekansı, koloni üreme hızı, offline kazanç ve SP kazanç çarpanlarına bağlandı.
+   - CPS-to-click senkronu: sabit %2 → `min(0.08, 0.02 + 0.015×seviye)` (max %8).
+   - `buyNeuralNode(id)` action'ı: SP, öncül zinciri ve choiceGroup hariç kilidi doğrular; `singularityReset` seçim düğümlerini serbest bırakır.
+   - Eski `SINGULARITY_UPGRADES` id'leri (eye_drops vb.) ağaç düğümleriyle senkron: her iki satın alma yolu paylaşımlı `singularityUpgrades` seviyesini günceller.
+3. **Combo (Hipnotik Seri) Mekaniği:**
+   - `manualClick` 1500 ms pencere içinde seriyi büyütür; `update()` tick'inde sessizlikte söner. `COMBO_THRESHOLDS` ×2 (5 tık) / ×3 (15) / ×5 (40); sadece `combo_unlock` düğümü alınmışsa aktif.
+4. **Save Migration:**
+   - `serialize`/`deserialize` sürüm 8 → 9: `neuralNodesBought` + `clickCombo` alanları; düğüm id doğrulama ve eski dükkân seviyelerinin ağaca backfill'i (`NEURAL_LEGACY_UPGRADE_IDS`). Eski save'ler değişmeden yüklenir.
+5. **UI:**
+   - [`NeuralTreeTab.vue`](src/components/NeuralTreeTab.vue) (yeni): Cookie Clicker tarzı öncüllü ağaç — tam bilgi yalnızca tüm ebeveynler alınınca görünür, "???" slotu kısmen kilitli, amber (alınabilir) / zümrüt (maks) durumları, SEÇİM kilit ipucu, `Seviye X/Y` tekrarlanabilir düğümler, dal renk açıklaması.
+   - [`SingularityTab.vue`](src/components/SingularityTab.vue): düz SP dükkânı grid'i ağaç paneliyle değiştirildi (TabHero ve çöküş butonu korundu).
+   - [`Header.vue`](src/components/Header.vue): Kaydır butonu yanında combo rozeti (×N + rAF tabanlı 1.5 sn geri sayım çubuğu; serisizken CPU kullanımı sıfır).
+   - [`AdminPanel.vue`](src/components/AdminPanel.vue): "Nöral Ağaç" debug bölümü (maxNeuralTree / resetNeuralTree / grantNeuralNode).
+6. **Dokümantasyon:**
+   - `brain/decisions/0012-neural-tree.md` (ADR) ve `GAME_DESIGN.md` 7.1 "Nöral Ağaç" bölümü eklendi.
+7. **Doğrulama:**
+   - `npm run build` (`vue-tsc && vite build`) sıfır TypeScript hatası ile tamamlandı (çekirdek faz 6.82s, UI fazı ve son kontrol dahil).

@@ -61,8 +61,8 @@ Tıklama Eylemi: **"👆 YUKARI KAYDIR! (Swipe Up / Scroll!)"**
 Ekranda ışıltılı bildirim kabarcıkları süzülür:
 - **🔥 Gece 3 Çılgınlığı (3 AM Dopamine Rush):** 60 saniye boyunca tüm dopamin akışı $7\times$ katlanır.
 - **👆 Başparmak Histerisi (Hyper-Swipe Frenzy):** 15 saniye boyunca Yukarı Kaydır gücü $777\times$ fırlar (*"Başparmak alev aldı!"*).
-- **💎 50 Milyonluk Viral Video:** Anında 15 dakikalık dopamin doğrudan beyne enjekte edilir.
-- **🔥 Süper Rezonans Komboları:** Gece 3 sırasında Başparmak Histerisi tetiklendiğinde çarpanlar katlanır ($7\times \times 777\times = 5,439\times$).
+- **💎 50 Milyonluk Viral Video:** Anında 5 dakikalık dopamin doğrudan beyne enjekte edilir.
+- **🔥 Süper Rezonans Komboları:** Gece 3 sırasında Başparmak Histerisi tetiklendiğinde üretim $7\times$, manuel kaydırma $777\times$ olarak aynı anda çalışır.
 
 ### 4.2. Vicdan Azabı ve Göz Batması (Wrinklers)
 Gece ilerledikçe ekrana dadanan vicdan sesleri:
@@ -137,6 +137,35 @@ Gece ilerledikçe ekrana dadanan vicdan sesleri:
   ├── Kadim Gece Varlıkları (Celestials)
   └── EVREN YUKARI KAYDIRILIR: TÜM VAROLUŞ BİR DOPAMİN AKIŞINA DÖNÜŞÜR!
 ```
+
+### 7.1. Nöral Ağaç (Neural Tree) — Kalıcı Yetenek Ağacı (*Cookie Clicker: Heavenly Upgrade Tree*)
+
+Şafak (Faz 1) sonrasında SP (Uykusuzluk Puanı) ile satın alınan, **asla resetlenmeyen** öncüllü düğüm ağacı. Düz SP dükkânının yerini alır: ebeveyn düğüm alınmadan çocuk görünmez (Cookie Clicker'ın heavenly modeli). Kök: **"Uykusuzluğun Kalbi"** (1 SP) → üç dal.
+
+```
+Uykusuzluğun Kalbi (kök, 1 SP)
+  ├── 🌙 Uyku Dalı (Pasif Build)
+  ├── 👍 Başparmak Dalı (Aktif/Tıklama Build)
+  └── ☯️ Hibrit Köprü (her iki daldan da düğüm şartı)
+```
+
+- **🌙 Uyku Dalı (Pasif):** offline kazanç yüzdesi, kalıcı üretim ×çarpanları, otomatik kaydırma botu frekansı, koloni üreme hızı, Şafak ilerleme hızı.
+- **👍 Başparmak Dalı (Aktif):**
+  - **Senkron Düğümü (CPS-to-click):** her seviye CPS'in tıklamaya aktarılan payını **%2 taban + %1.5/seviye** artırır; maksimum 4 seviye ile **%8**.
+  - **Combo Sistemi açma düğümü:** manuel tıklamalar **seri (combo)** oluşturur — seri, her tıkla uzar ve **1.5 saniyede** tıklama gelmezse söner. Eşik çarpanları: **5 tıklama → ×2**, **15 tıklama → ×3**, **40 tıklama → ×5** manuel kaydırma gücü. Combo maksimumi pasif üretimi asla geçmez; aktif oyun yalnızca **ivmelendiricidir** (idle = taban).
+  - Kriz/anomali ödül çarpanı ve tıklama buff süresi uzatmaları.
+- **☯️ Hibrit Köprü:** iki daldan da belirli sayıda düğüm gerektiren sinerji düğümleri (ör. *"Üretimin %10'u tıklamaya eklenir"*). "Tek optimal yol" riskini yapısal olarak kırar.
+- **Hariç Seçim Düğümleri (binary choice):** ağacın 2 noktasında ikili seçim — alınan taraf diğerini o prestij döngüsünde kilitler; seçilmeyen taraf küçük bir **telafi ödülü** verir. Seçim her prestijde yeniden gözden geçirilebilir (Realm Grinder kuralı: her seçim viable olsun).
+- **Denge hedefi:** ilk 3 prestijde ağaç ~%30 doldurulabilir.
+- **Save uyumluluğu:** mevcut SP dükkânı id'leri (`neural_chip`, `neural_nest`, `caffeine_drip` vb.) ağaç düğümü id'leri olarak korunur; eski kayıtlar migrasyonsuz uyumludur.
+
+### 7.2. Şafak Nöbeti Botu, Break Singularity ve Faz 2 Kilometre Taşı (*ADR 0013*)
+
+Reset döngüsü alt-saniyeye indiğinde oyun üst mekaniklere devredilir (*Antimatter Dimensions: Big Crunch autobuyer + Break Infinity modeli*):
+
+- **⚡ Şafak Nöbeti Botu (Singularity Autobuyer):** 3 çöküş + 1.79e308 Dopamin ile açılan bot, **marjinal kazanç optimizatörü** ile çalışır (*ExponentialIdle modeli*): saniyede bir `log10(matter)` örneklenir; son-3s eğim önceki-3s eğiminin altına inince 3 saniye üst üste kalırsa ve SP kazancı oyuncunun belirlediği tabanı (min-SP, default 1) geçerse sessiz çöküş tetiklenir. Üretim hızlandıkça eğim yükselir → bot bekler; rampa bittiğinde kendiliğinden çöker — tetik kendini yeniden kalibre eder.
+- **⚡ Uyku Sınırını Yıkma (Break Singularity, 8 SP):** alınmadığında Dopamin 1.79e308'i aştığında Shift/Galaxy botları beklemeye geçer (tekillik penceresi korunur); alındığında botlar sınırın ötesinde normal çalışır ve koşular e308 üstüne taşınır. SP kazancı formülü zaten her +1e308 için ×10 verir — beklemek değil, **hız** ödüllendirilir.
+- **🌙 Kolektif Gece Nöbeti (Faz 2 kilometre taşı):** 1e4000 Dopamin'de kalıcı olarak açılır; SingularityTab'de ilerleme kartı taşır. Uyku Baskısı Matrisi (Corruptions) içerik olarak bu fazda ayrı ADR ile gelir.
 
 ---
 

@@ -3,6 +3,7 @@ import type { NotationType } from '../core/format'
 
 export type StanceType = 'trend' | 'spam' | 'private_mode'
 export type AnomalyType = 'fyp' | 'heart_frenzy' | 'sponsor'
+export type BuffType = AnomalyType | 'espresso'
 
 export interface DimensionData {
   tier: number
@@ -14,7 +15,7 @@ export interface DimensionData {
 
 export interface ActiveBuff {
   id: string
-  type: AnomalyType
+  type: BuffType
   name: string
   duration: number
   remaining: number
@@ -49,6 +50,7 @@ export interface AutobuyerConfig {
   mode: AutobuyerMode
   interval: number // saniye cinsinden
   timer: number
+  minGainSp?: number // Şafak Nöbeti Botu: minimum SP kazancı tabanı (default 1)
 }
 
 export type LabSeedType =
@@ -109,6 +111,41 @@ export interface CollectiveMilestone {
 
 export type MusicTrackId = 'lofi_chill' | 'synthwave' | 'ambient_drone' | 'subway_groove' | 'custom'
 
+/** Nöral Ağaç dalı: kök, pasif (uyku), aktif (başparmak) ve hibrit köprü */
+export type NeuralBranch = 'root' | 'passive' | 'active' | 'hybrid'
+
+/**
+ * Nöral Ağaç düğümü (kalıcı SP yetenek ağacı).
+ * effect, neuralEffects getter'ında sayısal etkiye çevrilen tanımlayıcı id'dir.
+ * Tekrarlanabilir düğümler maxLevel + costMult alanlerini kullanır.
+ */
+export interface NeuralNode {
+  id: string
+  name: string
+  icon: string
+  desc: string
+  branch: NeuralBranch
+  cost: number // SP cinsinden taban maliyet
+  maxLevel?: number // Belirtilmezse 1 (tek seferlik)
+  costMult?: number // Seviye başına maliyet çarpanı (belirtilmezse 1)
+  requires: string[] // Satın alınması gereken öncül düğüm id'leri
+  effect: string // Etki tanımlayıcı id (neuralEffects içinde işlenir)
+  choiceGroup?: string // Aynı gruptaki düğümler birbirini hariç tutar (prestijde kilidi açılır)
+}
+
+/** Satın alınan Nöral Ağaç düğümlerinin toplanmış sayısal etkileri */
+export interface NeuralEffects {
+  productionMult: number // Tüm istasyon üretim çarpanı
+  clickMult: number // Manuel tıklama gücü çarpanı
+  offlineGainBonus: number // Çevrimdışı ilerleme ek oranı (additif, 0.25 = +%25)
+  crisisRewardMult: number // Vicdan Azabı prim çarpanı
+  breedRateMult: number // Koloni üreme hızı çarpanı
+  botFrequencyMult: number // Otomatik bot frekans çarpanı
+  dawnSpeedMult: number // Şafak (tekillik) kazancı çarpanı
+  cpsSyncLevel: number // CPS-to-click senkron düğümü seviyesi (0-4)
+  comboUnlocked: boolean // Combo sistemi açıldı mı
+}
+
 export interface GameSettings {
   notation: NotationType
   soundEnabled: boolean
@@ -123,6 +160,16 @@ export interface GameSettings {
   musicIntensity: number
   sleepTimerMinutes: number
   customAudioUrl?: string
+  // QoL ayarları (v10)
+  confirmDialogs: boolean // Prestij/sıfırlama onay diyaloğu göster
+  reduceAnimations: boolean // Animasyonları ve parçacıkları azalt
+}
+
+// Çevrimdışı / arka plan yakalama raporu — "Tekrar hoş geldin" modalı bunu gösterir
+export interface OfflineReport {
+  seconds: number
+  capped: boolean
+  dopamineGained: Decimal
 }
 
 export interface PlayerStats {
@@ -224,7 +271,7 @@ export interface SerializedPlayerState {
   singularityPoints: string
   currentStance: StanceType
   activeBuffs: Array<{
-    type: AnomalyType
+    type: BuffType
     remaining: number
   }>
   slackers: Array<{
@@ -243,10 +290,15 @@ export interface SerializedPlayerState {
   labHype?: number
   labMode?: LabMode
   discoveredFormulas?: LabSeedType[]
-  autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode }>
+  autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number }>
   autobuyerBulkUnlocked?: boolean
   autobuyerMaxUnlocked?: boolean
+  singularities?: number // Tekillik sayısı (v10: bot unlock koşulu için kalıcı)
+  nightWatchUnlocked?: boolean // Faz 2 kilometre taşı (1e4000 Dopamin)
   singularityUpgrades?: Record<string, number>
+  neuralNodesBought?: Record<string, number> // Nöral Ağaç satın alımları (v9)
+  clickCombo?: { count: number; lastClickAt: number } // Tıklama serisi (geçici, güvenli varsayılanla yüklenir)
+  buyAmount?: 10 | 100 | 'max' // Reels satın alma modu (v10 QoL)
   sacrificeCount?: number
   sacrificeMultiplier?: string
   algorithmUpgrades?: string[]

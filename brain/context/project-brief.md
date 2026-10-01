@@ -12,7 +12,7 @@
 1. **Matematik & Boyut Motoru (*Antimatter Dimensions*):** 1-8 dereceli Reels basamakları (Kedi Videolarından Saf Beyin Çürümesine), Algoritma Frekansı (Hz), üstel büyüme ve otomatik kaydırma botları.
 2. **Taktil Doyum, Kombolar & Mini-Oyunlar (*Cookie Clicker*):**
    - Ekranda yüzen rastgele **"Gece Krizleri" (Gece 3 Çılgınlığı 7x, Başparmak Histerisi 777x, 50 Milyonluk Viral Video)**.
-   - Çarpılarak katlanan **Rezonans Komboları** (Gece 3 + Başparmak Histerisi = 5,439x Beyin Çürümesi!).
+   - Eşzamanlı **Rezonans Komboları** (Gece 3 üretimi 7×, Başparmak Histerisi manuel kaydırmayı 777× güçlendirir).
    - Tesis tabanlı **4 Büyük Mini-Oyun**: Algoritma Lab (Garden), Gece Yarısı Kriz Yönetimi (Grimoire), Gece Kuşları Panteonu (Pantheon), Sahte Kripto Reklamları (Market).
    - **Vicdan Azabı & Göz Batması (Wrinklers)**: Ekrana dadanıp "Yarın iş var!" diyerek dopamini emen, "Sadece 1 Video Daha!" diyerek kovulunca 1.2x prim iade eden vicdan sesleri.
 3. **Çapraz Sinerji, Tılsımlar & Bozulmalar (*Synergism*):**

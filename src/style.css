@@ -352,6 +352,33 @@
 .layer-toast { z-index: 70; }
 .layer-modal { z-index: 80; }
 
+/* QoL: "Animasyonları Azalt" ayarı — nabız/parıltı/geçiş animasyonlarını söndürür
+   (Canvas parçacıkları dışındaki tüm CSS animasyonları pratikte donar) */
+.reduce-anim *,
+.reduce-anim *::before,
+.reduce-anim *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+}
+
+/* 0-state onboarding: ilk kaydırma çağrısı — Kaydır butonunda nefes alan halka */
+@keyframes cta-beacon-anim {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(168, 85, 247, 0.1); }
+}
+.cta-beacon {
+  animation: cta-beacon-anim 1.6s ease-in-out infinite;
+}
+/* Onboarding ipucu oku — yukarı kaydırma etkisi */
+@keyframes arrow-nudge-anim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.arrow-nudge {
+  animation: arrow-nudge-anim 1.2s ease-in-out infinite;
+}
+
 /* Minimalist Dark Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
@@ -381,7 +408,9 @@
   .affordance-pulse,
   .tab-dot,
   .screen-shake,
-  .count-pop {
+  .count-pop,
+  .cta-beacon,
+  .arrow-nudge {
     animation: none;
   }
   .progress-fill {

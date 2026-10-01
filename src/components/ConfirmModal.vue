@@ -1,0 +1,54 @@
+<script setup lang="ts">
+import { AlertTriangle } from 'lucide-vue-next'
+
+defineProps<{
+  title: string
+  message: string
+  confirmLabel?: string
+  danger?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+}>()
+</script>
+
+<template>
+  <!-- QoL: tüm prestij/sıfırlama aksiyonları için tek onay diyaloğu (settings.confirmDialogs'a bağlı) -->
+  <div
+    class="layer-modal fixed inset-0 flex items-center justify-center p-4 bg-black/70"
+    @click.self="emit('cancel')"
+    @keydown.esc="emit('cancel')"
+  >
+    <div class="modal-glass w-full max-w-xs rounded-2xl border border-white/10 bg-[#0b0d14]/95 p-5 shadow-2xl">
+      <div class="flex items-start gap-3 mb-4">
+        <div
+          class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          :class="danger ? 'bg-red-500/15 border border-red-400/30' : 'bg-amber-500/15 border border-amber-400/30'"
+        >
+          <AlertTriangle class="w-4.5 h-4.5" :class="danger ? 'text-red-300' : 'text-amber-300'" />
+        </div>
+        <div class="min-w-0">
+          <h3 class="text-sm font-bold text-white leading-tight">{{ title }}</h3>
+          <p class="text-xs text-slate-400 mt-1 leading-snug">{{ message }}</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button
+          class="btn-tactile flex-1 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 text-xs font-semibold cursor-pointer"
+          @click="emit('cancel')"
+        >
+          Vazgeç
+        </button>
+        <button
+          class="btn-tactile flex-1 h-10 rounded-xl text-white text-xs font-bold cursor-pointer"
+          :class="danger ? 'bg-red-500/90 hover:bg-red-500' : 'bg-amber-500/90 hover:bg-amber-500'"
+          @click="emit('confirm')"
+        >
+          {{ confirmLabel || 'Onayla' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

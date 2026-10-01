@@ -13,6 +13,9 @@ const speedMultiplier = computed(() => {
   return Math.pow(1.5, store.singularityUpgrades?.neural_chip || 0).toFixed(1)
 })
 
+// QoL: hassas hız çarpanı — gösterim string'i değil ham değer üzerinden hesap
+const speedMultiplierRaw = computed(() => Math.pow(1.5, store.singularityUpgrades?.neural_chip || 0))
+
 const allEnabled = computed(() => {
   const bots = Object.values(store.autobuyers).filter((b) => b.unlocked)
   return bots.length > 0 && bots.every((b) => b.enabled)
@@ -51,6 +54,16 @@ function modeLabel(mode: string | undefined): string {
 
 function setMode(key: string, mode: AutobuyerMode): void {
   store.setAutobuyerMode(String(key), mode)
+}
+
+// Şafak Nöbeti Botu min-SP tabanı: pozitif tam sayıya sıkıştır, geçersizse default 1
+function onMinGainInput(event: Event, key: string): void {
+  const input = event.target as HTMLInputElement
+  const raw = Number(input.value)
+  const val = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 1
+  const bot = store.autobuyers[key]
+  if (bot) bot.minGainSp = val
+  input.value = String(val)
 }
 </script>
 
@@ -176,7 +189,7 @@ function setMode(key: string, mode: AutobuyerMode): void {
           <div class="text-[11px] text-slate-400 font-mono mt-1">
             <span v-if="bot.unlocked">
               <span class="ds-badge mr-1.5" :class="bot.mode === 'max' ? 'ds-badge-amber' : bot.mode === 'bulk' ? 'ds-badge-blue' : 'ds-badge-emerald'">{{ modeLabel(bot.mode) }}</span>
-              Tetiklenme: <span class="text-slate-300 font-bold tabular-nums">{{ (bot.interval / Number(speedMultiplier)).toFixed(2) }} sn</span>
+              Tetiklenme: <span class="text-slate-300 font-bold tabular-nums">{{ (bot.interval / speedMultiplierRaw).toFixed(2) }} sn</span>
             </span>
             <span v-else>
               Açılış Maliyeti: <span class="text-blue-300 font-bold tabular-nums">{{ formatNumber(AUTOBUYER_COSTS[key], store.settings.notation) }} Dopamin</span>
@@ -186,8 +199,27 @@ function setMode(key: string, mode: AutobuyerMode): void {
           </div>
         </div>
 
+        <!-- Şafak Nöbeti Botu: mod seçici yerine min-SP tabanı girişi -->
+        <div v-if="bot.unlocked && key === 'singularity'" class="mt-3">
+          <div class="text-[10px] text-slate-400 font-mono leading-relaxed mb-1.5">
+            Marjinal büyüme koşu ortalamasına oturunca (3 sn) çöker. Taban:
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              step="1"
+              :value="bot.minGainSp || 1"
+              @change="onMinGainInput($event, String(key))"
+              class="w-full bg-black/40 border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-amber-300 tabular-nums focus:outline-none focus:border-amber-500/50"
+              v-tip="'Bu kadar SP garantilenecek kadar bekler; eğim düşüşü ile birlikte çöker.'"
+            />
+            <span class="text-[10px] text-slate-400 font-mono shrink-0">SP</span>
+          </div>
+        </div>
+
         <!-- Mod Seçici -->
-        <div v-if="bot.unlocked" class="grid grid-cols-3 gap-1.5 mt-3">
+        <div v-else-if="bot.unlocked" class="grid grid-cols-3 gap-1.5 mt-3">
           <button
             @click="setMode(String(key), 'single')"
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"

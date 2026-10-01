@@ -19,12 +19,14 @@ const isCombo = computed(() => store.isComboActive)
 function getIcon(type: AnomalyType | string) {
   if (type === 'fyp') return Flame
   if (type === 'heart_frenzy') return Zap
+  if (type === 'espresso') return Zap
   return Sparkles
 }
 
 function getCategoryTag(type: AnomalyType | string) {
   if (type === 'fyp') return 'Trend Akışı'
   if (type === 'heart_frenzy') return 'Gece 3 Krizi'
+  if (type === 'espresso') return 'Kafein Kararı'
   return 'Viral Patlama'
 }
 
@@ -49,6 +51,7 @@ function getProgressColor(type: AnomalyType | string) {
 function getIconColor(type: AnomalyType | string) {
   if (type === 'fyp') return 'text-purple-400'
   if (type === 'heart_frenzy') return 'text-rose-400'
+  if (type === 'espresso') return 'text-cyan-400'
   return 'text-amber-400'
 }
 
@@ -152,7 +155,7 @@ function handleAnomalyClick(anomaly: FloatingAnomaly, event: MouseEvent) {
         class="px-4 py-1.5 rounded-full bg-purple-950/80 border border-purple-500/50 text-purple-200 text-xs font-mono font-bold flex items-center gap-2 shadow-lg backdrop-blur-md"
       >
         <Flame class="w-3.5 h-3.5 text-rose-400" />
-        <span>Rezonans Hipnozu: 5,439× Dopamin Çarpanı Aktif</span>
+        <span>Rezonans Hipnozu: 7× üretim + 777× kaydırma aktif</span>
       </div>
 
       <!-- Tekil Buff Sayaçları -->

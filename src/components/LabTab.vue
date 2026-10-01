@@ -271,7 +271,7 @@ const isHypeFull = computed(() => store.labHype >= 100)
             class="px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <BookOpen class="w-3.5 h-3.5" />
-            <span>Viral Kodeks ({{ store.discoveredFormulas.length }}/8)</span>
+            <span>Viral Kodeks ({{ store.labCodexDiscoveredCount }}/{{ LAB_RECIPES.length }})</span>
           </button>
         </div>
       </div>
@@ -501,6 +501,9 @@ const isHypeFull = computed(() => store.labHype >= 100)
           <span>Toplam Hasatlar & Drop:</span>
           <span class="text-emerald-400 font-bold">{{ store.stats.labHarvests || 0 }}</span>
         </div>
+        <div class="mt-2 text-[10px] font-mono text-slate-500">
+          Aktif hasat bütçesi, olgun hücreler arasında paylaşılır.
+        </div>
       </div>
     </div>
 
@@ -598,7 +601,7 @@ const isHypeFull = computed(() => store.labHype >= 100)
                 Viral Kodeks & Sentez Ansiklopedisi
               </h2>
               <div class="text-xs text-amber-300 font-mono">
-                Keşfedilen: {{ store.discoveredFormulas.length }}/8 Formül (+{{ store.labCodexBonusPercent }}% Kalıcı Global Dopamin)
+                Keşfedilen: {{ store.labCodexDiscoveredCount }}/{{ LAB_RECIPES.length }} Formül (+{{ store.labCodexBonusPercent }}% Kalıcı Global Dopamin)
               </div>
             </div>
           </div>

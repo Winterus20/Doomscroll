@@ -21,6 +21,7 @@ import {
 } from 'lucide-vue-next'
 import { MUSIC_TRACKS } from '../core/music-engine'
 import type { MusicTrackId } from '../models/types'
+import ConfirmModal from './ConfirmModal.vue'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -31,6 +32,8 @@ const store = useGameStore()
 const copyFeedback = ref(false)
 const importString = ref('')
 const importError = ref('')
+const importSuccess = ref('')
+const showImportConfirm = ref(false)
 const showHardResetConfirm = ref(false)
 const customUrlInput = ref(store.settings.customAudioUrl || '')
 
@@ -107,32 +110,79 @@ function saveCustomUrl() {
 }
 
 function manualSave() {
-  SaveSystem.save(store.serialize())
+  const ok = SaveSystem.save(store.serialize())
   copyFeedback.value = true
   setTimeout(() => (copyFeedback.value = false), 2000)
+  if (!ok) importError.value = 'Kayıt yazılamadı (depolama kotası dolu olabilir)!'
   sounds.playClick()
+}
+
+// QoL: panoya kopyalama izin verilmezse sessizce başarısız olmasın — dosyaya indir
+function downloadSaveFile(saveStr: string) {
+  const blob = new Blob([saveStr], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `doomscroll-save-${new Date().toISOString().slice(0, 10)}.txt`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function exportSave() {
   const saveStr = SaveSystem.exportSave(store.serialize())
-  navigator.clipboard.writeText(saveStr).then(() => {
-    alert('Kayıt verisi panoya kopyalandı!')
-    sounds.playClick()
-  })
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard
+      .writeText(saveStr)
+      .then(() => {
+        importSuccess.value = 'Kayıt verisi panoya kopyalandı!'
+        sounds.playClick()
+      })
+      .catch(() => {
+        downloadSaveFile(saveStr)
+        importSuccess.value = 'Pano erişilemedi — kayıt dosya olarak indirildi.'
+      })
+  } else {
+    downloadSaveFile(saveStr)
+    importSuccess.value = 'Kayıt dosya olarak indirildi.'
+  }
+}
+
+// QoL: import mevcut kaydın üzerine yazar — iki adımlı onay (ayarlardan kapatılabilir)
+function requestImport() {
+  if (!importString.value.trim()) return
+  importError.value = ''
+  importSuccess.value = ''
+  if (store.settings.confirmDialogs) {
+    showImportConfirm.value = true
+    return
+  }
+  doImport()
 }
 
 function doImport() {
+  showImportConfirm.value = false
   if (!importString.value.trim()) return
   const data = SaveSystem.importSave(importString.value)
   if (data) {
     store.deserialize(data)
     importString.value = ''
     importError.value = ''
-    alert('Kayıt başarıyla yüklendi!')
-    emit('close')
+    importSuccess.value = 'Kayıt başarıyla yüklendi!'
+    sounds.playClick()
   } else {
+    importSuccess.value = ''
     importError.value = 'Geçersiz veya bozuk kayıt dizesi!'
   }
+}
+
+function toggleConfirmDialogs() {
+  store.settings.confirmDialogs = !store.settings.confirmDialogs
+  sounds.playClick()
+}
+
+function toggleAnimations() {
+  store.settings.reduceAnimations = !store.settings.reduceAnimations
+  sounds.playClick()
 }
 
 function hardReset() {
@@ -383,6 +433,46 @@ function hardReset() {
           />
         </div>
 
+        <!-- QoL: Oyun & Erişilebilirlik -->
+        <div class="border-t border-white/[0.06] pt-5 space-y-2">
+          <label class="section-label">
+            Oyun &amp; Erişilebilirlik
+          </label>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div>
+              <div class="text-xs font-mono font-medium text-slate-300">Onay Diyaloğu</div>
+              <div class="text-[10px] text-slate-500">Çöküş, Toplu Uyku ve Önbellek Silmede onay sorulur</div>
+            </div>
+            <button
+              @click="toggleConfirmDialogs"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="store.settings.confirmDialogs ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ store.settings.confirmDialogs ? 'Açık' : 'Kapalı' }}
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div>
+              <div class="text-xs font-mono font-medium text-slate-300">Animasyonları Azalt</div>
+              <div class="text-[10px] text-slate-500">Nabız, parıltı ve parçacık efektlerini kapatır</div>
+            </div>
+            <button
+              @click="toggleAnimations"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="store.settings.reduceAnimations ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ store.settings.reduceAnimations ? 'Azaltıldı' : 'Tam' }}
+            </button>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-[10px] text-slate-500 font-mono leading-relaxed">
+            <span class="text-slate-400 font-semibold">Kısayollar:</span>
+            1-8 sekme değiştir · M Tümünü Al · Space Kaydır · Esc modal kapat
+          </div>
+        </div>
+
         <!-- Kayıt & Yedekleme Yönetimi -->
         <div class="border-t border-white/[0.06] pt-5 space-y-3">
           <label class="section-label">
@@ -417,7 +507,7 @@ function hardReset() {
                 class="flex-1 bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-300"
               />
               <button
-                @click="doImport"
+                @click="requestImport"
                 class="btn-tactile px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
               >
                 <Upload class="w-3.5 h-3.5" />
@@ -426,6 +516,12 @@ function hardReset() {
             </div>
             <p v-if="importError" class="text-[11px] text-rose-400 font-mono">
               {{ importError }}
+            </p>
+            <p v-else-if="importSuccess" class="text-[11px] text-emerald-400 font-mono">
+              {{ importSuccess }}
+            </p>
+            <p class="text-[10px] text-slate-500 font-mono">
+              Not: Yükleme mevcut kaydın üzerine yazar — önce Dışa Aktar ile yedekleyin.
             </p>
           </div>
         </div>
@@ -463,6 +559,17 @@ function hardReset() {
           </div>
         </div>
       </div>
+
+      <!-- QoL: import onay diyaloğu (mevcut kaydın üzerine yazar) -->
+      <ConfirmModal
+        v-if="showImportConfirm"
+        title="Kaydı Yükle"
+        message="İçe aktarılan kayıt mevcut ilerlemenizin üzerine yazar. Önce Dışa Aktar ile yedeklemeniz önerilir. Devam edilsin mi?"
+        confirm-label="Üzerine Yaz"
+        :danger="true"
+        @confirm="doImport"
+        @cancel="showImportConfirm = false"
+      />
     </div>
   </div>
 </template>

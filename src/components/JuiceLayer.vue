@@ -5,6 +5,9 @@ export interface JuiceTriggerOptions {
   x: number
   y: number
   text?: string
+  color?: string
+  /** Vurgulu boyut (prestij/büyük ödül anları için) */
+  big?: boolean
 }
 
 declare global {
@@ -23,6 +26,7 @@ interface Particle {
   life: number
   text: string
   color: string
+  size: number
 }
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -47,13 +51,14 @@ function resizeCanvas() {
   canvas.style.height = `${height}px`
 }
 
-function spawnParticle(x: number, y: number, text: string) {
+function spawnParticle(x: number, y: number, text: string, color = '#e2e8f0', big = false) {
   // Hafif rastgele dikey açı ve hız
   const vx = (Math.random() - 0.5) * 1.5
   const vy = -(2.5 + Math.random() * 2.0)
 
   const p: Particle = {
-    x,
+    // Yatay saçılım: aynı noktadan üst üste spawn'da metin yığını yerine şerit
+    x: x + (Math.random() - 0.5) * 28,
     y,
     vx,
     vy,
@@ -61,7 +66,8 @@ function spawnParticle(x: number, y: number, text: string) {
     maxLife: 35 + Math.floor(Math.random() * 10), // ~0.6 - 0.8 saniye
     life: 0,
     text,
-    color: '#e2e8f0'
+    color,
+    size: big ? 20 : 15
   }
 
   if (particles.length >= MAX_PARTICLES) {
@@ -75,9 +81,9 @@ function spawnParticle(x: number, y: number, text: string) {
 }
 
 function triggerJuice(options: JuiceTriggerOptions) {
-  const { x, y, text } = options
+  const { x, y, text, color, big } = options
   if (text) {
-    spawnParticle(x, y, text)
+    spawnParticle(x, y, text, color, big)
   }
 }
 
@@ -112,11 +118,14 @@ function loop() {
     ctx.globalAlpha = p.alpha
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = '600 15px "JetBrains Mono", monospace'
+    // İmza tipografi: display font, boyut parçacıkla taşınır
+    ctx.font = `700 ${p.size}px "Chakra Petch", "JetBrains Mono", monospace`
 
-    // Temiz, keskin metin ve hafif gölge
-    ctx.fillStyle = '#08090d'
-    ctx.fillText(p.text, p.x + 1, p.y + 1)
+    // Koyu kontur: her zeminde okunabilirlik (karanlık panelde de açık alanda da)
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 3.5
+    ctx.strokeStyle = 'rgba(8, 9, 13, 0.9)'
+    ctx.strokeText(p.text, p.x, p.y)
 
     ctx.fillStyle = p.color
     ctx.fillText(p.text, p.x, p.y)

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useGameStore, ALGORITHM_UPGRADES } from '../stores/game'
 import { format } from '../core/format'
 import { D_0 } from '../core/math'
 import type { AlgorithmUpgradeId } from '../models/types'
 import DimensionRow from './DimensionRow.vue'
+import ConfirmModal from './ConfirmModal.vue'
 import {
   Sun,
   Sunrise,
@@ -40,7 +41,7 @@ const currentShiftDimAmount = computed(() => {
 })
 
 const shiftProgressPercent = computed(() => {
-  if (shiftReq.value.amount <= 0) return 0
+  if (shiftReq.value.amount.lte(0)) return 0
   const ratio = currentShiftDimAmount.value.div(shiftReq.value.amount).toNumber()
   return Math.min(100, Math.max(0, ratio * 100))
 })
@@ -80,7 +81,8 @@ function triggerRefresh(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: '3× Trend Dalgası!'
+        text: '3× Trend Dalgası!',
+        color: '#67e8f9'
       }
     })
   )
@@ -89,9 +91,19 @@ function triggerRefresh(e: MouseEvent) {
 
 function triggerSacrifice(e: MouseEvent) {
   if (!store.canSacrifice) return
+  // QoL: geri dönüşsüz aksiyon — onay diyaloğu (ayarlardan kapatılabilir)
+  if (store.settings.confirmDialogs) {
+    showSacrificeConfirm.value = true
+    return
+  }
+  doSacrifice(e)
+}
+
+function doSacrifice(e?: MouseEvent) {
+  if (!store.canSacrifice) return
   window.dispatchEvent(new CustomEvent('doomscroll:shake'))
 
-  const target = e.currentTarget as HTMLElement | null
+  const target = e?.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2
   const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2
@@ -101,7 +113,8 @@ function triggerSacrifice(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: 'Önbellek Temizlendi!'
+        text: 'Önbellek Temizlendi!',
+        color: '#fda4af'
       }
     })
   )
@@ -118,11 +131,12 @@ function buyUpgrade(e: MouseEvent, id: AlgorithmUpgradeId) {
   if (success) {
     window.dispatchEvent(
       new CustomEvent('doomscroll:tap', {
-        detail: {
-          x,
-          y,
-          text: 'Yama Yüklendi!'
-        }
+      detail: {
+        x,
+        y,
+        text: 'Yama Yüklendi!',
+        color: '#67e8f9'
+      }
       })
     )
   }
@@ -140,7 +154,8 @@ function triggerShift(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: isShiftUnlock.value ? 'Yeni Format!' : '2× Boost!'
+        text: isShiftUnlock.value ? 'Yeni Format!' : `×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} Boost!`,
+        color: '#d8b4fe'
       }
     })
   )
@@ -159,7 +174,8 @@ function triggerGalaxy(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: 'Küme Kuruldu!'
+        text: 'Küme Kuruldu!',
+        color: '#fcd34d'
       }
     })
   )
@@ -168,9 +184,19 @@ function triggerGalaxy(e: MouseEvent) {
 
 function triggerSingularity(e: MouseEvent) {
   if (!store.canSingularity) return
+  // QoL: onaysız tetiklenen buton artık onay diyaloğuna bağlı
+  if (store.settings.confirmDialogs) {
+    showSingularityConfirm.value = true
+    return
+  }
+  doSingularity(e)
+}
+
+function doSingularity(e?: MouseEvent) {
+  if (!store.canSingularity) return
   window.dispatchEvent(new CustomEvent('doomscroll:shake'))
 
-  const target = e.currentTarget as HTMLElement | null
+  const target = e?.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2
   const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2
@@ -180,12 +206,25 @@ function triggerSingularity(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: 'GÜNEŞ DOĞDU!'
+        text: 'GÜNEŞ DOĞDU!',
+        color: '#fbbf24',
+        big: true
       }
     })
   )
   store.singularityReset()
 }
+
+// QoL: onay diyaloğu görünürlükleri
+const showSingularityConfirm = ref(false)
+const showSacrificeConfirm = ref(false)
+
+// QoL: satın alma modu seçenekleri (10'luk paketler üzerinden)
+const BUY_MODES: Array<{ value: 10 | 100 | 'max'; label: string; tip: string }> = [
+  { value: 10, label: '×10', tip: 'Tek paket al (10 adet)' },
+  { value: 100, label: '×100', tip: '10 paket birden al (100 adet)' },
+  { value: 'max', label: 'Maks', tip: 'Alınabildiği kadar al' }
+]
 
 function handleSlackerClick(e: MouseEvent, id: string) {
   window.dispatchEvent(new CustomEvent('doomscroll:shake'))
@@ -204,7 +243,8 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       detail: {
         x,
         y,
-        text: 'Sustur!'
+        text: 'Sustur!',
+        color: '#fda4af'
       }
     })
   )
@@ -363,6 +403,25 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       </div>
     </div>
 
+    <!-- QoL: satın alma modu seçici — tüm format satırları seçili modda alır (Cookie Clicker bulk buy deseni) -->
+    <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/40 border border-white/[0.06]">
+        <button
+          v-for="mode in BUY_MODES"
+          :key="mode.value"
+          @click="store.setBuyAmount(mode.value)"
+          class="btn-tactile px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-all cursor-pointer border"
+          :class="store.buyAmount === mode.value
+            ? 'bg-purple-500/25 text-purple-200 border-purple-400/40'
+            : 'bg-transparent text-slate-500 hover:text-slate-300 border-transparent'"
+          v-tip="mode.tip"
+        >
+          {{ mode.label }}
+        </button>
+      </div>
+      <span class="text-[10px] font-mono text-slate-500">satın alma modu</span>
+    </div>
+
     <!-- 4. Format Listesi (D1-D8 Kompakt Satırlar) -->
     <div class="space-y-1.5">
       <DimensionRow
@@ -439,7 +498,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       <!-- Akış Sıçraması (Shift) -->
       <div
         class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06]"
-        v-tip="isShiftUnlock ? 'Yeni format açar ve tüm üretimi 2× katlar' : 'Tüm üretimi kalıcı 2× katlar'"
+        v-tip="isShiftUnlock ? 'Yeni format açar' : `Tüm üretimi kalıcı ×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} katlar`"
       >
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.08] text-purple-400 flex items-center justify-center shrink-0">
@@ -451,7 +510,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
               <span class="text-[10px] font-mono text-purple-400">Sv: {{ store.dimensionShifts }}</span>
             </div>
             <div class="text-[11px] font-mono text-slate-400 tabular-nums">
-              {{ format(currentShiftDimAmount, 0, store.settings.notation) }} / {{ shiftReq.amount }} D{{ shiftReq.tier }}
+              {{ format(currentShiftDimAmount, 0, store.settings.notation) }} / {{ format(shiftReq.amount, 0, store.settings.notation) }} D{{ shiftReq.tier }}
             </div>
             <div class="progress-track progress-track-mini w-20 sm:w-24 mt-1">
               <div class="progress-fill progress-fill-purple" :style="{ width: `${shiftProgressPercent}%` }"></div>
@@ -467,7 +526,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
             ? 'bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border-purple-500/40 cursor-pointer'
             : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
         >
-          {{ isShiftUnlock ? 'Format Aç' : '2× Boost' }}
+          {{ isShiftUnlock ? 'Format Aç' : `×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} Boost` }}
         </button>
       </div>
 
@@ -510,7 +569,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       <div
         v-if="isSacrificeUnlocked"
         class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-rose-500/20 bg-rose-950/10"
-        v-tip="'D1-D7 sıfırlanır; biriken D1 miktarına göre D8 Saf Beyin Çürümesine kalıcı çarpan kazandırır!'"
+        v-tip="'D1-D7 üretmeye devam eder; biriken D1 miktarına göre D8 Saf Beyin Çürümesine kalıcı çarpan kazandırır!'"
       >
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
@@ -525,7 +584,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
               → ×{{ format(store.currentSacrificeReward, 1, store.settings.notation) }} D8
             </div>
             <div class="text-[9px] text-slate-500 font-mono">
-              D1-D7 feda et
+              D1 birikimini D8 gücüne çevir
             </div>
           </div>
         </div>
@@ -541,6 +600,26 @@ function handleSlackerClick(e: MouseEvent, id: string) {
           Temizle
         </button>
       </div>
+
+      <!-- QoL: onay diyaloğu (native confirm yerine; ayarlardan kapatılabilir) -->
+      <ConfirmModal
+        v-if="showSacrificeConfirm"
+        title="Önbelleği Sil"
+        message="D1-D7 istasyonların sıfırlanır; biriken D1 miktarına göre D8 Saf Beyin Çürümesine kalıcı çarpan eklenir. Devam edilsin mi?"
+        confirm-label="Temizle"
+        :danger="true"
+        @confirm="showSacrificeConfirm = false; doSacrifice($event)"
+        @cancel="showSacrificeConfirm = false"
+      />
+      <ConfirmModal
+        v-if="showSingularityConfirm"
+        title="Sabah 06:00 Çöküşü"
+        message="Dopamin ve istasyonların sıfırlanacak; karşılığında kalıcı Uykusuzluk Puanı (SP) kazanacaksın. Hazır mısın?"
+        confirm-label="Güneşi Karşıla"
+        :danger="false"
+        @confirm="showSingularityConfirm = false; doSingularity()"
+        @cancel="showSingularityConfirm = false"
+      />
     </div>
   </div>
 </template>

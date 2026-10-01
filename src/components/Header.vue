@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useGameStore } from '../stores/game'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { useGameStore, COMBO_THRESHOLDS, COMBO_DECAY_MS } from '../stores/game'
 import { format } from '../core/format'
 import type { StanceType } from '../models/types'
 import {
@@ -18,11 +18,13 @@ import {
   Play,
   Pause,
   SkipForward,
-  Lock
+  Lock,
+  Sun
 } from 'lucide-vue-next'
 import { musicEngine, MUSIC_TRACKS } from '../core/music-engine'
 import { getFeatureById, unlockProgress } from '../game/unlocks'
 import { Decimal } from '../core/math'
+import ConfirmModal from './ConfirmModal.vue'
 
 const emit = defineEmits(['open-settings'])
 
@@ -66,6 +68,29 @@ const tickspeedCost = computed(() => format(store.tickspeedCost, 2, store.settin
 const tickspeedMultiplier = computed(() => format(store.tickspeedMultiplier, 2, store.settings.notation))
 const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
 
+// Sabah 06:00 Çöküşü hazır: 1.79e308 Dopamin eşiği aşıldı
+const singularityReady = computed(() => store.canSingularity)
+const singularityGainText = computed(() => format(store.singularityGain, 2, store.settings.notation))
+// Break Singularity alındıysa Shift/Galaxy botları tekillikte beklemeyi bırakır
+const singularityBroken = computed(() => (store.singularityUpgrades?.break_singularity || 0) >= 1)
+const singularityTip = computed(() =>
+  singularityBroken.value
+    ? `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Sınır yıkıldı: Shift/Galaxy botları e308 üstünde de çalışıyor.`
+    : `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Shift/Galaxy botları sen kararı verene kadar bekliyor.`
+)
+
+function handleSingularity() {
+  if (!store.canSingularity) return
+  // QoL: native confirm yerine tek onay diyaloğu (ayarlardan kapatılabilir)
+  if (!store.settings.confirmDialogs) {
+    store.singularityReset()
+    return
+  }
+  showSingularityConfirm.value = true
+}
+
+const showSingularityConfirm = ref(false)
+
 // Gece saati — Şafak ilerlemesiyle senkron (02:47 → 06:00 arası)
 const nightClock = computed(() => {
   const logVal = store.matter.lt(10) ? 0 : Math.max(0, store.matter.log10().toNumber())
@@ -82,6 +107,10 @@ const stanceLabel = computed(() => {
   return 'Yorgan Altı'
 })
 
+// 0-state onboarding: ilk format hiç alınmamışsa oyuncuya tek bir eylem çizilir
+// (oyun 10 Dopamin ile başlar — matter eşiği değil, ilk alım davranışı belirleyicidir)
+const showFirstSwipeHint = computed(() => store.dimensions[0]?.bought === 0)
+
 // Alınabilir en az bir yükseltme var mı?
 const canAffordAny = computed(() => {
   if (canAffordTickspeed.value) return true
@@ -94,6 +123,9 @@ const canAffordAny = computed(() => {
 // "Sıradaki hedef" satırı (bulgu U4 — competence/next-goal dersi):
 // her zaman tek bir odak çizer: alınabilir varsa o, yoksa en yakın kilide kalan.
 const nextGoal = computed<{ label: string; value: string; ready: boolean }>(() => {
+  if (singularityReady.value) {
+    return { label: 'Sabah 06:00 — Güneşi Karşıla!', value: `+${singularityGainText.value} SP`, ready: true }
+  }
   if (canAffordTickspeed.value) {
     return { label: 'Frekans hazır', value: `×${tickspeedMultiplier.value} → ${tickspeedCost.value}`, ready: true }
   }
@@ -141,6 +173,48 @@ const stancePrivateLock = computed(() => stanceLockHint('stance_private'))
 function buyTickspeed() {
   store.buyTickspeed()
 }
+
+// Combo rozeti: yalnızca Hipnotik Seri (combo_unlock) alınmışsa ve seri ≥2 iken görünür.
+// rAF döngüsü rozet görünürken başlar, seri ölünce durur — boşta CPU harcamaz.
+const comboCount = computed(() => store.clickCombo.count)
+const comboUnlocked = computed(() => (store.neuralNodesBought['combo_unlock'] || 0) >= 1)
+const comboActive = computed(() => comboUnlocked.value && comboCount.value >= 2)
+
+function currentComboMult(): number {
+  let mult = 1
+  for (const t of COMBO_THRESHOLDS) {
+    if (comboCount.value >= t.count) mult = t.mult
+  }
+  return mult
+}
+
+// Eşik altında (2-4 seri) çarpan henüz 1 olduğundan seri sayısı gösterilir
+const comboBadgeText = computed(() => {
+  const mult = currentComboMult()
+  return mult > 1 ? `×${mult}` : `${comboCount.value}×`
+})
+
+const comboDrain = ref(1)
+let comboRaf = 0
+
+function tickComboDrain() {
+  const elapsed = Date.now() - store.clickCombo.lastClickAt
+  comboDrain.value = Math.max(0, 1 - elapsed / COMBO_DECAY_MS)
+  comboRaf = comboActive.value && comboDrain.value > 0 ? requestAnimationFrame(tickComboDrain) : 0
+}
+
+watch(
+  [comboActive, () => store.clickCombo.lastClickAt],
+  ([active]) => {
+    if (active && comboRaf === 0) {
+      comboRaf = requestAnimationFrame(tickComboDrain)
+    } else if (!active && comboRaf !== 0) {
+      cancelAnimationFrame(comboRaf)
+      comboRaf = 0
+    }
+  },
+  { immediate: true }
+)
 
 function maxAll() {
   store.maxAll()
@@ -208,6 +282,10 @@ onUnmounted(() => {
   if (popTimer !== null) {
     clearTimeout(popTimer)
     popTimer = null
+  }
+  if (comboRaf !== 0) {
+    cancelAnimationFrame(comboRaf)
+    comboRaf = 0
   }
 })
 </script>
@@ -285,10 +363,10 @@ onUnmounted(() => {
         <span>Dopamin</span>
       </span>
 
-      <!-- Sayıların zıplamaması ve taşmaması için tabular-nums ve temiz font-mono -->
+      <!-- Sayıların zıplamaması ve taşmaması için tabular-nums; imza tipografi: Chakra Petch -->
       <div
         ref="counterRef"
-        class="text-4xl sm:text-5xl lg:text-6xl font-mono tabular-nums font-black text-white tracking-tight my-0.5 select-all will-change-transform"
+        class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums text-white tracking-tight my-0.5 select-all will-change-transform"
       >
         {{ formattedDopamine }}
       </div>
@@ -314,6 +392,15 @@ onUnmounted(() => {
         <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="nextGoal.ready ? 'bg-purple-400 animate-pulse' : 'bg-slate-500'"></span>
         <span>{{ nextGoal.label }}</span>
         <span v-if="nextGoal.value" class="tabular-nums font-bold">{{ nextGoal.value }}</span>
+      </div>
+
+      <!-- 0-state onboarding: ilk eylem çağrısı (ilk D1 alınana kadar) -->
+      <div
+        v-if="showFirstSwipeHint"
+        class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/[0.07] border border-purple-500/25 text-[11px] font-mono font-semibold text-purple-200"
+      >
+        <ArrowUp class="w-3.5 h-3.5 text-purple-400 arrow-nudge" />
+        <span>Başparmağı hazırla — ilk video için <span class="font-bold">Kaydır</span>'a bas</span>
       </div>
     </div>
 
@@ -368,11 +455,27 @@ onUnmounted(() => {
 
       <!-- Sağ: TAKTİL BUTONLAR (Kayıp/zıplama yapmayan sabit yükseklikli ve sarmasız buton grubu) -->
       <div class="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto no-scrollbar py-0.5 max-w-full">
+        <!-- Hipnotik Seri rozeti: seri ≥2 iken Kaydır butonunun solunda belirir, geri sayım çubuğu 1.5 sn'de boşalır -->
+        <div
+          v-if="comboActive"
+          class="h-11 px-2 rounded-xl bg-rose-500/15 border border-rose-500/40 flex flex-col items-center justify-center gap-1 min-w-[54px] shrink-0"
+          v-tip="`Hipnotik Seri: ${comboCount} üst üste kaydırma — seri 1.5 sn içinde söner, devam et!`"
+        >
+          <span class="text-xs font-mono font-black text-rose-300 tabular-nums leading-none">{{ comboBadgeText }}</span>
+          <div class="w-full h-1 rounded-full bg-black/50 overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full"
+              :style="{ width: `${comboDrain * 100}%` }"
+            ></div>
+          </div>
+        </div>
+
         <!-- 1. Manuel Yukarı Kaydır (Space / Swipe Up) -->
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
           class="btn-tactile h-11 px-2.5 sm:px-3.5 rounded-xl bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border border-purple-500/40 text-xs font-bold font-mono flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm active:scale-95 shrink-0 min-w-[85px] sm:min-w-[110px]"
+          :class="{ 'cta-beacon': showFirstSwipeHint }"
           v-tip="'Space tuşuna basarak da kaydırabilirsiniz'"
         >
           <ArrowUp class="w-4 h-4 text-purple-400 shrink-0" />
@@ -387,9 +490,10 @@ onUnmounted(() => {
           </div>
         </button>
 
-        <!-- 2. Algoritma Frekansı (Tickspeed) Butonu -->
+        <!-- 2. Algoritma Frekansı (Tickspeed) Butonu — basılı tutunca tekrarlar -->
         <button
           @click="buyTickspeed"
+          v-hold="buyTickspeed"
           :disabled="!canAffordTickspeed"
           class="btn-tactile h-11 px-2 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[78px] sm:min-w-[95px]"
           :class="canAffordTickspeed
@@ -427,7 +531,21 @@ onUnmounted(() => {
           </div>
         </button>
 
-        <!-- 4. Ayarlar Butonu -->
+        <!-- 4. Güneşi Karşıla (Tekillik hazır): autobuyer'lar beklemede, tek tıkla çöküş -->
+        <button
+          v-if="singularityReady"
+          @click="handleSingularity"
+          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md animate-pulse shrink-0 min-w-[70px] sm:min-w-[90px]"
+          v-tip="singularityTip"
+        >
+          <Sun class="w-4 h-4 text-amber-900 shrink-0" />
+          <div class="flex flex-col items-start text-left leading-tight">
+            <span class="text-[10px] text-amber-900/80 font-normal">06:00</span>
+            <span class="text-xs font-black tabular-nums">+{{ singularityGainText }}</span>
+          </div>
+        </button>
+
+        <!-- 5. Ayarlar Butonu -->
         <button
           @click="emit('open-settings')"
           class="btn-tactile h-11 w-10 sm:w-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] transition-all cursor-pointer flex items-center justify-center shrink-0"
@@ -437,5 +555,16 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- QoL: tekillik onay diyaloğu (native confirm yerine) -->
+    <ConfirmModal
+      v-if="showSingularityConfirm"
+      title="Sabah 06:00 Çöküşü"
+      message="Dopamin ve istasyonların sıfırlanacak; karşılığında kalıcı Uykusuzluk Puanı (SP) kazanacaksın. Hazır mısın?"
+      confirm-label="Güneşi Karşıla"
+      :danger="false"
+      @confirm="store.singularityReset(); showSingularityConfirm = false"
+      @cancel="showSingularityConfirm = false"
+    />
   </header>
 </template>

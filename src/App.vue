@@ -17,6 +17,7 @@ import AchievementsTab from './components/AchievementsTab.vue'
 import AchievementToast from './components/AchievementToast.vue'
 import StatsTab from './components/StatsTab.vue'
 import SettingsModal from './components/SettingsModal.vue'
+import WelcomeBackModal from './components/WelcomeBackModal.vue'
 import AnomalyOverlay from './components/AnomalyOverlay.vue'
 import AdminPanel from './components/AdminPanel.vue'
 import { Layers, BarChart3, Lock, Bot, FlaskConical, Zap, Sunrise, Trophy, Network } from 'lucide-vue-next'
@@ -56,12 +57,17 @@ const hasCrisisAlert = computed(() => {
   return store.crisisBackfireDebuff > 0 || store.caffeineEnergy >= store.maxCaffeineEnergy
 })
 
-// Bot sekmesi bildirimi: açılabilir kademe ya da satın alınabilir bot varsa
+// Bot sekmesi bildirimi: açılabilir kademe, satın alınabilir bot ya da kilitli ama şartı+parası hazır bot varsa
 const hasBotAlert = computed(() => {
   if (!store.autobuyersUnlocked) return false
   if (store.canUnlockBulk || store.canUnlockMax) return true
-  return false
+  return store.hasAffordableLockedBot
 })
+
+// QoL: sekme sırası — 1-8 klavye kısayolları bu sırayla eşleşir
+const TAB_ORDER: TabId[] = [
+  'dimensions', 'lab', 'crisis', 'autobuyers', 'colony', 'singularity', 'achievements', 'stats'
+]
 
 function switchTab(tab: TabId) {
   if (tabLocked.value[tab]) {
@@ -88,6 +94,15 @@ watch(
       activeTab.value = 'dimensions'
     }
   }
+)
+
+// QoL: animasyon azaltma ayarı — kök elemana sınıf bağlar (style.css: .reduce-anim)
+watch(
+  () => store.settings.reduceAnimations,
+  (reduce) => {
+    document.documentElement.classList.toggle('reduce-anim', reduce)
+  },
+  { immediate: true }
 )
 
 // Sonraki Açılacak — Özellik Merdiveni (nav altı bandı)
@@ -120,12 +135,33 @@ const NAV_BTN =
 const NAV_LOCKED =
   'hit-44 shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 flex items-center gap-1.5 border border-white/[0.03] bg-black/20 opacity-70 cursor-not-allowed whitespace-nowrap'
 
-// Gizli Admin Paneli: klavyede GODMODE yazınca aç/kapat
+// Gizli Admin Paneli: klavyede GODMODE yazınca aç/kapat + QoL kısayolları (1-8 sekme, M=Tümü, Esc=modal)
 function handleGodmode(e: KeyboardEvent) {
-  if (e.key === 'Escape' && showAdmin.value) {
-    showAdmin.value = false
+  if (e.key === 'Escape') {
+    if (showAdmin.value) {
+      showAdmin.value = false
+      return
+    }
+    if (showSettings.value) {
+      showSettings.value = false
+      return
+    }
+  }
+  // Yazı alanlarında kısayol çalışmaz (import/export textarea, admin input'ları)
+  const target = e.target as HTMLElement | null
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+
+  // 1-8: sekme değiştir
+  const idx = Number(e.key)
+  if (Number.isInteger(idx) && idx >= 1 && idx <= TAB_ORDER.length) {
+    switchTab(TAB_ORDER[idx - 1])
     return
   }
+  if (e.key.toLowerCase() === 'm') {
+    store.maxAll()
+    return
+  }
+
   if (e.key.length !== 1) return
   godmodeBuffer = (godmodeBuffer + e.key.toLowerCase()).slice(-7)
   if (godmodeBuffer === 'godmode') {
@@ -183,12 +219,19 @@ onUnmounted(() => {
     <!-- Başarım Bildirimleri -->
     <AchievementToast />
 
+    <!-- QoL: Çevrimdışı / arka plan yakalama raporu -->
+    <WelcomeBackModal />
+
     <div class="w-full max-w-5xl relative z-10 flex flex-col">
       <!-- Üst Gösterge ve Kontroller -->
       <Header @open-settings="showSettings = true" />
 
-      <!-- Segmented Dock Bar Menüsü (Linear / Apple Kalitesi) -->
-      <nav class="p-1 rounded-xl mb-4 flex items-center gap-1 overflow-x-auto w-full border border-white/[0.06] bg-black/60 no-scrollbar" aria-label="Ana sekmeler">
+      <!-- Segmented Dock Bar Menüsü (Linear / Apple Kalitesi)
+        Mobilde (<768px) alt sabit dock'a dönüşür: başparmak erişimi + safe-area desteği -->
+      <nav
+        class="p-1 rounded-xl mb-4 flex items-center gap-1 overflow-x-auto w-full border border-white/[0.06] bg-black/60 no-scrollbar max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-30 max-md:mb-0 max-md:rounded-b-none max-md:rounded-t-2xl max-md:px-2 max-md:py-1.5 max-md:bg-black/85 max-md:border-white/[0.1] max-md:pb-[max(0.375rem,env(safe-area-inset-bottom))]"
+        aria-label="Ana sekmeler"
+      >
         <!-- Reels Akışı Sekmesi -->
         <button @click="switchTab('dimensions')" :class="[NAV_BTN, navClass(activeTab === 'dimensions')]">
           <Layers class="w-3.5 h-3.5 text-purple-400" />
@@ -222,7 +265,7 @@ onUnmounted(() => {
         <button v-if="store.autobuyersUnlocked" @click="switchTab('autobuyers')" :class="[NAV_BTN, navClass(activeTab === 'autobuyers')]">
           <Bot class="w-3.5 h-3.5 text-blue-400" />
           <span>Botlar</span>
-          <span v-if="hasBotAlert" class="tab-dot tab-dot-blue" v-tip="'Açılabilir bot kademesi var'"></span>
+          <span v-if="hasBotAlert" class="tab-dot tab-dot-blue" v-tip="'Açılabilir bot kademesi veya alınabilir bot var'"></span>
         </button>
         <div v-else :class="NAV_LOCKED" v-tip="'1M (1e6) Dopamin biriktir'">
           <Lock class="w-3 h-3" />
@@ -245,6 +288,7 @@ onUnmounted(() => {
           <Sunrise class="w-3.5 h-3.5 text-amber-400" />
           <span>Şafak (06:00)</span>
           <span v-if="store.canSingularity" class="tab-dot tab-dot-amber" v-tip="'Tekillik hazır'"></span>
+          <span v-else-if="store.hasAffordableNeuralNode" class="tab-dot tab-dot-amber" v-tip="'Alınabilir Nöral Ağaç düğümü var'"></span>
         </button>
         <div v-else :class="NAV_LOCKED" v-tip="'1e30 Dopamine ulaşıldığında görünür hale gelir'">
           <Lock class="w-3 h-3" />
@@ -298,8 +342,8 @@ onUnmounted(() => {
         </span>
       </div>
 
-      <!-- Aktif Sekme İçeriği (tek ritim: space-y-3) -->
-      <main class="w-full pb-8">
+      <!-- Aktif Sekme İçeriği (tek ritim: space-y-3; mobilde alt dock payı eklenir) -->
+      <main class="w-full pb-8 max-md:pb-28">
         <DimensionsTab v-if="activeTab === 'dimensions'" />
         <LabTab v-else-if="activeTab === 'lab' && store.labUnlocked" />
         <CrisisTab v-else-if="activeTab === 'crisis' && store.crisisUnlocked" />

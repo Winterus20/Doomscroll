@@ -73,7 +73,12 @@ const milestoneInfo = computed(() => store.getDimensionMilestone(props.dimension
 const partnerInfo = computed(() => store.getPartnerInfo(props.dimension.tier))
 const cost = computed(() => store.getDimensionCost(props.dimension.tier))
 const multiplier = computed(() => store.getDimensionMultiplier(props.dimension.tier))
-const canAfford = computed(() => store.matter.gte(cost.value))
+// QoL: satın alma modu x100'de geometrik toplam maliyeti gösterilir
+const displayCost = computed(() =>
+  store.buyAmount === 'max' ? cost.value : store.getDimensionPackCost(props.dimension.tier, store.buyAmount / 10)
+)
+const canAfford = computed(() => store.matter.gte(displayCost.value))
+const buyLabel = computed(() => (store.buyAmount === 'max' ? 'Maks' : `×${store.buyAmount}:`))
 
 const progressCount = computed(() => {
   if (props.dimension.bought % 10 !== 0) {
@@ -86,11 +91,11 @@ const progressPercent = computed(() => {
   return (progressCount.value / 10) * 100
 })
 
-function getClickCoordinates(e: MouseEvent): { x: number; y: number } {
-  if (e.clientX || e.clientY) {
+function getClickCoordinates(e?: MouseEvent): { x: number; y: number } {
+  if (e && (e.clientX || e.clientY)) {
     return { x: e.clientX, y: e.clientY }
   }
-  const target = e.currentTarget as HTMLElement | null
+  const target = e?.currentTarget as HTMLElement | null
   if (target) {
     const rect = target.getBoundingClientRect()
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
@@ -98,9 +103,10 @@ function getClickCoordinates(e: MouseEvent): { x: number; y: number } {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 }
 
-function buy(e: MouseEvent) {
+// QoL: e opsiyonel — basılı tut tekrarında koordinat olmadan da çağrılabilir
+function buy(e?: MouseEvent) {
   const coords = getClickCoordinates(e)
-  const success = store.buyDimension(props.dimension.tier)
+  const success = store.buyDimensionByMode(props.dimension.tier)
   if (success) {
     window.dispatchEvent(
       new CustomEvent('doomscroll:tap', {
@@ -114,7 +120,7 @@ function buy(e: MouseEvent) {
   }
 }
 
-function buyMax(e: MouseEvent) {
+function buyMax(e?: MouseEvent) {
   const coords = getClickCoordinates(e)
   const success = store.buyMaxDimension(props.dimension.tier)
   if (success) {
@@ -213,22 +219,25 @@ function buyMax(e: MouseEvent) {
         </div>
       </div>
 
-      <!-- 10 İzle -->
+      <!-- QoL: mod-duyarlı satın alma (x10 paket / x100 / Maks) + basılı tut tekrarı -->
       <button
         @click="buy($event)"
+        v-hold="buy"
         :disabled="!canAfford"
         class="btn-tactile hit-44 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex items-center gap-1 border shrink-0"
         :class="canAfford
           ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
       >
-        <span>10:</span>
-        <span class="tabular-nums font-semibold">{{ format(cost, 2, store.settings.notation) }}</span>
+        <span>{{ buyLabel }}</span>
+        <span v-if="store.buyAmount !== 'max'" class="tabular-nums font-semibold">{{ format(displayCost, 2, store.settings.notation) }}</span>
       </button>
 
-      <!-- Maks -->
+      <!-- Maks (x10/x100 modlarında ayrıca görünür) -->
       <button
+        v-if="store.buyAmount !== 'max'"
         @click="buyMax($event)"
+        v-hold="buyMax"
         :disabled="!canAfford"
         class="btn-tactile hit-44 px-2 py-1.5 rounded-lg text-xs font-mono transition-all border shrink-0"
         :class="canAfford

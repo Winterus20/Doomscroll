@@ -4,6 +4,8 @@ import { useGameStore, COLONY_CORE_COST, COLONY_MIN_NAP_BOTS } from '../stores/g
 import { formatNumber } from '../core/format'
 import { Network, Brain, Moon, Lock, TrendingUp, Hourglass } from 'lucide-vue-next'
 import TabHero from './TabHero.vue'
+import ConfirmModal from './ConfirmModal.vue'
+import { ref } from 'vue'
 
 const store = useGameStore()
 
@@ -33,10 +35,21 @@ function hatch() {
 }
 
 function nap() {
+  // QoL: koloni fedakarlığı geri dönüşsüz — onay diyaloğu (ayarlardan kapatılabilir)
+  if (store.settings.confirmDialogs) {
+    showNapConfirm.value = true
+    return
+  }
+  doNap()
+}
+
+function doNap() {
   if (store.powerNap()) {
     window.dispatchEvent(new CustomEvent('doomscroll:shake'))
   }
 }
+
+const showNapConfirm = ref(false)
 </script>
 
 <template>
@@ -134,6 +147,17 @@ function nap() {
         Çekirdek korunur; koloni sıfırdan ürer. Çarpan sabah 06:00 çöküşünden bile sağ kalır.
       </div>
     </div>
+
+    <!-- QoL: Toplu Uyku onay diyaloğu -->
+    <ConfirmModal
+      v-if="showNapConfirm"
+      title="Toplu Uyku"
+      message="Koloni sıfırdan üremeye başlar; karşılığında kalıcı kök dopamin çarpanı katlanır. Çekirdek korunur. Onaylıyor musun?"
+      confirm-label="Uykuya Dal"
+      :danger="false"
+      @confirm="showNapConfirm = false; doNap()"
+      @cancel="showNapConfirm = false"
+    />
 
     <!-- Nöral Yuva (SP yükseltmesi) ipucu -->
     <div class="glass-panel-card p-3 rounded-xl flex items-center gap-2">

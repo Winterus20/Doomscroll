@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useGameStore, SINGULARITY_UPGRADES } from '../stores/game'
+import { useGameStore, SINGULARITY_UPGRADES, NEURAL_TREE, NEURAL_LEGACY_UPGRADE_IDS } from '../stores/game'
 import { Decimal } from '../core/math'
 import { SaveSystem } from '../core/save'
 import { X, ShieldAlert } from 'lucide-vue-next'
@@ -269,6 +269,36 @@ function maxSpUpgrades() {
   flash('SP dükkanı maxlandı')
 }
 
+// ---- Nöral Ağaç ----
+function grantNeuralNode(nodeId: string) {
+  const node = NEURAL_TREE.find((n) => n.id === nodeId)
+  if (!node) return
+  const lvl = (store.neuralNodesBought[nodeId] || 0) + 1
+  store.neuralNodesBought = { ...store.neuralNodesBought, [nodeId]: lvl }
+  // Eski dükkân id'leri: etki bağlantıları singularityUpgrades okuduğu için kayıt senkronlanır
+  if (NEURAL_LEGACY_UPGRADE_IDS.has(nodeId)) {
+    store.singularityUpgrades[nodeId] = lvl
+  }
+  flash(`${node.icon} ${node.name} verildi (Sv.${lvl})`)
+}
+
+function maxNeuralTree() {
+  NEURAL_TREE.forEach((n) => {
+    const max = n.maxLevel ?? 1
+    store.neuralNodesBought[n.id] = max
+    if (NEURAL_LEGACY_UPGRADE_IDS.has(n.id)) {
+      store.singularityUpgrades[n.id] = max
+    }
+  })
+  store.neuralNodesBought = { ...store.neuralNodesBought }
+  flash('Nöral Ağaç maxlandı')
+}
+
+function resetNeuralTree() {
+  store.neuralNodesBought = {}
+  flash('Nöral Ağaç sıfırlandı (düz dükkan korunur)')
+}
+
 // ---- Zaman / Prestij ----
 function timeWarp(seconds: number) {
   const step = 5
@@ -424,6 +454,20 @@ function hardReset() {
             <button @click="toggleAllBots(false)" class="px-2 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-200 border border-blue-500/30 cursor-pointer">Botları Çalıştır</button>
             <button @click="toggleAllBots(true)" class="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer">Botları Durdur</button>
             <button @click="maxSpUpgrades" class="px-2 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/30 cursor-pointer">SP Dükkanı Maxla</button>
+          </div>
+        </section>
+
+        <!-- Nöral Ağaç -->
+        <section class="rounded-xl border border-white/10 bg-black/40 p-3 space-y-2">
+          <h4 class="font-bold text-teal-300 tracking-wider">🌳 NÖRAL AĞAÇ</h4>
+          <div class="flex flex-wrap gap-1.5">
+            <button @click="maxNeuralTree" class="px-2 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-100 border border-teal-500/40 cursor-pointer font-bold">Ağacı Maxla</button>
+            <button @click="resetNeuralTree" class="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer">Ağaç Sıfırla</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button v-for="n in NEURAL_TREE" :key="n.id" @click="grantNeuralNode(n.id)" v-tip="n.name" class="px-2 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/25 text-teal-200 border border-teal-500/30 cursor-pointer">
+              {{ n.icon }} {{ n.id }}
+            </button>
           </div>
         </section>
 
