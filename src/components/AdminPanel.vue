@@ -185,7 +185,7 @@ function spawnGuilt() {
 
 function cashoutGuilt() {
   store.slackers.forEach((s) => {
-    const refund = s.leechedLikes.times(1.5)
+    const refund = s.leechedDopamine.times(1.5)
     store.matter = store.matter.plus(refund)
     store.stats.totalMatterProduced = store.stats.totalMatterProduced.plus(refund)
     store.stats.slackersFired += 1
@@ -214,6 +214,11 @@ function matureLab() {
     }
   })
   flash('Lab ürünleri olgunlaştırıldı')
+}
+
+function fillHype() {
+  store.labHype = 100
+  flash('Lab Hype %100 yapıldı')
 }
 
 function plantBrainrot() {
@@ -339,7 +344,7 @@ function hardReset() {
         <button
           @click="emit('close')"
           class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          title="Kapat"
+          v-tip="'Kapat'"
         >
           <X class="w-5 h-5" />
         </button>
@@ -410,6 +415,7 @@ function hardReset() {
           <div class="flex flex-wrap gap-1.5">
             <button @click="fillCaffeine" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">Kafein Full</button>
             <button @click="matureLab" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">Lab Olgunlaştır</button>
+            <button @click="fillHype" class="px-2 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-500/40 cursor-pointer font-bold">Hype %100</button>
             <button @click="plantBrainrot" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">🧠 Ekle</button>
             <button @click="clearLab" class="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer">Lab Temizle</button>
           </div>

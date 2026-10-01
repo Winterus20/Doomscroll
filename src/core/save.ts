@@ -1,7 +1,8 @@
 import LZString from 'lz-string'
 import type { SerializedPlayerState } from '../models/types'
 
-const SAVE_KEY = 'QUANTUM_HORIZON_SAVE_V1'
+const SAVE_KEY = 'DOOMSCROLL_SAVE_V1'
+const LEGACY_SAVE_KEY = 'QUANTUM_HORIZON_SAVE_V1'
 
 // Hard reset sonrası aynı sayfa bağlamında tetiklenen otomatik kayıtların
 // (beforeunload + 10sn oyun döngüsü) silinen kaydı diriltmesini engeller.
@@ -24,7 +25,7 @@ export const SaveSystem = {
 
   load(): SerializedPlayerState | null {
     try {
-      const raw = localStorage.getItem(SAVE_KEY)
+      const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY)
       if (!raw) return null
 
       // Önce sıkıştırılmış hali dene, değilse düz JSON dene (geriye uyumluluk)
@@ -63,5 +64,6 @@ export const SaveSystem = {
   hardReset(): void {
     saveSuppressed = true
     localStorage.removeItem(SAVE_KEY)
+    localStorage.removeItem(LEGACY_SAVE_KEY)
   }
 }

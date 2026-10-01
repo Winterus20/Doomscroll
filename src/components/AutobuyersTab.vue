@@ -61,7 +61,7 @@ function setMode(key: string, mode: AutobuyerMode): void {
       :icon="Bot"
       icon-class="text-blue-400"
       title="Otomatik Kaydırma Botları (Autobuyers)"
-      badge="Antimatter Dimensions"
+      badge="Otonom Algoritma"
       badge-class="ds-badge-blue"
       subtitle="Başparmağın yorulduğunda devreye giren nöral botlar. İstasyonları, Algoritma Frekansını ve Sıçramaları otomatik olarak enjekte ederler."
       accent="blue"
@@ -198,7 +198,7 @@ function setMode(key: string, mode: AutobuyerMode): void {
           <button
             @click="setMode(String(key), 'bulk')"
             :disabled="!store.autobuyerBulkUnlocked"
-            :title="!store.autobuyerBulkUnlocked ? 'Önce Toplu Alım kademesini aç' : '1.5sn de 5 paket'"
+            v-tip="!store.autobuyerBulkUnlocked ? 'Önce Toplu Alım kademesini aç' : '1.5sn de 5 paket'"
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"
             :class="bot.mode === 'bulk' ? 'bg-blue-500/25 text-blue-200 border-blue-500/50' : store.autobuyerBulkUnlocked ? 'bg-black/40 text-slate-400 border-white/[0.06] hover:border-blue-500/50' : 'bg-black/30 text-slate-700 border-white/[0.04] cursor-not-allowed'"
           >
@@ -207,7 +207,7 @@ function setMode(key: string, mode: AutobuyerMode): void {
           <button
             @click="setMode(String(key), 'max')"
             :disabled="!store.autobuyerMaxUnlocked"
-            :title="!store.autobuyerMaxUnlocked ? 'Önce Max Alım kademesini aç' : '0.5sn de max'"
+            v-tip="!store.autobuyerMaxUnlocked ? 'Önce Max Alım kademesini aç' : '0.5sn de max'"
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"
             :class="bot.mode === 'max' ? 'bg-amber-500/25 text-amber-200 border-amber-500/50' : store.autobuyerMaxUnlocked ? 'bg-black/40 text-slate-400 border-white/[0.06] hover:border-amber-500/50' : 'bg-black/30 text-slate-700 border-white/[0.04] cursor-not-allowed'"
           >

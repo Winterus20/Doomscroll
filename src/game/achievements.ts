@@ -23,7 +23,7 @@ export const ACHIEVEMENT_CATEGORIES: AchievementCategoryMeta[] = [
   { id: 'dopamine', name: 'Dopamin Bağımlılığı', desc: 'Yukarı kaydır, üret, biriktir. Başparmağın kaderi.', icon: '📱' },
   { id: 'dimensions', name: 'Boyut Yozlaşması', desc: 'İstasyonlar, frekans, sıçrama ve kümeler.', icon: '🏭' },
   { id: 'automation', name: 'Otomasyon Ordusu', desc: 'Botları aç, toplu ve max moda geçir.', icon: '🤖' },
-  { id: 'crisis', name: 'Gece Krizleri', desc: 'Anomaliler, rezonans komboları ve gece büyüleri.', icon: '🌃' },
+  { id: 'crisis', name: 'Gece Krizleri', desc: 'Anomaliler, rezonans komboları ve gece kararları.', icon: '🌃' },
   { id: 'guilt', name: 'Vicdan Azapları', desc: 'Dadanırlar, emerler, susturulurlar.', icon: '😈' },
   { id: 'lab', name: 'Algoritma Laboratuvarı', desc: 'Tohum ek, olgunlaştır, hasat et, mutasyona uğrat.', icon: '🧪' },
   { id: 'singularity', name: 'Tekillik Yolculuğu', desc: 'Şafağı gör, çök, SP biriktir, nöbette kal.', icon: '🌅' }
@@ -74,6 +74,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'auto_freq', name: 'Frekans Teknisyeni', desc: 'Frekans (Hz) botunu aç', icon: '🎛️', category: 'automation', check: (c) => c.unlockedBots.includes('tickspeed') },
   { id: 'auto_shift', name: 'Sıçrama Operatörü', desc: 'Akış Sıçraması botunu aç', icon: '🔁', category: 'automation', check: (c) => c.unlockedBots.includes('shift') },
   { id: 'auto_galaxy', name: 'Küme Mimarı', desc: 'Akış Kümeleri botunu aç', icon: '🛸', category: 'automation', secret: true, check: (c) => c.unlockedBots.includes('galaxy') },
+  { id: 'colony_hatch', name: 'Nöral Çekirdek', desc: 'Nöral izleme kolonisini aktif et', icon: '🧠', category: 'automation', check: (c) => c.neuralBots.gt(0) },
+  { id: 'colony_nap', name: 'İlk Toplu Uyku', desc: '1 Toplu Uyku (Power Nap) yap', icon: '😴', category: 'automation', check: (c) => c.napCount >= 1 },
+  { id: 'colony_million', name: 'Milyonlarca Alt-Rutin', desc: '1.000.000 nöral bot yetiştir', icon: '🐜', category: 'automation', secret: true, check: (c) => c.neuralBots.gte(N1E6) },
 
   // ---- 4. Gece Krizleri ----
   { id: 'cri_first', name: 'İlk Gece Krizi', desc: '1 Gece Krizine dokun', icon: '✨', category: 'crisis', check: (c) => c.anomaliesClicked >= 1 },
@@ -85,9 +88,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   { id: 'cri_combo', name: 'Rezonans Hipnozu', desc: 'İlk Süper Rezonans komboyu tetikle (7× + 777×)', icon: '💥', category: 'crisis', check: (c) => c.combosTriggered >= 1 },
   { id: 'cri_combo5', name: 'Hipnoz Ustası', desc: '5 Süper Rezonans kombo tetikle', icon: '💫', category: 'crisis', check: (c) => c.combosTriggered >= 5 },
-  { id: 'cri_spell', name: 'İlk Gece Kararı', desc: '1 gece büyüsü yap', icon: '☕', category: 'crisis', check: (c) => c.spellsCast >= 1 },
+  { id: 'cri_spell', name: 'İlk Gece Kararı', desc: '1 gece kriz kararı al', icon: '☕', category: 'crisis', check: (c) => c.spellsCast >= 1 },
   {
-    id: 'cri_spells', name: 'Kriz Yöneticisi', desc: '10 gece büyüsü yap', icon: '🧙', category: 'crisis',
+    id: 'cri_spells', name: 'Kriz Yöneticisi', desc: '10 gece kriz kararı al', icon: '⚡', category: 'crisis',
     reward: { kind: 'buff_duration', desc: 'Kalıcı ödül: Kriz buff süresi +%20' },
     check: (c) => c.spellsCast >= 10
   },
@@ -108,16 +111,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'gui_100', name: 'Vicdan Katili', desc: '100 vicdan azabı sustur', icon: '⚔️', category: 'guilt', secret: true, check: (c) => c.slackersFired >= 100 },
 
   // ---- 6. Algoritma Laboratuvarı ----
-  { id: 'lab_seed', name: 'İlk Tohum', desc: 'Labirent... pardon, laba 1 tohum ek', icon: '🌱', category: 'lab', check: (c) => c.seedsPlanted >= 1 },
+  { id: 'lab_seed', name: 'İlk Format', desc: 'Laboratuvara 1 ses/trend formatı ek', icon: '🌱', category: 'lab', check: (c) => c.seedsPlanted >= 1 },
   { id: 'lab_harvest', name: 'İlk Hasat', desc: '1 trend hasadı yap', icon: '🌾', category: 'lab', check: (c) => c.labHarvests >= 1 },
-  { id: 'lab_10', name: 'Sera Operatörü', desc: '10 trend hasadı yap', icon: '🧑‍🌾', category: 'lab', check: (c) => c.labHarvests >= 10 },
+  { id: 'lab_10', name: 'Trend Küratörü', desc: '10 trend formatı hasat et', icon: '🎧', category: 'lab', check: (c) => c.labHarvests >= 10 },
   {
     id: 'lab_25', name: 'Endüstriyel Brainrot', desc: '25 trend hasadı yap', icon: '🏗️', category: 'lab',
     reward: { kind: 'lab_yield', desc: 'Kalıcı ödül: Lab hasadı +%10' },
     check: (c) => c.labHarvests >= 25
   },
   { id: 'lab_mature3', name: 'Olgun Hasat Zamanı', desc: 'Aynı anda 3 olgun hücre', icon: '🌿', category: 'lab', check: (c) => c.matureCells >= 3 },
-  { id: 'lab_full', name: 'Tam Sera', desc: 'Aynı anda 9 olgun hücre', icon: '🌳', category: 'lab', check: (c) => c.matureCells >= 9 },
+  { id: 'lab_full', name: 'Tam Matris', desc: 'Aynı anda 9 olgun trend hücresi', icon: '🎛️', category: 'lab', check: (c) => c.matureCells >= 9 },
   { id: 'lab_mutant', name: 'Mutasyon Gözlemcisi', desc: 'Saf Nöron Çürütücü filizlensin (🐱+🗿)', icon: '👾', category: 'lab', check: (c) => c.hasBrainrot },
   { id: 'lab_mutant2', name: 'Saf Nöron Çürütücü', desc: 'Brainrot Remix olgunlaşsın', icon: '🧬', category: 'lab', secret: true, check: (c) => c.hasMatureBrainrot },
 

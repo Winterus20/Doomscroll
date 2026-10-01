@@ -14,13 +14,24 @@
 
 ---
 
+## 🔒 Özellik Merdiveni (Progressive Unlock — v0.11.0 Tamamlandı ✅)
+- [x] Tek kaynaklı unlock registry'si (`src/game/unlocks.ts`): `UnlockReq` tipleri + `FEATURE_UNLOCKS` listesi (15 unlock) + `checkUnlock` / `unlockProgress` / `nextLocked`.
+- [x] Store getter'larını registry'e bağla (`isFeatureUnlocked`, `syncUnlocks`; lab/crisis/autobuyers getter'ları tek yerden üretiliyor — kritik `unlockedDimensionsCount` bug'ı fixlendi).
+- [x] Sekme içi kademeli açılmalar: Lab tohumları (Kedi→Kaşar→Subway→Phonk), Kriz büyüleri (Şarj→Espresso→Kulaklık→Yalan), Algoritma Yamaları + Akışı Yenile.
+- [x] Kilitli kart UX: `LockedFeature.vue` (kilit simgesi + şart metni + slate mini ilerleme çubuğu + v-tip).
+- [x] "Sonraki Açılacak" bandı (App.vue nav altında, `nextLocked` + ilerleme %).
+- [x] Eşik ince ayarı: Lab (100 Dopamin → D2×25), Botlar (1e4 → 1e6), Anomali (başlangıç → 100 Dopamin), stances (Çılgın/Düşük Parlaklık → D1×50). ADR: `brain/decisions/0009-feature-unlock-ladder.md`.
+- Plan: `brain/research/feature-unlock-ladder-plan.md`
+
+---
+
 ## 🎯 Katman 1: Tekillik, Mini-Oyunlar & Botlar (v0.4.0 Tamamlandı ✅)
 - [x] **Otomatik Kaydırma Botları (Autobuyers - Antimatter Dimensions):**
   - [x] 1-8 İstasyon, Algoritma Frekansı, Akış Sıçraması ve Kümeler için 11 bağımsız bot.
   - [x] Aç/kapa kontrolleri ve master "Tümünü Aç / Kapat" butonu.
   - [x] Otonom Kaydırma Çipi ile 1.5x - 7.5x hız ivmesi.
 - [x] **Tesis Tabanlı Mini-Oyunlar (Cookie Clicker Minigames):**
-  - [x] *Algoritma Laboratuvarı (The Garden - D2 ile açılır):* 3x3 ızgarada 5 farklı Reels ses/meme formatını ekme, olgunlaştırma, hasat etme ve efsanevi mutasyon (🐱 + 🗿 = 🧠 Saf Nöron Çürütücü!).
+  - [x] *Algoritma Stüdyosu (Viral Matris & Trend Reaktörü - Hibrit Model v0.12.0):* Çürümesiz 3x3 sinerji matrisi, 8 meme/ses formatı, komşuluk sentezi, kalıcı Viral Kodeks (+%3/keşif), 3 FYP zemin modu ve canlı "Akışa Fırlat!" Trend Reaktörü.
   - [x] *Gece Yarısı Kriz Yönetimi (The Grimoire - D4 ile açılır):* 100 birimlik Kafein Enerjisiyle çalışan 4 riskli gece kararı (Şarj kablosu tak, espresso shot, kulaklık tak, yalan söyle + Backfire riskleri).
 - [x] **Sabah 06:00 Çöküşü & Kalıcı Uykusuzluk Dükkanı (Singularity & SP Upgrades):**
   - [x] 1.79e308 Dopamin tekilliği ve Uykusuzluk Puanı (SP) kazanımı.

@@ -1,5 +1,243 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-01] — 🧪 Algoritma Stüdyosu: Hibrit Viral Matris & Trend Reaktörü (v0.12.0)
+
+### Kapsam & Motivasyon:
+- Kullanıcı talebi: *"oyunun bu lab kisminda neler yapabiliriz fikirler ver bu kisim hakkinda guzel dusuncelerim var... peki ya hibrit bir sey yapsak en iyi ne yapabiliriz bir plan yap... bu guzel bunu en iyi sekilde yap"*.
+- Eski durum: Cookie Clicker Garden klonu tarla/çiftlik modeli — tohum ekme, bekleme, `maxAge` aşımıyla tohumların çürümesi (`rot`), dar 3x3 ızgara ve yalnızca 1 mutasyon. Gece 03:00'te Reels izleme temasına aykırıydı ve AFK kalan oyuncuyu cezalandırıyordu.
+- Çözüm: **"Algoritma Stüdyosu: Viral Matris & Trend Reaktörü"** hibrit sistemi geliştirildi.
+
+### Yapılan İşler:
+1. **Çürümesiz 3×3 Akış Matrisi (Sinerji Devresi):**
+   - Çürüme cezası tamamen kaldırıldı (`maxAge` zorlaması bitti). Formatlar kalıcı soket/kart olarak 7/24 çalışır.
+   - **Nöral Çekirdek (Merkez Hücre 4):** Kendi çarpanını $\times 1.5$ yapar ve 4 komşusuna $+%20$ verim yayar.
+   - **Yönlü Sinerjiler:** Kedi ($+%15$ rezonans), Phonk (Bas Şoku $\times 1.25$ ve $+%50$ kriz sıklığı), Yemek Sinerjisi (Kaşar, Mukbang, Burger yan yana $+%30$).
+   - **Satır / Sütun Uyumları:** 3 olgun hücre $\times 1.25$, aynı tür 3 format $\times 1.40$ mono-format çarpanı.
+   - **Taktil Hasat:** Olgun hücreye tıklandığında anlık dopamin & Hype toplar, hücre yok olmaz sadece taze rezonans için yeniden ısınır.
+2. **Viral Kodeks & Çift Yönlü Formül Sentezi:**
+   - 8 farklı Reels meme/ses formatı (4 temel + 4 sentezlenen hibrit format):
+     - 🍜 *Gece 3 Mukbang & Drama* (🧀+🛹): $+%50$ Pasif & $\times 1.5$ Tıklama.
+     - 🍔 *Cheeseburger Kedi* (🐱+🧀): $+%40$ Pasif & **Vicdan Azabı emişi $-\%25$**.
+     - 🏎️ *Tokyo Drift Dublajı* (🗿+🛹): $\times 2.0$ Tıklama & $+%30$ Gece Krizi sıklığı.
+     - 🧠 *Saf Nöron Çürütücü* (🐱+🗿): $+%200$ ($\times 3$) Tüm Küresel Dopamin!
+   - Çift yönlü sentez: Boş komşu hücreye filizlenme VEYA ızgara dolu olsa bile rezonansla doğrudan Kodekse keşif ekleme.
+   - **Kalıcı Ödül:** Keşfedilen her formül tüm oyuna kalıcı **$+%3$ Global Dopamin** kazandırır.
+3. **Trend Reaktörü & "🚀 AKIŞA FIRLAT!" (Viral Drop):**
+   - Matris çalışması ve manuel kaydırma ($+\%0.4$/tık) ile dolan Hype Barı (%0-100).
+   - Fırlatıldığında: Anında 60 sn Dopamin, 25 sn boyunca $\times 5$ ile $\times 25$ arasında değişen **Canlı Viral Zirve Çarpanı**, 3× Gece Krizleri yağmuru ve dinamik canlı izlenme sayacı ($10K \to 10M$).
+4. **Algoritma Besleme Zeminleri (FYP Stratejileri):**
+   - 🔥 *Agresif FYP:* Hype $\%80$ hızlı dolar, fırlatma $2\times$ dopamin verir (Aktif mod).
+   - ☕ *Evergreen Arşiv:* Hype durur, matrisin tüm pasif üretimi **$2.5\times$** katlanır (AFK/gece modu).
+   - 🧬 *Nöral Sentez:* Yeni formül keşfetme şansı **$3\times$** katına çıkar (Kaşif modu).
+5. **Ses & UI:**
+   - Web Audio API synthesizer motoruna `playViralDrop()` (riser sweep + ağır bas drop + çan akorları) eklendi.
+   - `LabTab.vue` sıfırdan modern cyberpunk/stüdyo paneline dönüştürüldü; Viral Kodeks modalı, canlı akış banner'ı, zemin seçiciler eklendi.
+   - `AdminPanel.vue`'ya tek tıkla Hype'ı %100 yapma butonu eklendi.
+
+### Doğrulama & Geriye Dönük Uyumluluk:
+- `npm run build` (`vue-tsc && vite build`): **0 hata, kusursuz derleme** (1629 modül).
+- Eski save dosyaları otomatik olarak `discoveredFormulas` ile zenginleştirilir; mevcut hiçbir başarım bozulmaz.
+- Mimari Karar Kaydı: `brain/decisions/0010-hybrid-algorithm-studio-viral-matrix.md`.
+
+---
+
+### Kapsam & Motivasyon:
+- Kullanıcı geri bildirimi (v0.11.3 sonrası): *"erken oyunda bile tiklamadan aşırı hızlı yükseliyorum, tıklama bir işe yarıyor sanmıyorum"*.
+- Kök neden (koda göre): erken oyunda tıklama/CPS oranı zaten **orta-oyun seviyesindeydi**. D1×10 alınıp CPS ≈ 20/s olunca tıklama = flat 1 + CPS×%1 ≈ 1.2 → gelirin sadece **%6'sı/tıklama** (4 tıklama/sn ≈ %24). Cookie Clicker'da erken oyunda bu oran ~150×'tir. Flat taban (1) hiçbir zaman büyümüyor, tek büyüyen çarpan `2^shifts` ise D4×25 (ilk Akış Sıçraması) geçene kadar geliyor.
+
+### Yapılan İş (`src/stores/game.ts`, `manualClickPower` — getter-only, save uyumlu):
+1. **Koleksiyon Senkronizasyonu** (Cookie Clicker "cursor level" tasarımı): `taban = (1 + 0.25 × toplamSatınAlınanReelAdedi) × 2^shifts × ...`. Tüm 8 katmanın `bought` toplamı tabanı büyütür.
+   - Erken: D1×10 → tıklama ≈ 3.9 (CPS'in %20'si/tıklama; 4 tıklama/sn ≈ gelirin %78'i) — tıklama artık görünür ve anlamlı.
+   - Orta: D1×50 → düz terim ~13.5, CPS ~6400 → payı doğal olarak ~%2'ye çöker (üretim üstel: `2^(bought/10)` × Hz × sıçramalar × kolektif).
+   - Sıçrama/Küme ile `bought` sıfırlanır → her koşuda tıklama yeniden büyür (pacing tutarlı).
+2. **Temel Senkronizasyon 1% → 2%:** orta oyunun ölü bölgesinde 5-10 tıklama/sn ≈ gelirin **%10-20'si** (Cookie Clicker benchmark'ı). Kafein Serumu (%25) + 1080p milestone'ları (~%8) ile geç oyun toplamı ~%35 CPS/tıklama — dengeli kalır.
+3. Yan etki: **Başparmak Histerisi (777×)** artık orta oyunda da gerçek spike üretir (D1×50 civarında 777 × ~140 ≈ 110K/tıklama ≈ CPS'in 17'si × 15 sn) — v0.11.3 analizindeki "boşa gidiyor" bulgusu kapatıldı.
+
+### Değişmeyenler:
+- `matterPerSecond`, anomali/lab/vicdan ödül formülleri, serialize/deserialize dokunulmadı → **migrasyon yok, eski save'lar otomatik yararlanır**.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) **sıfır hata** (1629 modül, JS 417.49 kB / gzip 116.00 kB, 9.23s).
+
+---
+
+## [2026-10-01] — Tıklama Etkinliği Araştırması (click-to-score)
+
+### Kapsam & Motivasyon:
+- Kullanıcı sorusu: "oyundaki tiklama ile puan alma yontemi ne kadar ise yariyor?" → `src/stores/game.ts` mekaniği (manualClickPower formülü, anomali/lab/vicdan ödülleri) + tür literatürü (Cookie Clicker Wiki: orta oyuncu tıklamada CPS'in ~%10-13'ü; Antimatter Dimensions: tıklama yok; Synergism; Machinations/GridInc idle tasarım en iyi uygulamaları) kıyaslandı.
+
+### Bulgular:
+- **Erken oyun (0→~1e4):** tıklama gelirin %50-90'ı — tamamen işe yarıyor. ✅
+- **Orta oyun (~1e4→1.79e308):** **ölü bölge**. Tıklama çarpanları flat (max ~8192× + 2^shifts) iken üretim üstel ($O(t^8)$); ~1e12-1e20 civarında payı ~%0'a düşüyor. Başparmak Histerisi 777× bu fazda boşa gidiyor. ⚠️
+- **Geç oyun (tekillik sonrası):** Kafein Serumu (%25 CPS/tıklama) + 1080p milestone'ları (~%1-8) ile ~%25-35 CPS/tıklama — CC benchmark'ına yakın, dengeli. ✅
+- Aktif oyunun gerçek kazancı orta oyunda **üretime bağlı** mekaniklerde (anomali sponsor 900 sn, lab hasadı 30-3600 sn, vicdan azabı 1.2-1.65× prim) — bu parça doğru tasarım.
+- Oyunun açıklanan felsefesi ("bekleme oyunu değil; taktil yukarı kaydırma") ile orta oyun ölü bölgesi çelişiyor.
+
+### Yapılan İş:
+1. Rapor: `brain/research/click-effectiveness-analysis.md` (faz tablosu, formül envanteri, benchmark karşılaştırması, dengeleme önerileri).
+2. **Düzeltme (`src/stores/game.ts`, `manualClickPower` — v0.11.3):** Cookie Clicker "%CPS to click" tasarımı olan **Temel Senkronizasyon** eklendi: `power += CPS × 0.01`. Artık tıklama hiçbir fazda sıfıra düşmez (5-10 tıklama/sn ≈ gelirin %5-10'u, her zaman). Yeni yama/SP/başarım gerekmez; serialize'a dokunulmadığı için **save uyumlu, migrasyon gerekmez**.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) **sıfır hata** (1629 modül, JS 417.41 kB / gzip 115.98 kB).
+
+---
+
+## [2026-10-01] — Yama Fiyat Senkronizasyonu (v0.11.2)
+
+### Kapsam & Motivasyon:
+- Kullanıcı sorusu: "itemlerin satın alma fiyatları nasıl?" → tam fiyat envanteri çekildi (D1-D8 taban+múlt, Hz 1000×13^n, yamalar, tohumlar, botlar, SP, koloni). Fiyatlar AD-standardında ve doğruydı; asıl sorun **dükkan açılış senkronizasyonu** yoktu: yama dükkanı 100K Dopamin'de açılırken ilk 3 yama 500 / 2.5K / 25K — açılma anında hepsi birden ucuz, anlamlı ilk karar yoktu. Cookie Clicker'da yükseltme açılış anında gelirin anlamlı bir kesarına mal olur.
+
+### Yapılan İş:
+1. **`src/stores/game.ts` (`ALGORITHM_UPGRADES`):** ilk 3 yama fiyatı senkronize edildi — `play_speed` 500→**1e5** · `double_tap` 2.5K→**1e6** · `amoled_black` 25K→**1e7**. `patch_shop` kilidi (1e5 Dopamin) açılınca ilk yama tam olarak afford edilebilir = anlamlı ilk karar.
+2. **Basamak çakışması düzeltmesi:** 4. yama (`bg_listen`) 1e6'da kalırsa yeni 2. yama (1e6) ile eşitleniyordu → `bg_listen` 1e6→**1e8**, `bookmark_pack` 1e8→**1e9** (`bass_boost` 1e11 sabit). Yeni merdiven: **1e5 → 1e6 → 1e7 → 1e8 → 1e9 → 1e11** (sıkı artan 10× basamaklar).
+3. **`src/components/DimensionsTab.vue`:** satır 375 yorumu "500 Dopamin ile açılır" → "100K Dopamin ile açılır" (gerçek `patch_shop` kilidine göre düzeltme).
+4. **Aynen kaldı:** Lab tohumları (flat 500/50K/5M/1e9/1e15, Garden'daki gerginlik hücre kıtlığı gibi tekrarlanabilirlik baskısı mevcut), D1 `costMult` 1e3 (777× Başparmak Histerisi ile dengeli), Hz 1000×13^n (indirimler uygulanır), bot fiyatları (dim1 5e5 … dim8 1e34, tickspeed 5e8), `AUTOBUYER_BULK_COST` 2.5e11+1 Shift, `AUTOBUYER_MAX_COST` 1e22+1 Galaxy, `COLONY_CORE_COST` 1e13.
+
+### Save uyumlu:
+- `algorithmUpgrades` yalnızca **id listesi** olarak serileştirilir (serialize ~2218 / deserialize ~2343); fiyatlar live `ALGORITHM_UPGRADES` def'inden okunur → eski kayıtlar satın alınan yamaları korur, **migrasyon gerekmez**. UI (`DimensionsTab.vue` dükkanı) `upg.cost`'u dinamik okuduğu için yalnızca sabit değişti.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) **sıfır hata** (1629 modül, JS 417.37 kB / gzip 115.97 kB).
+
+---
+
+## [2026-10-01] — Özellik Merdiveni Pacing Revizyonu (v0.11.1)
+
+### Kapsam & Motivasyon:
+- Kullanıcı talebi: "oyunda bir şeyin açılması veya alınması çok kolay, bunu biraz daha uzun tut". Cookie Clicker / Antimatter Dimensions / Synergism ve idle UX literatürüyle kıyaslandı (ölçüt: ilk 5 dakikada 3-5 açılış, ilk büyük sekme 3-5 dk; Cookie Clicker yükseltmeleri sahiplik 1/5/15/25 eşiklerinde; AD ilk boost ~19 dk).
+
+### Tespit (kritik bug):
+- `dimBought` kilitlemeleri `dim.amount` (üretimle kendiliğinden büyür) ile değil `dim.bought` (gerçek satın alım) ile karşılaştırılmıyordu. Max-all simülasyonunda D1×50 duruşu **~13 sn'de** açılıyordu (tahmin ~2.3 dk). Cookie Clicker tasarımı 'own N' = satın alım üzerinden çalışır.
+
+### Yapılan İş:
+1. **`src/game/unlocks.ts`:** `UnlockContext` ve `buildUnlockContext` girdisine `bought: number` eklendi; `checkUnlock` / `unlockProgress` `dimBought` dalı artık `dim.bought` üzerinden (`>= count`, `Math.min(dim.bought, count)`).
+2. **Dopamin eşikleri:** `crisis_spawn` 100→**1e3** · `patch_shop` 500→**1e5** · `refresh_feed` 1e3→**1e7** · `autobuyers` 1e6→**1e9** · `guilt_slackers` 1e6→**1e9** (hint metinleri: 1.000 / 100K / 10M / 1B / 1B Dopamin).
+3. **Aynen kaldı:** Kriz sekmesi D4×10, stance'lar D1×50, Lab D2×25, tohumlar (D2×50 / D3×25 / D4×25), büyüler 2/3/4 cast — hepsi artık gerçek satın alım sayılır.
+4. **`src/components/DimensionsTab.vue`:** merdiven kademeleri yorumu güncellendi (10M / 100K Dopamin).
+5. **Pacing (günlük oyuncu modeli, 1.5 tıklama/sn + 2× kayıt):** Kriz doğurması ~16 sn · Yamalar ~41 sn · Kriz sekmesi ~57 sn · Lab ~1 dk 51 sn · Akışı Yenile ~1 dk 10 sn · Botlar & Azaplar ~1 dk 27 sn · Stance'lar ~3 dk 02 sn · Subway tohumu ~3 dk 22 sn · Phonk tohumu ~8 dk 40 sn.
+6. **ADR-0009** eşik tablosu ve rasyoneli güncellendi (v0.11.1 revizyon notu).
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) **sıfır hata**.
+
+---
+
+## [2026-10-01] — Özellik Merdiveni / Progressive Unlock (v0.11.0)
+
+### Kapsam & Motivasyon:
+- Kullanıcı talebi: oyun özellikleri başlangıçta hepsi açık olmasın, sırayla (merdiven halinde) açılsın. Araştırma (Cookie Clicker / Antimatter Dimensions / Synergism + idle UX literatürü): `brain/research/feature-unlock-ladder-plan.md`. ADR: `brain/decisions/0009-feature-unlock-ladder.md`.
+
+### Yapılan İş:
+1. **`src/game/unlocks.ts` (yeni):** Tek kaynaklı registry — `UnlockReq` discriminated union (dimBought/dopamine/shifts/galaxies/singularities/anomalies/spellsCast), 15 `FeatureUnlock` (`order` alanlı), `buildUnlockContext` / `checkUnlock` / `unlockProgress` / `getFeatureById` / `nextLocked`.
+2. **`src/components/LockedFeature.vue` (yeni):** 🔒 + özellik adı + şart metni + current/target + slate ilerleme çubuğu (`progress-fill-slate`), `v-tip` tooltip. `featureId: string | null` prop'u.
+3. **`src/stores/game.ts`:** `unlockedFeatures: string[]` state (sticky); `isFeatureUnlocked(id)` getter (liste veya koşul); `syncUnlocks()` action (her `update()` başında + deserialize sonrası); `labUnlocked`/`crisisUnlocked`/`autobuyersUnlocked` artık yalnızca registry üzerinden; `setStance` korumaları; `canRefresh` kilit kontrolü; anomali doğurması `crisis_spawn`, slacker doğurması `guilt_slackers` kilidine bağlı; serialize/deserialize (`unlockedFeatures`).
+4. **Kritik bug fix:** `unlockedDimensionsCount` başlangıçta 4 olduğundan eski Lab/Kriz getter'ları her zaman `true` idi (sekme başlangıçtan açık oluyordu) — registry'e bağlanarak düzeltildi.
+5. **Sekme içi kademeler:** LabTab (Kaşar/Subway/Phonk tohumları kilitli kart + eklenemez), CrisisTab (Espresso/Kulaklık/Yalan kilitli kart + cast edilemez), DimensionsTab (Akışı Yenile + Algoritma Yamaları dükkanı).
+6. **`src/components/Header.vue`:** Çılgın Kaydırma / Düşük Parlaklık butonları D1×50'e kadar kilitli (devre dışı + Lock ikonu + "(current/target)" tooltip).
+7. **`src/App.vue`:** Nav altında "Sonraki Açılacak" bandı (`nextLocked` + ilerleme çubuğu + current/target notasyonu); nav tooltip'ları güncellendi.
+8. **Eşik ince ayarı** (pacing simülasyonu, 2 tıklama/sn max-all): Gece Krizleri 100 Dopamin (~30sn) · Yamalar 500 (~1dk) · Akışı Yenile 1.000 (~1.2dk) · Botlar 1e6 (~1.6dk) · Vicdan Azapları 1e6 · Kriz D4×10 (~2.1dk) · Stance'lar D1×50 (~2.3dk) · Lab D2×25 (~3.6dk) · tohumlar D2×50/D3×25/D4×25 · büyüler 2/3/4 cast.
+9. **Save uyumlu:** kilitlemeler state'ten türetilmiş, koşul sağlanmışsa eski save'larda otomatik açılır — kayıp yok, migrasyon yok.
+10. **Doğrulama:** `npm run build` (`vue-tsc && vite build`) **sıfır hata** (1629 modül, JS 417.39 kB / gzip 115.97 kB). İlk derlemedeki 6 TS hatası (formatNumber argüman sırası, `string | null` prop) düzeltildi.
+
+---
+
+## [2026-10-01] — Nöral İzleme Kolonisi & Toplu Uyku (v0.10.0)
+
+### Kapsam & Motivasyon:
+- Backlog'daki ilk Synergism katmanı mekaniği: kendi kendini üreyen nöral alt-bot kolonisi + Toplu Uyku (Power Nap) ile botları feda edip kalıcı kök dopamin çarpanı katlama. ADR: `brain/decisions/0008-neural-colony-power-nap.md`.
+
+### Yapılan İş:
+1. **`src/stores/game.ts`:**
+   - Sabitler: `COLONY_CORE_COST = 1e13`, `COLONY_MIN_NAP_BOTS = 100`, `COLONY_BREED_RATE = 0.008`, `COLONY_PASSIVE_LOG_FACTOR = 0.3`.
+   - State: `neuralBots`, `napCount`, `napMultiplier` (kalıcı, prestijden sağ kalır).
+   - Getter'lar: `colonyUnlocked` (sticky), `botBreedRate`, `colonyMultiplier` (logaritmik), `canPowerNap`, `powerNapGain`.
+   - `hatchCore()` ve `powerNap()` aksiyonları; update() 7.5. aşamasında üreme; D1 net üretimi + `matterPerSecond`'a çarpan (kolektif çarpanla aynı yere).
+   - SP dükkanı: `neural_nest` (Nöral Yuva, 6 SP, ×3 maliyet, max 5 seviye, üremeyi +%10/seviye).
+2. **`src/models/types.ts`:** `AchievementContext` (`neuralBots`, `napCount`) ve `SerializedPlayerState` (opsiyonel alanlar, save versiyonu 7→8) eklendi.
+3. **`src/game/achievements.ts`:** 3 Otomasyon başarımı: `colony_hatch`, `colony_nap`, `colony_million` (gizli, ≥1e6 bot).
+4. **`src/components/ColonyTab.vue` (yeni):** TabHero (violet, Network), çekirdek yumurtlama, üreme oranı + 10 dk projeksiyon, ilk uykuya kalan süre tahmini, Toplu Uyku kartı.
+5. **`src/App.vue`:** "Koloni" sekmesi (Botlar ile Şafak arası), kilitli durumda "1e13" ipucu, nap-ready `tab-dot-violet` bildirim noktası.
+6. **`src/style.css`:** `.tab-dot-violet`, `.hero-accent-violet`, `.ds-badge-violet` ekleri.
+7. **Seri hale getirme:** save v8 — eski kayıtlar `??`/fallback ile uyumlu.
+8. **Bugfix (kullanıcı bildirimi):** Çekirdek aktivasyon paneli `!colonyUnlocked` koşuluyla gizlenmişti; sekmenin açılış koşuluyla aynı değer olduğundan buton hiç render olmuyordu → `neuralBots.lte(0)` (çekirdek yumurtlanmamış) koşuluna düzeltildi.
+9. **Doğrulama:** `npm run build` (`vue-tsc && vite build`) **sıfır hata** (1626 modül, JS 408.83 kB / gzip 113.62 kB).
+
+---
+
+## [2026-10-01] — Anti-Slop UI Yönü & Erişilebilirlik Turu (v0.9.0)
+
+### Kapsam & Motivasyon:
+- İnternet araştırması (avoid-ai-design 67-tell katalogu, Zach Gage Three Reads, Kukshtel oyun UI prensipleri, WCAG 2.2, backdrop-filter performans) + kod denetimi → 5 fazlı plan: `brain/research/ui-ux-anti-slop-research-and-plan.md`. ADR: `brain/decisions/0007-anti-slop-ui-and-accessibility-pass.md`.
+
+### Yapılan İş:
+1. **Faz 0 — Ölçüm:** slate-500 = 4.18:1, slate-600 = 2.63:1 (AA altı); dokunma hedefleri 28-30px; 52 ölü `title`.
+2. **Faz 1 — Erişilebilirlik:**
+   - `tailwind.config.js`: slate 500/600/700 override → 55 metin kullanımı tek seferde AA (5.23/4.87/4.6:1).
+   - `style.css`: `.hit-44` (görsel boyutu bozmadan 44px hit-area) — nav/stance/radyo/satır butonlarına uygulandı.
+   - `style.css`: `.affordance-pulse` → `--pulse-c1/c2` custom property; Hz butonu artık **amber** nabız atıyor (renk sözlüğü ihlali A5 kapandı).
+   - `public/favicon.svg` (telefon + yukarı ok) + `index.html` description/theme-color (A3).
+3. **Faz 2 — Anti-slop:**
+   - Eyebrow temizliği (A1): `.section-label`, TabHero h2, SettingsModal başlığı, "DOPAMİN", "Tümü", toast vb. → sentence-case gövde yüzü; nav etiketleri mono→`font-semibold` sans.
+   - Blur budama (A4): `glass-panel-card`, `panel-hero`, `glass-panel-glow` → katı yüzey; blur yalnız `.glass-panel-glow`+`.modal-glass` (SettingsModal) ve AnomalyOverlay overlay'lerinde; nav/header radyo blur kaldırıldı. Toplam backdrop-filter kullanımı >20 → 5.
+   - 9:16 kimlik motifi: `.hero-orb` dairesel blur → dikey 9:16 telefon çerçevesi (rotate 8°).
+4. **Faz 3 — Three Reads:**
+   - `src/core/tooltip.ts` (yeni): `v-tip` directive — hover anında, mobil tap'ta konumlu tooltip; `main.ts` kaydı; 43 `title` → `v-tip` (TabHero prop'ları geri alındı).
+   - Header: **"Sıradaki hedef" satırı** (U4) — alınabilir varsa "Frekans hazır / D3 alınabilir", yoksa en yakın hedefe kalan %.
+   - Header: radyo widget'ı `hidden sm:flex`, şebeke/WiFi ikonları `hidden sm:block` (U1) — mobilde ilk bakış: sayaç + hedef.
+5. **Faz 4 — Juice:** `count-pop` (tıklama/space anında sayaç mikro-pop, `prefers-reduced-motion` kapalı) + DimensionRow "10:" butonuna `affordance-pulse`.
+6. **Doğrulama:** kontrast yeniden hesap (tüm metinler AA ✅), `npm run build` (`vue-tsc && vite build`) **sıfır hata**.
+
+---
+
+## [2026-10-01] - Hibrit Format Sinerjisi & Kolektif Trend Motoru (v0.8.1)
+
+### Kapsam & Motivasyon:
+- Üst kademe formatlar (D5-D8) açıldığında alt kademelerin (D1-D4) önemsizleşmesi ("Lower Tier Obsolescence") problemini çözmek için hibrit mekanik entegre edildi.
+
+### Yapılan İş:
+1. **`src/models/types.ts`:** `CollectiveMilestone` arayüzü eklendi.
+2. **`src/stores/game.ts`:**
+   - `COLLECTIVE_MILESTONES`: 25 (2x), 50 (3x), 100 (5x + %10 Frekans indirim), 250 (10x), 500 (25x), 1000 (50x).
+   - `MIRROR_PAIRS`: D1↔D8, D2↔D7, D3↔D6, D4↔D5.
+   - `getDimensionSynergyMultiplier`: $1 + \sqrt{\text{Partner.bought}} \times 0.15$ yakıt çarpanı hem `getDimensionMultiplier` hem de `getPartnerInfo`'ya bağlandı.
+   - `collectiveMinBought`, `collectiveBottleneck`, `collectiveMilestoneInfo` ve `collectiveMultiplier` getter'ları.
+   - `matterPerSecond` ve `update()` içindeki `rawProduced` hesabına `collectiveMultiplier` uygulandı; 100+ seviyede `tickspeedCost`'a %10 indirim entegre edildi.
+3. **`src/components/DimensionRow.vue`:**
+   - Her formata eşleştiği partneri ve sağladığı yakıt çarpanını gösteren neon rozet eklendi (`🔗 D8: ×2.50`).
+4. **`src/components/DimensionsTab.vue`:**
+   - Şafak barının altına "Kolektif Trend" bento kartı eklendi: Canlı ilerleme çubuğu ve oyuncuya en gerideki formatı gösteren "En Geride: D3 ASMR Sabun (38/50)" darboğaz uyarısı.
+5. **Doğrulama:** `npm run build` (`vue-tsc && vite build`) sıfır hata ile doğrulandı.
+
+## [2026-10-01] - Reels Pro: Akış Motoru & Algoritma Devrimi (v0.8.0)
+
+### Kapsam & Motivasyon:
+- Reels (Boyutlar) sekmesi sadece düz "10 Al" ve "Maks Al" butonlarından ibaretti; orta oyunda yavaşlama ve tekdüzelik oluşuyordu.
+- *Antimatter Dimensions* (Dimension Sacrifice), *Cookie Clicker* (Milestone Çözünürlükleri, Upgrade Dükkanı) ve mobil sosyal medya refleksleri (Pull to Refresh) hibrit biçimde entegre edildi.
+
+### Yapılan İş:
+1. **`src/models/types.ts`:**
+   - `ResolutionMilestone` ve `AlgorithmUpgradeDef`/`AlgorithmUpgradeId` tipleri eklendi.
+   - `SerializedPlayerState`'e `sacrificeCount`, `sacrificeMultiplier`, `algorithmUpgrades`, `refreshCooldown` eklendi.
+2. **`src/core/audio.ts`:**
+   - `playSacrifice()`: Sub-bass sweep frekans süpürme efekti.
+   - `playRefresh()`: Taktil hava swoosh ve parlak synth efekti.
+   - `playMilestone()`: 4 tonlu arpej seviye atlama kristal çanı.
+   - `playUpgrade()`: Yükseltme satın alma kilidi açma sesi.
+3. **`src/stores/game.ts`:**
+   - `RESOLUTION_MILESTONES`: 25 (360p - 2x), 50 (720p HD - 3x), 100 (1080p 60fps - 4x + %1 Tıklama payı), 250 (4K HDR - 8x), 500 (Nöro-Link - 16x), 1000 (Kozmik - 32x).
+   - `ALGORITHM_UPGRADES`: 6 adet tek seferlik Dopamin yükseltmesi (1.25x Oynatma Hızı, Çift Dokunarak Beğen, OLED Sonsuz Siyah, Arka Planda Dinle, Kayıtlılara Ekle, Kulaklık Bass Boost).
+   - `sacrificeDimensions()`: D1-D7 sıfırlanıp D8 Saf Beyin Çürümesine `(1 + log10(D1)/4)^2.5` kalıcı katlanan çarpan.
+   - `pullToRefresh()`: 60 sn cooldown ile 12 sn boyunca 3x üretim dalgası.
+   - Save / Load (serialize / deserialize) desteği tamamlandı.
+4. **`src/components/DimensionRow.vue`:**
+   - Her formata ulaştığı çözünürlük seviyesine göre neon rozet (`144p`, `360p`, `720p HD`, `1080p 60fps`, `4K HDR`).
+   - Bir sonraki çözünürlük kademesine kalan adeti gösteren dinamik mini progress bar.
+5. **`src/components/DimensionsTab.vue`:**
+   - Üst çubukta "Akışı Yenile (Pull to Refresh)" taktil butonu ve canlı geri sayım/dalga rozeti.
+   - 6 kartlık "Algoritma Yamaları" yükseltme dükkanı paneli.
+   - 5. Sıçramadan sonra açılan "Önbelleği Sil (Dimension Sacrifice)" bento kartı.
+6. **Doğrulama:** `npm run build` (`vue-tsc && vite build`) sıfır hata ile doğrulandı.
+
 ## [2026-10-01] - UI Bütünlük & Senkronizasyon Devrimi (v0.7.1)
 
 ### Tespit Edilen Dağınıklık:
@@ -297,3 +535,33 @@
 
 
 
+
+
+---
+
+## [2026-10-01] - Doomscroll Tema Arındırma & Kalıntı Temizliği (v0.6.1)
+
+### Kök Neden Analizi:
+Projenin ilk geliştirme aşamasındaki prototiplerden (ofis/troll/sosyal medya ajansı) ve ilham kaynağı oyunlardan (Antimatter Dimensions, Cookie Clicker The Grimoire/The Garden, Quantum Horizon) kalan yabancı rozetler, değişkenler, ses metodları, yorumlar ve kayıt anahtarları mevcuttu.
+
+### Uygulanan Çözümler:
+1. **Arayüz (UI) Rozetleri & Metin Düzenlemeleri:**
+   - [`AutobuyersTab.vue`](file:///data/data/com.termux/files/home/incremental/src/components/AutobuyersTab.vue): `badge="Antimatter Dimensions"` rozeti `badge="Otonom Algoritma"` olarak güncellendi.
+   - [`CrisisTab.vue`](file:///data/data/com.termux/files/home/incremental/src/components/CrisisTab.vue): `badge="The Grimoire"` rozeti `badge="Gece Kararları"` olarak güncellendi, büyü ifadeleri kaldırıldı.
+   - [`LabTab.vue`](file:///data/data/com.termux/files/home/incremental/src/components/LabTab.vue): `badge="The Garden"` rozeti `badge="Viral Laboratuvar"` olarak güncellendi.
+   - [`StatsTab.vue`](file:///data/data/com.termux/files/home/incremental/src/components/StatsTab.vue): `Gece Kriz Kararları (Büyüler)` ifadesinden `(Büyüler)` temizlendi.
+   - [`achievements.ts`](file:///data/data/com.termux/files/home/incremental/src/game/achievements.ts): Büyü, büyücü (`🧙`), sera gibi kalıntı başarım ad ve açıklamaları gece kararları ve trend format küratörlüğüne dönüştürüldü.
+2. **Model, Tip ve Değişken İyileştirmeleri:**
+   - [`types.ts`](file:///data/data/com.termux/files/home/incremental/src/models/types.ts): `InternetTroll` tipi `GuiltWrinkler` ile değiştirildi, geriye dönük tip alias'ı bırakıldı.
+   - `leechedLikes` alanı `leechedDopamine` olarak refactor edildi.
+   - `PlayerStats` ve `SerializedPlayerState` yorumlarındaki eski kavramlar (Kalp Atma, Beğeni, Mavi Tik, Troller, Likes) temizlenerek Doomscroll terminolojisine kavuşturuldu.
+3. **Kayıt Sistemi (Save) ve Geriye Dönük Uyumluluk:**
+   - [`save.ts`](file:///data/data/com.termux/files/home/incremental/src/core/save.ts): Anahtar `DOOMSCROLL_SAVE_V1` yapıldı; mevcut oyuncuların ilerlemesini korumak için `QUANTUM_HORIZON_SAVE_V1` fallback desteği eklendi.
+   - [`stores/game.ts`](file:///data/data/com.termux/files/home/incremental/src/stores/game.ts): `serialize` ve `deserialize` çift taraflı geriye dönük uyumluluk (`leechedDopamine` || `leechedKpi`) ile korundu.
+4. **Ses Motoru:**
+   - [`audio.ts`](file:///data/data/com.termux/files/home/incremental/src/core/audio.ts): `playFireWorker` $\to$ `playSilenceGuilt()`, `playSlackerClick` $\to$ `playGuiltClick()`, `playCastSpell` $\to$ `playCrisisDecision()` eklendi ve geriye uyumluluk alias'ları korundu.
+5. **Paket ve Direktif Tanımları:**
+   - [`package.json`](file:///data/data/com.termux/files/home/incremental/package.json): `"name": "doomscroll-endless-reels"`.
+   - [`AGENTS.md`](file:///data/data/com.termux/files/home/incremental/AGENTS.md): "Doomscroll: The Endless Reels" direktif başlığı ile hizalandı.
+6. **Doğrulama:**
+   - `npm run build` (`vue-tsc && vite build`) sıfır hata ile tamamlandı (6.37s).

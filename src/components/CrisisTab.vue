@@ -3,14 +3,30 @@ import { useGameStore, CRISIS_SPELLS } from '../stores/game'
 import { Zap, Flame, AlertTriangle, BatteryCharging, ShieldAlert, Sparkles } from 'lucide-vue-next'
 import type { CrisisSpellType } from '../models/types'
 import TabHero from './TabHero.vue'
+import LockedFeature from './LockedFeature.vue'
 
 const store = useGameStore()
+
+// Büyü kademesi (Özellik Merdiveni): Şarj başlangıçta, Espresso/Kulaklık/Yalan sırayla açılır
+const SPELL_UNLOCK_FEATURES: Partial<Record<CrisisSpellType, string>> = {
+  espresso_shot: 'spell_espresso',
+  noise_cancelling: 'spell_noise',
+  sleep_denial: 'spell_sleep'
+}
+function spellUnlockFeatureId(spellId: CrisisSpellType): string | null {
+  return SPELL_UNLOCK_FEATURES[spellId] || null
+}
+function isSpellLocked(spellId: CrisisSpellType): boolean {
+  const featureId = spellUnlockFeatureId(spellId)
+  return !!featureId && !store.isFeatureUnlocked(featureId)
+}
 
 function canCast(spellCost: number): boolean {
   return store.caffeineEnergy >= spellCost
 }
 
 function handleCast(spellId: CrisisSpellType) {
+  if (isSpellLocked(spellId)) return
   store.castSpell(spellId)
 }
 </script>
@@ -22,7 +38,7 @@ function handleCast(spellId: CrisisSpellType) {
       :icon="Zap"
       icon-class="text-cyan-400"
       title="Gece Yarısı Kriz Yönetimi: Kafein & Uykusuzluk Kararları"
-      badge="The Grimoire"
+      badge="Gece Kararları"
       badge-class="ds-badge-cyan"
       subtitle="Gece ilerledikçe biriken uykusuzluk enerjisini kullanarak riskli hamleler yap. Dikkat et; bazı kararlar ters tepebilir!"
       accent="cyan"
@@ -58,14 +74,18 @@ function handleCast(spellId: CrisisSpellType) {
       </template>
     </TabHero>
 
-    <!-- Karar ve Büyü Kartları -->
+    <!-- Gece Kararı Kartları -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div
-        v-for="spell in CRISIS_SPELLS"
-        :key="spell.id"
-        class="glass-panel-card p-4 rounded-xl flex flex-col justify-between"
-        :class="canCast(spell.energyCost) ? 'hover:border-cyan-500/40' : 'opacity-60'"
-      >
+      <template v-for="spell in CRISIS_SPELLS" :key="spell.id">
+        <LockedFeature
+          v-if="isSpellLocked(spell.id)"
+          :feature-id="spellUnlockFeatureId(spell.id)"
+        />
+        <div
+          v-else
+          class="glass-panel-card p-4 rounded-xl flex flex-col justify-between"
+          :class="canCast(spell.energyCost) ? 'hover:border-cyan-500/40' : 'opacity-60'"
+        >
         <div>
           <!-- Üst Başlık & İkon & Enerji Maliyeti -->
           <div class="flex items-start justify-between gap-3 mb-2">
@@ -112,10 +132,11 @@ function handleCast(spellId: CrisisSpellType) {
             ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50'
             : 'bg-black/30 text-slate-600 border-white/[0.05]'"
         >
-          <Sparkles class="w-3.5 h-3.5" />
-          <span>{{ canCast(spell.energyCost) ? 'Kararı Uygula' : 'Yetersiz Enerji' }}</span>
-        </button>
-      </div>
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>{{ canCast(spell.energyCost) ? 'Kararı Uygula' : 'Yetersiz Enerji' }}</span>
+          </button>
+        </div>
+      </template>
     </div>
 
     <!-- İstatistik & Bilgi Kutusu -->

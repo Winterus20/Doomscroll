@@ -398,7 +398,7 @@ class SoundManager {
   }
 
   // Vicdan Azabını Dürtme (Tok Uyku Baskısı Sesi)
-  playSlackerClick() {
+  playGuiltClick() {
     const ctx = this.getContext()
     if (!ctx) return
 
@@ -418,8 +418,13 @@ class SoundManager {
     osc.stop(ctx.currentTime + 0.055)
   }
 
+  /** Geriye dönük ses alias'ı */
+  playSlackerClick() {
+    this.playGuiltClick()
+  }
+
   // "Sadece 1 Video Daha!" diyerek Vicdanı Susturma (Dopamin Fışkırması)
-  playFireWorker() {
+  playSilenceGuilt() {
     const ctx = this.getContext()
     if (!ctx) return
 
@@ -448,6 +453,11 @@ class SoundManager {
     osc1.stop(ctx.currentTime + 0.14)
     osc2.start(ctx.currentTime + 0.06)
     osc2.stop(ctx.currentTime + 0.4)
+  }
+
+  /** Geriye dönük ses alias'ı */
+  playFireWorker() {
+    this.playSilenceGuilt()
   }
 
   // Gece Duruşu Değiştirme
@@ -516,8 +526,59 @@ class SoundManager {
     })
   }
 
-  // Gece Kriz Yönetimi: Büyü Fısıltısı / Karar Alma
-  playCastSpell() {
+  // Trend Reaktörü: Akışa Fırlat (Viral Drop Patlaması)
+  playViralDrop() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    // 1. Riser Sweep (Akışa Fırlatma İvmesi)
+    const sweepOsc = ctx.createOscillator()
+    const sweepGain = ctx.createGain()
+    sweepOsc.type = 'sawtooth'
+    sweepOsc.frequency.setValueAtTime(220, ctx.currentTime)
+    sweepOsc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.28)
+    sweepGain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    sweepGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+    sweepOsc.connect(sweepGain)
+    sweepGain.connect(ctx.destination)
+    this.registerCleanup(sweepOsc, sweepGain)
+    sweepOsc.start(ctx.currentTime)
+    sweepOsc.stop(ctx.currentTime + 0.3)
+
+    // 2. Ağır Bas Drop
+    const bassOsc = ctx.createOscillator()
+    const bassGain = ctx.createGain()
+    bassOsc.type = 'sine'
+    bassOsc.frequency.setValueAtTime(180, ctx.currentTime + 0.25)
+    bassOsc.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.8)
+    bassGain.gain.setValueAtTime(this.volume * 0.85, ctx.currentTime + 0.25)
+    bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
+    bassOsc.connect(bassGain)
+    bassGain.connect(ctx.destination)
+    this.registerCleanup(bassOsc, bassGain)
+    bassOsc.start(ctx.currentTime + 0.25)
+    bassOsc.stop(ctx.currentTime + 0.8)
+
+    // 3. Parlak Viral Çan Akoru
+    const viralChords = [587.33, 880, 1174.66, 1760]
+    viralChords.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      const startT = ctx.currentTime + 0.28 + i * 0.03
+      osc.frequency.setValueAtTime(freq, startT)
+      gain.gain.setValueAtTime(this.volume * 0.5, startT)
+      gain.gain.exponentialRampToValueAtTime(0.001, startT + 0.6)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      this.registerCleanup(osc, gain)
+      osc.start(startT)
+      osc.stop(startT + 0.6)
+    })
+  }
+
+  // Gece Kriz Yönetimi: Kriz Kararı Alma Sesi
+  playCrisisDecision() {
     const ctx = this.getContext()
     if (!ctx) return
 
@@ -535,6 +596,11 @@ class SoundManager {
     this.registerCleanup(osc, gain)
     osc.start()
     osc.stop(ctx.currentTime + 0.25)
+  }
+
+  /** Geriye dönük ses alias'ı */
+  playCastSpell() {
+    this.playCrisisDecision()
   }
 
   // Gece Kriz Yönetimi: Ters Tepme (Backfire Elektrik Çarpması)
@@ -577,6 +643,94 @@ class SoundManager {
     this.registerCleanup(osc, gain)
     osc.start()
     osc.stop(ctx.currentTime + 0.03)
+  }
+
+  // Önbelleği Temizleme (Sacrifice / Purge) - Derin rezonanslı fütüristik süpürme
+  playSacrifice() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(80, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.35)
+
+    gain.gain.setValueAtTime(this.volume * 0.45, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.35)
+  }
+
+  // Akışı Yenile (Pull to Refresh) - Taktil swoosh ve tazeleyici synth
+  playRefresh() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(400, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.12)
+
+    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.12)
+  }
+
+  // Video Kalite Milestone (360p -> 1080p -> 4K seviye atlama)
+  playMilestone() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const notes = [523.25, 659.25, 783.99, 1046.5] // C5, E5, G5, C6
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      const startTime = ctx.currentTime + idx * 0.04
+      osc.frequency.setValueAtTime(freq, startTime)
+
+      gain.gain.setValueAtTime(0.001, startTime)
+      gain.gain.exponentialRampToValueAtTime(this.volume * 0.3, startTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      this.registerCleanup(osc, gain)
+      osc.start(startTime)
+      osc.stop(startTime + 0.25)
+    })
+  }
+
+  // Algoritma Yaması Satın Alma (Tek seferlik upgrade)
+  playUpgrade() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(600, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.1)
+
+    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.1)
   }
 }
 

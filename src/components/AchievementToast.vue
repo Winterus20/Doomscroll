@@ -45,7 +45,7 @@ onUnmounted(() => {
     >
       <span class="text-2xl leading-none shrink-0">{{ getAchievement(id)?.icon || '🏆' }}</span>
       <div class="min-w-0">
-        <div class="text-[11px] font-mono text-amber-400 uppercase tracking-wider">Başarım kazanıldı!</div>
+        <div class="text-[11px] font-semibold text-amber-400">Başarım kazanıldı!</div>
         <div class="text-sm font-bold text-white truncate">{{ getAchievement(id)?.name || id }}</div>
         <div v-if="getAchievement(id)?.reward" class="text-[11px] text-emerald-300 font-mono mt-0.5">
           {{ getAchievement(id)?.reward?.desc }}

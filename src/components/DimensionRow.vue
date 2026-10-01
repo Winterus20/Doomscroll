@@ -69,6 +69,8 @@ const tierConfig = computed<FormatMeta>(() => {
   )
 })
 
+const milestoneInfo = computed(() => store.getDimensionMilestone(props.dimension.tier))
+const partnerInfo = computed(() => store.getPartnerInfo(props.dimension.tier))
 const cost = computed(() => store.getDimensionCost(props.dimension.tier))
 const multiplier = computed(() => store.getDimensionMultiplier(props.dimension.tier))
 const canAfford = computed(() => store.matter.gte(cost.value))
@@ -131,15 +133,45 @@ function buyMax(e: MouseEvent) {
 
 <template>
   <div
-    class="glass-panel-card relative px-3 py-2 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors"
-    :title="tierConfig.subtitle"
+    class="glass-panel-card relative px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors"
+    v-tip="tierConfig.subtitle"
   >
-    <!-- Sol: Tier + Kısa İsim + Çarpan -->
-    <div class="flex items-center gap-2.5 min-w-0">
+    <!-- Sol: Tier + Kısa İsim + Çözünürlük Rozeti + Çarpan -->
+    <div class="flex items-center gap-2 min-w-0">
       <span class="text-xs font-mono font-bold text-purple-400 shrink-0">D{{ props.dimension.tier }}</span>
-      <span class="text-xs font-medium text-slate-200 truncate">{{ tierConfig.shortName }}</span>
+      <span class="text-xs font-medium text-slate-200 truncate max-w-[90px] sm:max-w-[140px] md:max-w-none">{{ tierConfig.shortName }}</span>
+
+      <!-- Video Çözünürlük Rozeti (Milestone) -->
+      <span
+        v-if="milestoneInfo.current"
+        class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 uppercase tracking-wider"
+        :class="milestoneInfo.current.colorClass"
+        v-tip="`${milestoneInfo.current.name}: ${milestoneInfo.current.desc}`"
+      >
+        {{ milestoneInfo.current.shortName }}
+      </span>
+      <span
+        v-else
+        class="text-[9px] font-mono text-slate-500 px-1.5 py-0.2 rounded bg-white/[0.02] border border-white/[0.04] shrink-0"
+        v-tip="'25 adette 360p kalitesi açılır'"
+      >
+        144p
+      </span>
+
+      <!-- Toplam Çarpan -->
       <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 tabular-nums shrink-0">
         ×{{ format(multiplier, 2, store.settings.notation) }}
+      </span>
+
+      <!-- Algoritmik Ayna Sinerjisi (Partner Yakıtı) -->
+      <span
+        v-if="partnerInfo.partnerBought > 0"
+        class="hidden md:inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tabular-nums shrink-0 cursor-help"
+        v-tip="`Ayna Sinerjisi: ${partnerInfo.label} (${partnerInfo.partnerBought} adet) bu formata ×${partnerInfo.mult.toFixed(2)} çarpan sağlıyor! Bu formatı satın aldıkça da ${partnerInfo.label} beslenir.`"
+      >
+        <span class="text-cyan-400">🔗</span>
+        <span>D{{ partnerInfo.partnerTier }}:</span>
+        <span class="font-bold">×{{ partnerInfo.mult.toFixed(2) }}</span>
       </span>
     </div>
 
@@ -149,12 +181,29 @@ function buyMax(e: MouseEvent) {
       <span class="text-slate-500 text-[11px]">({{ props.dimension.bought }})</span>
     </div>
 
-    <!-- Sağ: 10x İlerleme Barı + Satın Alma Butonları -->
+    <!-- Sağ: Kalite & 10x İlerleme Barı + Satın Alma Butonları -->
     <div class="flex items-center gap-2 shrink-0">
+      <!-- Sıradaki Kalite İlerleme Barı (25, 50, 100...) -->
+      <div
+        v-if="milestoneInfo.next"
+        class="w-14 hidden lg:flex flex-col gap-0.5"
+        v-tip="`Sıradaki Kalite: ${milestoneInfo.next.name} (${milestoneInfo.next.desc}) — ${props.dimension.bought}/${milestoneInfo.next.count}`"
+      >
+        <div class="progress-track progress-track-mini">
+          <div
+            class="progress-fill progress-fill-cyan"
+            :style="{ width: `${milestoneInfo.progress}%` }"
+          ></div>
+        </div>
+        <div class="text-[8px] font-mono text-slate-500 text-center leading-none">
+          {{ props.dimension.bought }}/{{ milestoneInfo.next.count }}
+        </div>
+      </div>
+
       <!-- 10x Mini İlerleme Pili (3/10) -->
       <div
-        class="w-10 hidden md:flex flex-col gap-0.5"
-        :title="`Sonraki 2× Çarpan: ${progressCount}/10`"
+        class="w-8 hidden md:flex flex-col gap-0.5"
+        v-tip="`Sonraki 2× Çarpan: ${progressCount}/10`"
       >
         <div class="progress-track progress-track-mini">
           <div
@@ -168,9 +217,9 @@ function buyMax(e: MouseEvent) {
       <button
         @click="buy($event)"
         :disabled="!canAfford"
-        class="btn-tactile px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex items-center gap-1 border"
+        class="btn-tactile hit-44 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex items-center gap-1 border shrink-0"
         :class="canAfford
-          ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs'
+          ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
       >
         <span>10:</span>
@@ -181,11 +230,11 @@ function buyMax(e: MouseEvent) {
       <button
         @click="buyMax($event)"
         :disabled="!canAfford"
-        class="btn-tactile px-2 py-1.5 rounded-lg text-xs font-mono transition-all border"
+        class="btn-tactile hit-44 px-2 py-1.5 rounded-lg text-xs font-mono transition-all border shrink-0"
         :class="canAfford
           ? 'bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 border-white/10 cursor-pointer'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
-        title="Maksimum al"
+        v-tip="'Maksimum al'"
       >
         Maks
       </button>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 
-export type HeroAccent = 'purple' | 'emerald' | 'cyan' | 'blue' | 'amber' | 'rose' | 'slate'
+export type HeroAccent = 'purple' | 'emerald' | 'cyan' | 'blue' | 'amber' | 'rose' | 'slate' | 'violet'
 
 withDefaults(
   defineProps<{
@@ -30,7 +30,7 @@ withDefaults(
       <div class="min-w-0">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
           <component :is="icon" class="w-5 h-5 shrink-0" :class="iconClass" />
-          <h2 class="text-sm font-bold font-mono text-slate-100 uppercase tracking-wider truncate">
+          <h2 class="text-base font-extrabold text-slate-50 truncate">
             {{ title }}
           </h2>
           <span v-if="badge" class="ds-badge" :class="badgeClass">{{ badge }}</span>

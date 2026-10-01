@@ -143,10 +143,10 @@ function hardReset() {
 
 <template>
   <div class="layer-modal fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" @click.self="emit('close')">
-    <div class="glass-panel-glow w-full max-w-lg rounded-2xl p-5 md:p-6 relative max-h-[90vh] overflow-y-auto">
+    <div class="glass-panel-glow modal-glass w-full max-w-lg rounded-2xl p-5 md:p-6 relative max-h-[90vh] overflow-y-auto">
       <!-- Modal Başlık & Kapat -->
       <div class="flex items-center justify-between border-b border-white/[0.06] pb-3.5 mb-5">
-        <h3 class="text-sm font-bold font-mono text-white tracking-wider uppercase">
+        <h3 class="text-sm font-extrabold text-slate-100">
           Sistem Ayarları
         </h3>
         <button

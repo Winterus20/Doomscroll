@@ -31,12 +31,15 @@ export interface FloatingAnomaly {
   desc: string
 }
 
-export interface InternetTroll {
+export interface GuiltWrinkler {
   id: string
   name: string
-  leechedLikes: Decimal
-  clicksRemaining: number // Linçletmek / engellemek için gereken tıklama
+  leechedDopamine: Decimal
+  clicksRemaining: number // Susturmak için gereken tıklama
 }
+
+/** Geriye dönük tip uyumluluğu */
+export type InternetTroll = GuiltWrinkler
 
 export interface AutobuyerConfig {
   id: string
@@ -48,7 +51,17 @@ export interface AutobuyerConfig {
   timer: number
 }
 
-export type LabSeedType = 'cat_audio' | 'cheese_sizzle' | 'subway_beat' | 'sigma_phonk' | 'brainrot_remix'
+export type LabSeedType =
+  | 'cat_audio'
+  | 'cheese_sizzle'
+  | 'subway_beat'
+  | 'sigma_phonk'
+  | 'mukbang_drama'
+  | 'cat_burger'
+  | 'drift_tok'
+  | 'brainrot_remix'
+
+export type LabMode = 'fyp' | 'evergreen' | 'mutation'
 
 export interface LabCell {
   id: number
@@ -62,6 +75,37 @@ export interface LabCell {
 export type CrisisSpellType = 'fast_charge' | 'espresso_shot' | 'noise_cancelling' | 'sleep_denial'
 
 export type AutobuyerMode = 'single' | 'bulk' | 'max'
+
+export type AlgorithmUpgradeId =
+  | 'play_speed'
+  | 'double_tap'
+  | 'amoled_black'
+  | 'bg_listen'
+  | 'bookmark_pack'
+  | 'bass_boost'
+
+export interface AlgorithmUpgradeDef {
+  id: AlgorithmUpgradeId
+  name: string
+  icon: string
+  desc: string
+  cost: Decimal
+}
+
+export interface ResolutionMilestone {
+  count: number
+  name: string
+  shortName: string
+  mult: number
+  colorClass: string
+  desc: string
+}
+
+export interface CollectiveMilestone {
+  minBought: number
+  mult: number
+  desc: string
+}
 
 export type MusicTrackId = 'lofi_chill' | 'synthwave' | 'ambient_drone' | 'subway_groove' | 'custom'
 
@@ -82,18 +126,18 @@ export interface GameSettings {
 }
 
 export interface PlayerStats {
-  manualClicks: number // Kalp Atma Sayısı
-  totalMatterProduced: Decimal // Toplam Beğeni
-  highestMatter: Decimal
+  manualClicks: number // Yukarı Kaydırma Sayısı
+  totalMatterProduced: Decimal // Toplam Üretilen Dopamin
+  highestMatter: Decimal // En Yüksek Dopamin Zirvesi
   totalPlaytime: number // saniye
-  singularityCount: number // Mavi Tik Devirleri
+  singularityCount: number // Sabah 06:00 Çöküş Sayısı
   fastestSingularity: number // saniye
-  anomaliesClicked: number // Tıklanan Viral Bildirimler
-  combosTriggered: number // Süper Rezonans Komboları
-  slackersFired: number // Linçletilen Troller
+  anomaliesClicked: number // Tıklanan Gece Krizleri
+  combosTriggered: number // Süper Rezonans Hipnozları
+  slackersFired: number // Susturulan Vicdan Azapları
   labHarvests: number // Algoritma Lab Hasatları
-  spellsCast: number // Kullanılan Gece Büyüleri
-  seedsPlanted: number // Ekilen Lab Tohumları
+  spellsCast: number // Alınan Gece Kararları
+  seedsPlanted: number // Ekilen Lab Trend/Ses Formatları
 }
 
 export type AchievementCategoryId =
@@ -157,6 +201,8 @@ export interface AchievementContext {
   unlockedBots: string[]
   bulkUnlocked: boolean
   maxUnlocked: boolean
+  neuralBots: Decimal
+  napCount: number
   matureCells: number
   hasBrainrot: boolean
   hasMatureBrainrot: boolean
@@ -167,7 +213,7 @@ export interface AchievementContext {
 
 export interface SerializedPlayerState {
   version: number
-  matter: string // Likes
+  matter: string // Dopamin
   dimensions: Array<{
     amount: string
     bought: number
@@ -183,7 +229,8 @@ export interface SerializedPlayerState {
   }>
   slackers: Array<{
     name: string
-    leechedKpi: string
+    leechedDopamine?: string
+    leechedKpi?: string // Eski kayıt geriye dönük uyumluluk
   }>
   caffeineEnergy?: number
   labCells?: Array<{
@@ -193,10 +240,20 @@ export interface SerializedPlayerState {
     matureAge: number
     maxAge: number
   }>
+  labHype?: number
+  labMode?: LabMode
+  discoveredFormulas?: LabSeedType[]
   autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode }>
   autobuyerBulkUnlocked?: boolean
   autobuyerMaxUnlocked?: boolean
   singularityUpgrades?: Record<string, number>
+  sacrificeCount?: number
+  sacrificeMultiplier?: string
+  algorithmUpgrades?: string[]
+  refreshCooldown?: number
+  neuralBots?: string // Nöral İzleme Kolonisi (v8)
+  napCount?: number
+  napMultiplier?: string
   lastUpdate: number
   settings: GameSettings
   stats: {
@@ -215,4 +272,5 @@ export interface SerializedPlayerState {
   }
   achievements?: string[]
   achievementsSeenCount?: number
+  unlockedFeatures?: string[] // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilit açılışları
 }

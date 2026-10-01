@@ -39,7 +39,7 @@ function handleSingularityReset() {
     <TabHero
       :icon="Sunrise"
       icon-class="text-amber-400"
-      title="SABAH 06:00 ÇÖKÜŞÜ (GÜNEŞ DOĞDU!)"
+      title="Sabah 06:00 Çöküşü (Güneş Doğdu!)"
       badge="Katman 1 Tekillik"
       badge-class="ds-badge-amber"
       subtitle="Dışarıdan kuş sesleri geliyor, güneş perdelerden sızıyor ama başparmağın hala otomatik yukarı kaydırıyor! 1.79e308 Dopamine ulaştığında uykusuzluğu yenerek ilk çöküşü yaşa ve kalıcı Uykusuzluk Puanı (SP) kazan."

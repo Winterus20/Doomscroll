@@ -80,7 +80,7 @@ const statsList = computed(() => [
     color: 'text-emerald-400'
   },
   {
-    label: 'Gece Kriz Kararları (Büyüler)',
+    label: 'Gece Kriz Kararları',
     value: (store.stats.spellsCast || 0).toLocaleString('tr-TR'),
     icon: Zap,
     color: 'text-cyan-400'

@@ -1,6 +1,6 @@
-# AGENTS.md — Quantum Horizon Otonom Geliştirici Direktifleri
+# AGENTS.md — Doomscroll: The Endless Reels Otonom Geliştirici Direktifleri
 
-Bu belge, **Quantum Horizon** projesinde çalışacak tüm yapay zeka kodlama asistanları (Antigravity, Cursor, Claude Code, Codex vb.) için bağlayıcı operasyonel çalışma anayasasıdır. Bu repoda görev alan her agent buradaki kurallara istisnasız uymakla yükümlüdür.
+Bu belge, **Doomscroll: The Endless Reels** projesinde çalışacak tüm yapay zeka kodlama asistanları (Antigravity, Cursor, Claude Code, Codex vb.) için bağlayıcı operasyonel çalışma anayasasıdır. Bu repoda görev alan her agent buradaki kurallara istisnasız uymakla yükümlüdür.
 
 ---
 
