@@ -39,8 +39,7 @@
 - [ ] **Otonom İzleme Botları & Toplu Uyku (Ant Sacrifice - Synergism):**
   - [ ] Arka planda kendi kendine üreyen nöral alt-bot kolonisi.
   - [ ] "Toplu Uyku (Power Nap)" ile botları feda edip kalıcı kök dopamin çarpanı katlama.
-- [ ] **Gece Kriz Meydan Okumaları (Normal Challenges):**
-  - [ ] 8 adet özel kısıtlama meydan okuması (Örn: "Düşük Pil %1", "Kulaklık Bozuldu", "Sadece Tıklama").
+- [ ] **Gece Kriz Meydan Okumaları (Normal Challenges):** → `in-progress.md`'ye taşındı (Faz 1 Motor implementasyonu başladı, plan v2).
 
 ---
 

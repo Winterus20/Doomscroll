@@ -185,6 +185,7 @@ export interface PlayerStats {
   labHarvests: number // Algoritma Lab Hasatları
   spellsCast: number // Alınan Gece Kararları
   seedsPlanted: number // Ekilen Lab Trend/Ses Formatları
+  challengesCompleted: number // Tamamlanan Gece Kriz Meydan Okumaları
 }
 
 export type AchievementCategoryId =
@@ -195,6 +196,7 @@ export type AchievementCategoryId =
   | 'guilt'
   | 'lab'
   | 'singularity'
+  | 'challenges'
 
 export type AchievementRewardKind =
   | 'click_x2'
@@ -256,6 +258,7 @@ export interface AchievementContext {
   activeSlackers: number
   leechedTotal: Decimal
   wallHour: number
+  completedChallenges: string[]
 }
 
 export interface SerializedPlayerState {
@@ -299,6 +302,9 @@ export interface SerializedPlayerState {
   neuralNodesBought?: Record<string, number> // Nöral Ağaç satın alımları (v9)
   clickCombo?: { count: number; lastClickAt: number } // Tıklama serisi (geçici, güvenli varsayılanla yüklenir)
   buyAmount?: 10 | 100 | 'max' // Reels satın alma modu (v10 QoL)
+  activeChallenge?: string | null // Aktif Gece Krizi (v10)
+  completedChallenges?: string[] // Tamamlanan Gece Krizleri (v10)
+  challengeBestTimes?: Record<string, number> // Challenge en iyi süreleri, sn (v10)
   sacrificeCount?: number
   sacrificeMultiplier?: string
   algorithmUpgrades?: string[]
@@ -321,6 +327,7 @@ export interface SerializedPlayerState {
     labHarvests?: number
     spellsCast?: number
     seedsPlanted?: number
+    challengesCompleted?: number
   }
   achievements?: string[]
   achievementsSeenCount?: number

@@ -1,0 +1,261 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { useGameStore } from '../stores/game'
+import { CHALLENGES, type ChallengeDef } from '../game/challenges'
+import { checkUnlock, unlockProgress } from '../game/unlocks'
+import { Swords } from 'lucide-vue-next'
+import TabHero from './TabHero.vue'
+import ConfirmModal from './ConfirmModal.vue'
+
+const store = useGameStore()
+
+const completedSet = computed(() => new Set<string>(store.completedChallenges))
+
+function isCompleted(id: string): boolean {
+  return completedSet.value.has(id)
+}
+
+function isActive(id: string): boolean {
+  return store.activeChallenge === id
+}
+
+function isLocked(def: ChallengeDef): boolean {
+  if (!def.unlock) return false
+  return !checkUnlock(store.unlockContext, { id: def.id, name: def.name, hint: '', req: def.unlock, order: def.order })
+}
+
+/** Merdiven metni + ilerleme (örn. "3 Sabah 06:00 Çöküşü yaşa · 1/3") */
+function lockInfo(def: ChallengeDef): { hint: string; progress: string } {
+  if (!def.unlock) return { hint: '', progress: '' }
+  const req = def.unlock
+  const p = unlockProgress(store.unlockContext, { id: def.id, name: def.name, hint: '', req, order: def.order })
+  if (req.kind === 'singularities') {
+    return { hint: `${req.count} Sabah 06:00 Çöküşü yaşa`, progress: `${p.current}/${p.target}` }
+  }
+  return { hint: 'Kilitli', progress: `${p.current}/${p.target}` }
+}
+
+function bestTime(id: string): string | null {
+  const secs = store.challengeBestTimes[id]
+  if (typeof secs !== 'number' || !Number.isFinite(secs) || secs < 0) return null
+  return formatDuration(secs)
+}
+
+function formatDuration(totalSecs: number): string {
+  const s = Math.floor(totalSecs)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const rest = s % 60
+  if (h > 0) return `${h}sa ${m}dk`
+  if (m > 0) return `${m}dk ${rest}sn`
+  return `${rest}sn`
+}
+
+const doneCount = computed(() => store.completedChallenges.length)
+const totalCount = CHALLENGES.length
+const progressPct = computed(() => Math.round(store.challengeProgress01 * 100))
+
+// BAŞLAT / Vazgeç onay akışı (Header deseni: settings.confirmDialogs kapısı)
+const pendingEnter = ref<ChallengeDef | null>(null)
+const showExitConfirm = ref(false)
+
+function requestEnter(def: ChallengeDef) {
+  if (isLocked(def) || isCompleted(def.id) || store.activeChallenge) return
+  if (!store.settings.confirmDialogs) {
+    store.enterChallenge(def.id)
+    return
+  }
+  pendingEnter.value = def
+}
+
+function confirmEnter() {
+  if (pendingEnter.value) store.enterChallenge(pendingEnter.value.id)
+  pendingEnter.value = null
+}
+
+function requestExit() {
+  if (!store.activeChallenge) return
+  if (!store.settings.confirmDialogs) {
+    store.exitChallenge()
+    return
+  }
+  showExitConfirm.value = true
+}
+
+function confirmExit() {
+  store.exitChallenge()
+  showExitConfirm.value = false
+}
+</script>
+
+<template>
+  <div class="space-y-3">
+    <TabHero
+      :icon="Swords"
+      icon-class="text-rose-400"
+      title="Gece Kriz Meydan Okumaları"
+      :badge="`${doneCount}/${totalCount}`"
+      badge-class="ds-badge-rose"
+      subtitle="Özel kısıtlamalarla 1.79e308 Dopamine ulaş: her tamamlanan meydan okuma kalıcı ödül verir. Giriş mevcut koşuyu sıfırlar, çıkış her zaman serbest ve cezasızdır."
+      accent="rose"
+    >
+      <template #stats>
+        <div class="stat-box">
+          <div>
+            <div class="stat-box-label">Tamamlanan Meydan Okuma</div>
+            <div class="stat-box-value text-rose-400 tabular-nums">{{ doneCount }}/{{ totalCount }}</div>
+          </div>
+        </div>
+      </template>
+      <template v-if="store.activeChallengeDef" #alert>
+        <div class="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 flex items-center gap-2 flex-wrap">
+          <span class="text-base leading-none">{{ store.activeChallengeDef.icon }}</span>
+          <span class="text-xs font-bold text-rose-200">
+            Aktif: {{ store.activeChallengeDef.name }}
+          </span>
+          <div class="progress-track progress-track-sm progress-track-bordered flex-1 min-w-[120px]">
+            <div
+              class="progress-fill progress-fill-rose"
+              :style="{ width: `${progressPct}%` }"
+            ></div>
+          </div>
+          <span class="text-[11px] font-mono text-rose-300 tabular-nums">%{{ progressPct }}</span>
+          <button
+            @click="requestExit"
+            class="btn-tactile px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 cursor-pointer"
+          >
+            Vazgeç
+          </button>
+        </div>
+      </template>
+    </TabHero>
+
+    <!-- 8 Meydan Okuma Kartı -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div
+        v-for="def in CHALLENGES"
+        :key="def.id"
+        class="p-3 rounded-xl border flex flex-col gap-1.5 transition-all"
+        :class="isCompleted(def.id)
+          ? 'bg-emerald-500/[0.05] border-emerald-500/25'
+          : isActive(def.id)
+            ? 'bg-rose-500/[0.06] border-rose-500/40 shadow-[0_0_18px_rgba(244,63,94,0.12)]'
+            : isLocked(def)
+              ? 'bg-black/30 border-white/[0.04] opacity-45'
+              : 'bg-black/30 border-white/[0.07] hover:border-rose-500/30'"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-xl leading-none" :class="{ 'grayscale': isLocked(def) }">
+            {{ isLocked(def) ? '🔒' : def.icon }}
+          </span>
+          <span
+            class="text-xs font-bold"
+            :class="isCompleted(def.id) ? 'text-emerald-200' : isActive(def.id) ? 'text-rose-200' : 'text-slate-300'"
+          >
+            {{ def.name }}
+          </span>
+          <span class="ml-auto shrink-0">
+            <span v-if="isCompleted(def.id)" class="ds-badge ds-badge-emerald">✔ TAMAM</span>
+            <span v-else-if="isActive(def.id)" class="ds-badge ds-badge-rose animate-pulse">● AKTİF</span>
+            <span v-else-if="isLocked(def)" class="ds-badge">KİLİTLİ</span>
+          </span>
+        </div>
+        <div class="text-[11px] text-slate-500 italic leading-snug">{{ def.flavor }}</div>
+        <div class="text-[11px] leading-snug line-clamp-2" :class="isLocked(def) ? 'text-slate-600' : 'text-slate-300'">
+          {{ def.ruleDesc }}
+        </div>
+        <div class="text-[11px] leading-snug text-slate-400">
+          🎯 1.79e308 Dopamin · 🏆 {{ def.rewardDesc }}
+        </div>
+        <div v-if="isLocked(def)" class="text-[11px] font-mono text-slate-500 tabular-nums">
+          {{ lockInfo(def).hint }} · {{ lockInfo(def).progress }}
+        </div>
+        <div v-if="isActive(def.id)" class="space-y-1">
+          <div class="flex justify-between text-[11px] font-mono">
+            <span class="text-slate-400">Hedef İlerlemesi</span>
+            <span class="text-rose-300 font-bold tabular-nums">%{{ progressPct }}</span>
+          </div>
+          <div class="progress-track progress-track-sm progress-track-bordered">
+            <div
+              class="progress-fill progress-fill-rose"
+              :style="{ width: `${progressPct}%` }"
+            ></div>
+          </div>
+        </div>
+        <div v-if="isCompleted(def.id) && bestTime(def.id)" class="text-[11px] font-mono text-slate-400 tabular-nums">
+          ⏱ En iyi süre: <span class="text-emerald-300 font-bold">{{ bestTime(def.id) }}</span>
+        </div>
+        <div class="mt-auto pt-1 flex gap-2">
+          <button
+            v-if="isActive(def.id)"
+            @click="requestExit"
+            class="btn-tactile flex-1 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 text-xs font-bold cursor-pointer"
+          >
+            Vazgeç
+          </button>
+          <button
+            v-else-if="!isCompleted(def.id) && !isLocked(def)"
+            @click="requestEnter(def)"
+            :disabled="!!store.activeChallenge"
+            class="btn-tactile flex-1 h-9 rounded-xl text-xs font-bold border transition-all"
+            :class="store.activeChallenge
+              ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-50'
+              : 'bg-rose-500/90 hover:bg-rose-500 text-white border-rose-400 cursor-pointer'"
+            v-tip="store.activeChallenge ? 'Önce aktif meydan okumadan vazgeç' : 'Mevcut koşu sıfırlanacak'"
+          >
+            BAŞLAT
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alt Bant: 8/8 Rozeti + Süre Metaları -->
+    <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-2">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🧟</span>
+          <div>
+            <div class="text-xs font-bold text-slate-200">Zombi Bakışı Rozeti (8/8)</div>
+            <div class="text-[11px] text-slate-500">Tüm meydan okumaları tamamla: tüm boyutlar kalıcı +%25</div>
+          </div>
+        </div>
+        <span class="ds-badge tabular-nums" :class="doneCount >= totalCount ? 'ds-badge-emerald' : ''">
+          {{ doneCount }}/{{ totalCount }}
+        </span>
+      </div>
+      <div class="progress-track progress-track-sm progress-track-bordered">
+        <div
+          class="progress-fill progress-fill-emerald"
+          :style="{ width: `${(doneCount / Math.max(1, totalCount)) * 100}%` }"
+        ></div>
+      </div>
+      <div class="rounded-xl border border-white/[0.05] bg-black/30 px-3 py-2">
+        <div class="text-xs font-bold text-slate-300">⏱ Süre Metalleri</div>
+        <div class="text-[11px] text-slate-500 leading-snug">
+          En iyi sürelerin toplamına göre kademeli üretim bonusları (Bronz / Gümüş / Altın) bu sekmeye eklenecek —
+          hızlı tekrar koşuları rozet avını hızlandıracak.
+        </div>
+      </div>
+    </div>
+
+    <!-- QoL: giriş / çıkış onay diyalogları -->
+    <ConfirmModal
+      v-if="pendingEnter"
+      :title="`${pendingEnter.icon} ${pendingEnter.name}`"
+      :message="`Mevcut koşu sıfırlanacak ve “${pendingEnter.name}” kısıtlamasıyla yeni bir koşu başlayacak. Hedef: 1.79e308 Dopamin. Ödül: ${pendingEnter.rewardDesc}. Emin misin?`"
+      confirm-label="Meydan Okumaya Başla"
+      :danger="true"
+      @confirm="confirmEnter"
+      @cancel="pendingEnter = null"
+    />
+    <ConfirmModal
+      v-if="showExitConfirm"
+      title="Meydan Okumadan Vazgeç"
+      message="Mevcut meydan okuma koşusu sıfırlanacak. Ceza yok, ödül yok — dilediğin zaman yeniden başlayabilirsin. Emin misin?"
+      confirm-label="Vazgeç"
+      :danger="false"
+      @confirm="confirmExit"
+      @cancel="showExitConfirm = false"
+    />
+  </div>
+</template>

@@ -227,6 +227,13 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
     hint: '4 Gece Kararı al',
     req: { kind: 'spellsCast', count: 4 },
     order: 140
+  },
+  {
+    id: 'challenges',
+    name: 'Gece Kriz Meydan Okumaları',
+    hint: '1 Sabah 06:00 Çöküşü yaşa',
+    req: { kind: 'singularities', count: 1 },
+    order: 150
   }
 ]
 

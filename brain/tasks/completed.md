@@ -1,5 +1,27 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-02] — Hotfix: GODMODE paneli açılmıyordu (M kısayolu kodu bölüyordu)
+
+### Neden:
+- `godmode` yazarken `m` harfi Max All kısayoluna takılıp `return` ediyordu; harf buffer'a eklenmediği için sıra asla tamamlanamıyordu.
+- Çözüm (`src/App.vue` `handleGodmode`): gizli-kod kontrolü kısayollardan önce; kod öneki yazılırken kısayol tetiklenmez. Node ile mantık testi ✓ (`godmode`→PANEL, tek `m`→Max All).
+- Doğrulama: `npm run build` 0 hata.
+
+## [2026-10-02] — Gece Kriz Meydan Okumaları Faz 3: Kurallar + Denge (v0.17.0 adayı)
+
+### Motivasyon:
+- Faz 1 motoru (registry, state, enter/exit/complete, save v10, G1/G2) üzerine C2–C8 kural wiring'i + meta ödüller + 8. başarım kategorisi + ADR-0015. Plan: `brain/research/challenges-research-and-plan.md` v2 (§5–§7, §10).
+
+### Yapılan İşler:
+1. **`src/stores/game.ts`:** `registerChallengeBuy()` (4 yaprak alım fn'unda: C2 halt+rampa, C5 ×1.5 sayaç) + `relieveChallengeOnPrestige()` (Sıçrama/Küme sonu: C3 reset, C8 ×0.6); `challengeProdMult` (C2 60 sn rampa + C8 fırtına 0.5×0.75^n, taban 0.15) + `challengeHalted`; `getDimensionMultiplier` (C3 taban+sayaç, C4 çift-tier 0, çift ×2, 8/8 ×1.25, süre-metas koşu-içi); maliyet getter'ları (C5 şişme + −%10); `tickspeedMultiplier` (C6 taban %40 + üs yarı + C2 +%15); `unlockedDimensionsCount`/kolektif sayaçlar (C7 kap 6); `shiftRequirement`/`canBuyGalaxy` (C7 D6 dengesi); `singularityGain` (C8 +%15 pre-floor); `manualClickPower` (C3 ×2); `update()` G3 (C2 sayaç, C3 ×1.004^dt, C8 sayaç + offline donması); yeni state `challengeSinceBuy`.
+2. **`src/game/challenges.ts`:** `CHALLENGE_TIME_TIERS` + `challengeTimeTierMult()` (Bronz <8 sa ×1.1 / Gümüş <4 sa ×1.25 / Altın <90 dk ×1.4) + `isAllChallengesComplete()` + `ALL_CHALLENGES_COMPLETE_MULT` (1.25).
+3. **`src/game/achievements.ts` + `src/models/types.ts`:** 8. kategori "Meydan Okumalar" (8 başarım, C8 gizli) + `AchievementContext.completedChallenges`; L8-11 bayat yorum fix'i (67 + 8 satır ≈ ×3.55, node ile doğrulandı: 3.5444).
+4. **Kalibrasyon:** saf-fonksiyon birim testleri (esbuild+node ✓); güç bütçesi ✓; tempo bandı tutarlılık kontrolü. Tam koşu simülasyonu altyapı yokluğundan yapılamadı — C7/C8 katsayıları + süre eşikleri "varsayılanla yayınlandı", ADR-0015'te işaretli.
+5. **ADR:** `brain/decisions/0015-night-crisis-challenges.md` (reddedilenler: zamanlı challenge, otomasyon ödülü, SP-içeride, sessiz koşu-silme, tek eşikli süre-metas, C²-kapsamı).
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1639 modül). Yasaklı dosyalar (App/Header/SingularityTab/ChallengesTab) ellenmedi.
+
 ## [2026-10-01] — UI/UX Kimlik Paketi: Display Font + Juice + Onboarding + Mobil Dock (v0.16.0 adayı)
 
 ### Motivasyon:

@@ -12,6 +12,7 @@ import LabTab from './components/LabTab.vue'
 import CrisisTab from './components/CrisisTab.vue'
 import AutobuyersTab from './components/AutobuyersTab.vue'
 import SingularityTab from './components/SingularityTab.vue'
+import ChallengesTab from './components/ChallengesTab.vue'
 import ColonyTab from './components/ColonyTab.vue'
 import AchievementsTab from './components/AchievementsTab.vue'
 import AchievementToast from './components/AchievementToast.vue'
@@ -20,14 +21,14 @@ import SettingsModal from './components/SettingsModal.vue'
 import WelcomeBackModal from './components/WelcomeBackModal.vue'
 import AnomalyOverlay from './components/AnomalyOverlay.vue'
 import AdminPanel from './components/AdminPanel.vue'
-import { Layers, BarChart3, Lock, Bot, FlaskConical, Zap, Sunrise, Trophy, Network } from 'lucide-vue-next'
+import { Layers, BarChart3, Lock, Bot, FlaskConical, Zap, Sunrise, Trophy, Network, Swords } from 'lucide-vue-next'
 import { nextLocked, unlockProgress } from './game/unlocks'
 import { Decimal } from './core/math'
 import { formatNumber } from './core/format'
 
 const store = useGameStore()
 
-export type TabId = 'dimensions' | 'lab' | 'crisis' | 'autobuyers' | 'colony' | 'singularity' | 'achievements' | 'stats'
+export type TabId = 'dimensions' | 'lab' | 'crisis' | 'autobuyers' | 'colony' | 'singularity' | 'challenges' | 'achievements' | 'stats'
 
 const activeTab = ref<TabId>('dimensions')
 const showSettings = ref(false)
@@ -42,6 +43,7 @@ const tabLocked = computed<Record<TabId, boolean>>(() => ({
   autobuyers: !store.autobuyersUnlocked,
   colony: !store.colonyUnlocked,
   singularity: !store.singularityUnlocked,
+  challenges: !store.challengesUnlocked,
   achievements: false,
   stats: false
 }))
@@ -64,9 +66,9 @@ const hasBotAlert = computed(() => {
   return store.hasAffordableLockedBot
 })
 
-// QoL: sekme sırası — 1-8 klavye kısayolları bu sırayla eşleşir
+// QoL: sekme sırası — 1-9 klavye kısayolları bu sırayla eşleşir
 const TAB_ORDER: TabId[] = [
-  'dimensions', 'lab', 'crisis', 'autobuyers', 'colony', 'singularity', 'achievements', 'stats'
+  'dimensions', 'lab', 'crisis', 'autobuyers', 'colony', 'singularity', 'challenges', 'achievements', 'stats'
 ]
 
 function switchTab(tab: TabId) {
@@ -88,7 +90,7 @@ function switchTab(tab: TabId) {
 
 // Prestij sonrası kilitlenen sekmedeysek güvenli sekmeye geri dön
 watch(
-  () => [store.labUnlocked, store.crisisUnlocked, store.autobuyersUnlocked, store.colonyUnlocked, store.singularityUnlocked].join('|'),
+  () => [store.labUnlocked, store.crisisUnlocked, store.autobuyersUnlocked, store.colonyUnlocked, store.singularityUnlocked, store.challengesUnlocked].join('|'),
   () => {
     if (tabLocked.value[activeTab.value]) {
       activeTab.value = 'dimensions'
@@ -135,7 +137,7 @@ const NAV_BTN =
 const NAV_LOCKED =
   'hit-44 shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 flex items-center gap-1.5 border border-white/[0.03] bg-black/20 opacity-70 cursor-not-allowed whitespace-nowrap'
 
-// Gizli Admin Paneli: klavyede GODMODE yazınca aç/kapat + QoL kısayolları (1-8 sekme, M=Tümü, Esc=modal)
+// Gizli Admin Paneli: klavyede GODMODE yazınca aç/kapat + QoL kısayolları (1-9 sekme, M=Tümü, Esc=modal)
 function handleGodmode(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (showAdmin.value) {
@@ -151,7 +153,24 @@ function handleGodmode(e: KeyboardEvent) {
   const target = e.target as HTMLElement | null
   if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
 
-  // 1-8: sekme değiştir
+  // GODMODE gizli kodu kısayollardan ÖNCE kontrol edilir — yoksa 'm' (Max All)
+  // kodu böler ve panel asla açılmaz. Kodun öneki yazılırken kısayol tetiklenmez.
+  if (e.key.length === 1) {
+    const candidate = (godmodeBuffer + e.key.toLowerCase()).slice(-7)
+    if (candidate === 'godmode') {
+      godmodeBuffer = ''
+      showAdmin.value = !showAdmin.value
+      sounds.playAnomaly()
+      return
+    }
+    if ('godmode'.startsWith(candidate)) {
+      godmodeBuffer = candidate
+      return
+    }
+    godmodeBuffer = candidate
+  }
+
+  // 1-9: sekme değiştir
   const idx = Number(e.key)
   if (Number.isInteger(idx) && idx >= 1 && idx <= TAB_ORDER.length) {
     switchTab(TAB_ORDER[idx - 1])
@@ -160,14 +179,6 @@ function handleGodmode(e: KeyboardEvent) {
   if (e.key.toLowerCase() === 'm') {
     store.maxAll()
     return
-  }
-
-  if (e.key.length !== 1) return
-  godmodeBuffer = (godmodeBuffer + e.key.toLowerCase()).slice(-7)
-  if (godmodeBuffer === 'godmode') {
-    godmodeBuffer = ''
-    showAdmin.value = !showAdmin.value
-    sounds.playAnomaly()
   }
 }
 
@@ -295,6 +306,17 @@ onUnmounted(() => {
           <span>Şafak (1e30)</span>
         </div>
 
+        <!-- Gece Kriz Meydan Okumaları Sekmesi -->
+        <button v-if="store.challengesUnlocked" @click="switchTab('challenges')" :class="[NAV_BTN, navClass(activeTab === 'challenges')]">
+          <Swords class="w-3.5 h-3.5 text-rose-400" />
+          <span>Meydan</span>
+          <span v-if="store.activeChallenge" class="tab-dot tab-dot-rose" v-tip="'Aktif meydan okuma var'"></span>
+        </button>
+        <div v-else :class="NAV_LOCKED" v-tip="'1 Sabah 06:00 Çöküşü yaşa'">
+          <Lock class="w-3 h-3" />
+          <span>Meydan (1 Şafak)</span>
+        </div>
+
         <!-- Başarımlar Sekmesi -->
         <button @click="switchTab('achievements')" :class="[NAV_BTN, navClass(activeTab === 'achievements')]">
           <Trophy class="w-3.5 h-3.5 text-amber-400" />
@@ -350,6 +372,7 @@ onUnmounted(() => {
         <AutobuyersTab v-else-if="activeTab === 'autobuyers' && store.autobuyersUnlocked" />
         <ColonyTab v-else-if="activeTab === 'colony' && store.colonyUnlocked" />
         <SingularityTab v-else-if="activeTab === 'singularity' && store.singularityUnlocked" />
+        <ChallengesTab v-else-if="activeTab === 'challenges' && store.challengesUnlocked" />
         <AchievementsTab v-else-if="activeTab === 'achievements'" />
         <StatsTab v-else-if="activeTab === 'stats'" />
       </main>

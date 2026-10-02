@@ -8,7 +8,7 @@ import type {
 // ---- Denge Sabitleri ----
 // Taslak plandaki (×1.03 / ×1.10) değerler 56 başarımda toplam ×4.5+ veriyordu;
 // onaylanan "tam sette ~×2.5-3" hedefini tutturmak için aşağı ayarlandı.
-// Tam set (56 + 7 tam satır): 1.012^56 × 1.06^7 ≈ ×2.93
+// Tam set (67 + 8 tam satır): 1.012^67 × 1.06^8 ≈ ×3.55 (8 Meydan Okuma başarımı dahil)
 export const PER_ACHIEVEMENT_MULT = 1.012
 export const ROW_COMPLETION_MULT = 1.06
 
@@ -26,7 +26,8 @@ export const ACHIEVEMENT_CATEGORIES: AchievementCategoryMeta[] = [
   { id: 'crisis', name: 'Gece Krizleri', desc: 'Anomaliler, rezonans komboları ve gece kararları.', icon: '🌃' },
   { id: 'guilt', name: 'Vicdan Azapları', desc: 'Dadanırlar, emerler, susturulurlar.', icon: '😈' },
   { id: 'lab', name: 'Algoritma Laboratuvarı', desc: 'Tohum ek, olgunlaştır, hasat et, mutasyona uğrat.', icon: '🧪' },
-  { id: 'singularity', name: 'Tekillik Yolculuğu', desc: 'Şafağı gör, çök, SP biriktir, nöbette kal.', icon: '🌅' }
+  { id: 'singularity', name: 'Tekillik Yolculuğu', desc: 'Şafağı gör, çök, SP biriktir, nöbette kal.', icon: '🌅' },
+  { id: 'challenges', name: 'Meydan Okumalar', desc: 'Gece Kriz Meydan Okumalarını tamamla.', icon: '🏆' }
 ]
 
 // Eşik sabitleri (string tabanlı: float kayması yok)
@@ -148,7 +149,17 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   { id: 'sin_hour', name: 'Bir Saatlik Nöbet', desc: 'Toplam 1 saat oyna', icon: '⏰', category: 'singularity', check: (c) => c.playtime >= 3600 },
   { id: 'sin_3h', name: 'Tam Mesai', desc: 'Toplam 3 saat oyna', icon: '🕰️', category: 'singularity', check: (c) => c.playtime >= 10800 },
-  { id: 'sin_whale', name: 'Uykusuzluk İmparatorluğu', desc: '1.000 SP biriktir', icon: '🏆', category: 'singularity', secret: true, check: (c) => c.sp.gte(SP1000) }
+  { id: 'sin_whale', name: 'Uykusuzluk İmparatorluğu', desc: '1.000 SP biriktir', icon: '🏆', category: 'singularity', secret: true, check: (c) => c.sp.gte(SP1000) },
+
+  // ---- 8. Meydan Okumalar (her Gece Krizi'ne 1; koşu ödülü challenge'dan, buradaki plaket global çarpana işler) ----
+  { id: 'chl_c1', name: 'Uçak Modu: İniş', desc: 'Uçak Modu meydan okumasını tamamla', icon: '✈️', category: 'challenges', check: (c) => c.completedChallenges.includes('c1') },
+  { id: 'chl_c2', name: 'Priz Bulundu', desc: 'Şarj Aleti Temassızlığı meydan okumasını tamamla', icon: '🔌', category: 'challenges', check: (c) => c.completedChallenges.includes('c2') },
+  { id: 'chl_c3', name: 'Önbellek Temizliği', desc: 'Önbellekteki Videolar meydan okumasını tamamla', icon: '💾', category: 'challenges', check: (c) => c.completedChallenges.includes('c3') },
+  { id: 'chl_c4', name: 'Sansürü Aşmak', desc: 'Sansür Matrisi meydan okumasını tamamla', icon: '🚫', category: 'challenges', check: (c) => c.completedChallenges.includes('c4') },
+  { id: 'chl_c5', name: 'Enflasyon Canavarı', desc: 'Gece Enflasyonu meydan okumasını tamamla', icon: '📈', category: 'challenges', check: (c) => c.completedChallenges.includes('c5') },
+  { id: 'chl_c6', name: 'Göz Damlası', desc: 'Göz Kuruluğu meydan okumasını tamamla', icon: '👁️', category: 'challenges', check: (c) => c.completedChallenges.includes('c6') },
+  { id: 'chl_c7', name: 'Kısıtlamayı Delmek', desc: 'Hesap Kısıtlaması meydan okumasını tamamla', icon: '🔒', category: 'challenges', check: (c) => c.completedChallenges.includes('c7') },
+  { id: 'chl_c8', name: 'Sessize Alınmış', desc: 'Grup Sohbeti Cehennemi meydan okumasını tamamla', icon: '💬', category: 'challenges', secret: true, check: (c) => c.completedChallenges.includes('c8') }
 ]
 
 export function getAchievement(id: string): AchievementDef | undefined {

@@ -80,6 +80,16 @@ const singularityTip = computed(() =>
 )
 
 function handleSingularity() {
+  // Meydan okuma aktifken buton "Tamamla" moduna geçer: SP yerine challenge ödülü verir
+  if (store.activeChallenge) {
+    if (!store.canSingularity) return
+    if (!store.settings.confirmDialogs) {
+      store.completeChallenge()
+      return
+    }
+    showCompleteConfirm.value = true
+    return
+  }
   if (!store.canSingularity) return
   // QoL: native confirm yerine tek onay diyaloğu (ayarlardan kapatılabilir)
   if (!store.settings.confirmDialogs) {
@@ -90,6 +100,29 @@ function handleSingularity() {
 }
 
 const showSingularityConfirm = ref(false)
+const showCompleteConfirm = ref(false)
+const showChallengeExitConfirm = ref(false)
+
+// Aktif meydan okuma bağlamı (banner + buton varyantı)
+const inChallenge = computed(() => !!store.activeChallenge)
+const challengeRewardShort = computed(() =>
+  (store.activeChallengeDef?.rewardDesc || '').replace(/^Kalıcı ödül:\s*/, '')
+)
+const challengeTip = computed(() => {
+  const def = store.activeChallengeDef
+  if (!def) return ''
+  return `Meydan Okuma: ${def.name} — ${def.ruleDesc} Hedef: 1.79e308 Dopamin. Ödül: ${def.rewardDesc}.`
+})
+const challengeProgressPct = computed(() => Math.round(store.challengeProgress01 * 100))
+
+function requestChallengeExit() {
+  if (!store.activeChallenge) return
+  if (!store.settings.confirmDialogs) {
+    store.exitChallenge()
+    return
+  }
+  showChallengeExitConfirm.value = true
+}
 
 // Gece saati — Şafak ilerlemesiyle senkron (02:47 → 06:00 arası)
 const nightClock = computed(() => {
@@ -531,17 +564,23 @@ onUnmounted(() => {
           </div>
         </button>
 
-        <!-- 4. Güneşi Karşıla (Tekillik hazır): autobuyer'lar beklemede, tek tıkla çöküş -->
+        <!-- 4. Güneşi Karşıla (Tekillik hazır) / Meydan Okumayı Tamamla (challenge aktif) -->
         <button
-          v-if="singularityReady"
+          v-if="inChallenge || singularityReady"
           @click="handleSingularity"
-          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md animate-pulse shrink-0 min-w-[70px] sm:min-w-[90px]"
-          v-tip="singularityTip"
+          :disabled="inChallenge && !singularityReady"
+          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
+          :class="inChallenge && !singularityReady
+            ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-60'
+            : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 shadow-md animate-pulse'"
+          v-tip="inChallenge ? challengeTip : singularityTip"
         >
           <Sun class="w-4 h-4 text-amber-900 shrink-0" />
-          <div class="flex flex-col items-start text-left leading-tight">
-            <span class="text-[10px] text-amber-900/80 font-normal">06:00</span>
-            <span class="text-xs font-black tabular-nums">+{{ singularityGainText }}</span>
+          <div class="flex flex-col items-start text-left leading-tight min-w-0">
+            <span class="text-[10px] text-amber-900/80 font-normal">{{ inChallenge ? 'Meydan Okuma' : '06:00' }}</span>
+            <span class="text-xs font-black tabular-nums truncate max-w-[110px] sm:max-w-[150px]">
+              {{ inChallenge ? challengeRewardShort : `+${singularityGainText}` }}
+            </span>
           </div>
         </button>
 
@@ -556,6 +595,34 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Aktif meydan okuma bandı (ince): kural özeti + hedef çubuğu + vazgeç -->
+    <div
+      v-if="inChallenge && store.activeChallengeDef"
+      class="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/[0.05] px-3 py-2 flex items-center gap-2.5"
+    >
+      <span class="text-base leading-none shrink-0">{{ store.activeChallengeDef.icon }}</span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[11px] font-bold text-rose-200 truncate">
+          {{ store.activeChallengeDef.name }}
+          <span class="text-slate-400 font-normal">— {{ store.activeChallengeDef.ruleDesc }}</span>
+        </div>
+        <div class="progress-track progress-track-sm progress-track-bordered mt-1">
+          <div
+            class="progress-fill progress-fill-rose"
+            :style="{ width: `${challengeProgressPct}%` }"
+          ></div>
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-rose-300 font-bold tabular-nums shrink-0">%{{ challengeProgressPct }}</span>
+      <button
+        @click="requestChallengeExit"
+        class="btn-tactile px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 cursor-pointer shrink-0"
+        v-tip="'Meydan okumadan cezasız vazgeç (koşu sıfırlanır)'"
+      >
+        Vazgeç
+      </button>
+    </div>
+
     <!-- QoL: tekillik onay diyaloğu (native confirm yerine) -->
     <ConfirmModal
       v-if="showSingularityConfirm"
@@ -565,6 +632,28 @@ onUnmounted(() => {
       :danger="false"
       @confirm="store.singularityReset(); showSingularityConfirm = false"
       @cancel="showSingularityConfirm = false"
+    />
+
+    <!-- QoL: meydan okuma tamamlama onayı (SP yerine challenge ödülü) -->
+    <ConfirmModal
+      v-if="showCompleteConfirm && store.activeChallengeDef"
+      title="Meydan Okumayı Tamamla"
+      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 Dopamin). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
+      confirm-label="Ödülü Al"
+      :danger="false"
+      @confirm="store.completeChallenge(); showCompleteConfirm = false"
+      @cancel="showCompleteConfirm = false"
+    />
+
+    <!-- QoL: meydan okumadan vazgeçme onayı -->
+    <ConfirmModal
+      v-if="showChallengeExitConfirm"
+      title="Meydan Okumadan Vazgeç"
+      message="Mevcut meydan okuma koşusu sıfırlanacak. Ceza yok, ödül yok — dilediğin zaman yeniden başlayabilirsin. Emin misin?"
+      confirm-label="Vazgeç"
+      :danger="false"
+      @confirm="store.exitChallenge(); showChallengeExitConfirm = false"
+      @cancel="showChallengeExitConfirm = false"
     />
   </header>
 </template>

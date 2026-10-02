@@ -30,6 +30,16 @@ const progressToSingularity = computed(() => {
 })
 
 function handleSingularityReset() {
+  // Meydan okuma aktifken buton "Tamamla" moduna geçer: SP yerine challenge ödülü verir
+  if (store.activeChallenge) {
+    if (!store.canSingularity) return
+    if (!store.settings.confirmDialogs) {
+      store.completeChallenge()
+      return
+    }
+    showCompleteConfirm.value = true
+    return
+  }
   if (!store.canSingularity) return
   // QoL: native confirm yerine tek onay diyaloğu (ayarlardan kapatılabilir)
   if (!store.settings.confirmDialogs) {
@@ -40,6 +50,18 @@ function handleSingularityReset() {
 }
 
 const showSingularityConfirm = ref(false)
+const showCompleteConfirm = ref(false)
+
+// Meydan okuma bağlamı: buton metni + ödül önizlemesi
+const inChallenge = computed(() => !!store.activeChallenge)
+const challengeRewardShort = computed(() =>
+  (store.activeChallengeDef?.rewardDesc || '').replace(/^Kalıcı ödül:\s*/, '')
+)
+const challengeButtonLabel = computed(() => {
+  if (!store.activeChallengeDef) return ''
+  if (store.canSingularity) return `Meydan Okumayı Tamamla (${challengeRewardShort.value})`
+  return `Meydan: ${store.activeChallengeDef.name} — Hedef 1.79e308 Dopamin`
+})
 </script>
 
 <template>
@@ -72,7 +94,7 @@ const showSingularityConfirm = ref(false)
         >
           <Sun class="w-4 h-4" />
           <span>
-            {{ store.canSingularity ? `Güneşi Karşıla (+${formatNumber(store.singularityGain, store.settings.notation)} SP)` : '1.79e308 Dopamin Gereklidir' }}
+            {{ inChallenge ? challengeButtonLabel : (store.canSingularity ? `Güneşi Karşıla (+${formatNumber(store.singularityGain, store.settings.notation)} SP)` : '1.79e308 Dopamin Gereklidir') }}
           </span>
         </button>
       </template>
@@ -137,6 +159,17 @@ const showSingularityConfirm = ref(false)
       :danger="false"
       @confirm="store.singularityReset(); showSingularityConfirm = false"
       @cancel="showSingularityConfirm = false"
+    />
+
+    <!-- QoL: meydan okuma tamamlama onayı (SP yerine challenge ödülü) -->
+    <ConfirmModal
+      v-if="showCompleteConfirm && store.activeChallengeDef"
+      title="Meydan Okumayı Tamamla"
+      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 Dopamin). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
+      confirm-label="Ödülü Al"
+      :danger="false"
+      @confirm="store.completeChallenge(); showCompleteConfirm = false"
+      @cancel="showCompleteConfirm = false"
     />
   </div>
 </template>
