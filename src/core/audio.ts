@@ -357,6 +357,106 @@ class SoundManager {
     })
   }
 
+  // Gece Krizi Doğuşu (Ekranda Kriz Belirdiğinde Gizemli Uzaysal Synth Uyarısı)
+  playAnomalySpawn() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    // İnce kozmik arpej (G#5 -> C#6 -> E6 -> B6)
+    const notes = [830.61, 1108.73, 1318.51, 1975.53]
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      const startTime = ctx.currentTime + idx * 0.05
+      osc.frequency.setValueAtTime(freq, startTime)
+
+      gain.gain.setValueAtTime(0.001, startTime)
+      gain.gain.exponentialRampToValueAtTime(this.volume * 0.28, startTime + 0.015)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.38)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      this.registerCleanup(osc, gain)
+      osc.start(startTime)
+      osc.stop(startTime + 0.4)
+    })
+  }
+
+  // Gece Krizine Tıklama (Kriz Tipine Göre İmzalı Synth Tınısı)
+  playCrisisCollect(type: string) {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    if (type === 'heart_frenzy') {
+      // 1. Kalp histerisi: Sub kick nabzı + yüksek voltajlı arpej
+      const kick = ctx.createOscillator()
+      const kickGain = ctx.createGain()
+      kick.type = 'triangle'
+      kick.frequency.setValueAtTime(160, ctx.currentTime)
+      kick.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.18)
+      kickGain.gain.setValueAtTime(this.volume * 0.7, ctx.currentTime)
+      kickGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18)
+      kick.connect(kickGain)
+      kickGain.connect(ctx.destination)
+      this.registerCleanup(kick, kickGain)
+      kick.start()
+      kick.stop(ctx.currentTime + 0.18)
+
+      // İkinci darbe (güm-güm kalp atışı hissi)
+      const kick2 = ctx.createOscillator()
+      const kick2Gain = ctx.createGain()
+      kick2.type = 'triangle'
+      kick2.frequency.setValueAtTime(140, ctx.currentTime + 0.1)
+      kick2.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.24)
+      kick2Gain.gain.setValueAtTime(this.volume * 0.6, ctx.currentTime + 0.1)
+      kick2Gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24)
+      kick2.connect(kick2Gain)
+      kick2Gain.connect(ctx.destination)
+      this.registerCleanup(kick2, kick2Gain)
+      kick2.start(ctx.currentTime + 0.1)
+      kick2.stop(ctx.currentTime + 0.24)
+
+      // Yüksek voltaj arpeji
+      const notes = [587.33, 880.0, 1174.66, 1760.0] // D5, A5, D6, A6
+      notes.forEach((f, i) => {
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.type = 'sawtooth'
+        const t = ctx.currentTime + i * 0.035
+        osc.frequency.setValueAtTime(f, t)
+        g.gain.setValueAtTime(this.volume * 0.22, t)
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
+        osc.connect(g)
+        g.connect(ctx.destination)
+        this.registerCleanup(osc, g)
+        osc.start(t)
+        osc.stop(t + 0.25)
+      })
+    } else if (type === 'sponsor') {
+      // 2. 50 Milyonluk Viral Video: Parıltılı altın çan kaskadı
+      const bellChord = [1046.5, 1318.51, 1567.98, 2093.0, 2637.02] // C6, E6, G6, C7, E7
+      bellChord.forEach((f, i) => {
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.type = 'sine'
+        const t = ctx.currentTime + i * 0.04
+        osc.frequency.setValueAtTime(f, t)
+        g.gain.setValueAtTime(0.001, t)
+        g.gain.exponentialRampToValueAtTime(this.volume * 0.45, t + 0.01)
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.45)
+        osc.connect(g)
+        g.connect(ctx.destination)
+        this.registerCleanup(osc, g)
+        osc.start(t)
+        osc.stop(t + 0.45)
+      })
+    } else {
+      // 3. fyp veya standart kriz: Yükselen alevli synth akoru
+      this.playAnomaly()
+    }
+  }
+
   // Süper Rezonans Kombo Patlaması (Sub-kick + Zengin Harmonik Akor)
   playCombo() {
     const ctx = this.getContext()

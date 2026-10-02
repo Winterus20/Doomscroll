@@ -190,6 +190,16 @@ function toggleCrt() {
   sounds.playClick()
 }
 
+function toggleHoloCards() {
+  store.settings.holoCardsEnabled = !(store.settings.holoCardsEnabled ?? true)
+  sounds.playClick()
+}
+
+function toggleScreenOverlay() {
+  store.settings.screenOverlayEffects = !(store.settings.screenOverlayEffects ?? true)
+  sounds.playClick()
+}
+
 function setJuiceMode(mode: 'calm' | 'balanced' | 'tilt') {
   store.settings.juiceMode = mode
   sounds.playClick()
@@ -491,6 +501,34 @@ function hardReset() {
             </button>
           </div>
 
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div>
+              <div class="text-xs font-mono font-medium text-slate-300">3D Kart &amp; Holo Efektleri</div>
+              <div class="text-[10px] text-slate-500">Balatro 3D eğilme ve Foil/Holo/Poly kaplamaları</div>
+            </div>
+            <button
+              @click="toggleHoloCards"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="(store.settings.holoCardsEnabled ?? true) ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ (store.settings.holoCardsEnabled ?? true) ? 'Açık' : 'Kapalı' }}
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div>
+              <div class="text-xs font-mono font-medium text-slate-300">Gece Ekran Dokuları</div>
+              <div class="text-[10px] text-slate-500">Taktil başparmak izi lekesi ve kriz çatlak camı</div>
+            </div>
+            <button
+              @click="toggleScreenOverlay"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="(store.settings.screenOverlayEffects ?? true) ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ (store.settings.screenOverlayEffects ?? true) ? 'Açık' : 'Kapalı' }}
+            </button>
+          </div>
+
           <div class="p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
             <div class="flex items-center justify-between mb-2">
               <div class="text-xs font-mono font-medium text-slate-300">Juice Yoğunluğu</div>
@@ -523,7 +561,7 @@ function hardReset() {
 
           <div class="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-[10px] text-slate-500 font-mono leading-relaxed">
             <span class="text-slate-400 font-semibold">Kısayollar:</span>
-            1-8 sekme değiştir · M Tümünü Al · Space Kaydır · Esc modal kapat
+            1-9 sekme değiştir · M Tümünü Al · Space Kaydır · Esc modal kapat
           </div>
         </div>
 

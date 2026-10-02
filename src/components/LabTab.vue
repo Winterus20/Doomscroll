@@ -69,7 +69,8 @@ function handleCellClick(cellId: number) {
     // Olgun hücreye tıklandığında anlık dopamin & Hype toplar, hücre silinmez tekrar ısınır!
     store.harvestCell(cellId)
   } else if (cell.seedType !== selectedSeedType.value && canAffordSeed(selectedSeedType.value)) {
-    // İsteğe bağlı: Farklı bir modülü mevcut hücrenin üzerine yazma
+    if (selectedSeed.value.isMutationOnly && !isSeedDiscovered(selectedSeedType.value)) return
+    if (isSeedLocked(selectedSeedType.value)) return
     store.plantSeed(cellId, selectedSeedType.value)
   }
 }

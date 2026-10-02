@@ -18,12 +18,14 @@ const singularityBroken = computed(() => (store.singularityUpgrades?.break_singu
 // Faz 2 kilometre taşı: Kolektif Gece Nöbeti (1e4000 Dopamin — GDD "İkinci Çöküş")
 const nightWatchUnlocked = computed(() => store.nightWatchUnlocked)
 const nightWatchProgress = computed(() => {
+  if (store.matter.lt(1)) return 0
   if (store.matter.gte(NIGHT_WATCH_THRESHOLD)) return 100
   const logVal = Math.max(0, store.matter.log10().toNumber())
   return Math.min(100, Math.floor((logVal / 4000) * 100))
 })
 
 const progressToSingularity = computed(() => {
+  if (store.matter.lt(1)) return 0
   if (store.matter.gte(D_INFINITY)) return 100
   const logVal = Math.max(0, store.matter.log10().toNumber())
   return Math.min(100, Math.floor((logVal / 308.25) * 100))

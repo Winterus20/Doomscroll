@@ -10,9 +10,17 @@ export interface JuiceTriggerOptions {
   big?: boolean
 }
 
+export interface ShockwaveTriggerOptions {
+  x: number
+  y: number
+  color?: string
+  maxRadius?: number
+}
+
 declare global {
   interface Window {
     __triggerJuice?: (options: JuiceTriggerOptions) => void
+    __triggerShockwave?: (options: ShockwaveTriggerOptions) => void
   }
 }
 
@@ -29,11 +37,35 @@ interface Particle {
   size: number
 }
 
+interface Shockwave {
+  x: number
+  y: number
+  radius: number
+  maxRadius: number
+  color: string
+  alpha: number
+  lineWidth: number
+}
+
+interface Spark {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  color: string
+  size: number
+  alpha: number
+  life: number
+  maxLife: number
+}
+
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let animId: number | null = null
 let shakeTimeout: ReturnType<typeof setTimeout> | null = null
 const particles: Particle[] = []
+const shockwaves: Shockwave[] = []
+const sparks: Spark[] = []
 
 let width = 0
 let height = 0
@@ -114,6 +146,70 @@ function triggerJuice(options: JuiceTriggerOptions) {
   }
 }
 
+function spawnShockwave(x: number, y: number, color = '#a855f7', maxRadius = 180) {
+  const mode = (() => {
+    try {
+      const raw = localStorage.getItem('doomscroll-save')
+      if (raw) {
+        const parsed = JSON.parse(raw) as { settings?: { juiceMode?: string } }
+        return parsed.settings?.juiceMode ?? 'balanced'
+      }
+    } catch { /* yoksay */ }
+    return 'balanced'
+  })()
+
+  if (mode === 'calm') return
+
+  // 1. Ana Dış Şok Dalgası
+  shockwaves.push({
+    x,
+    y,
+    radius: 12,
+    maxRadius,
+    color,
+    alpha: 0.95,
+    lineWidth: 4
+  })
+
+  // 2. Takip Eden Beyaz/Gümüş İç Çekirdek Dalgası
+  shockwaves.push({
+    x,
+    y,
+    radius: 4,
+    maxRadius: maxRadius * 0.72,
+    color: '#ffffff',
+    alpha: 0.85,
+    lineWidth: 2.2
+  })
+
+  // 3. 360 Derece Dağılan Neon Kıvılcımlar (Sparks)
+  const sparkCount = mode === 'tilt' ? 32 : 20
+  for (let i = 0; i < sparkCount; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const speed = 2.2 + Math.random() * 5.8
+    sparks.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color,
+      size: 1.8 + Math.random() * 2.8,
+      alpha: 1,
+      life: 0,
+      maxLife: 24 + Math.floor(Math.random() * 18)
+    })
+  }
+
+  if (animId === null) {
+    animId = requestAnimationFrame(loop)
+  }
+}
+
+function triggerShockwave(options: ShockwaveTriggerOptions) {
+  const { x, y, color, maxRadius } = options
+  spawnShockwave(x, y, color, maxRadius)
+}
+
 function loop() {
   if (!ctx || !canvasRef.value) {
     animId = null
@@ -125,6 +221,53 @@ function loop() {
   ctx.scale(dpr, dpr)
   ctx.clearRect(0, 0, width, height)
 
+  // 1. Şok Dalgaları Render & Fizik
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const sw = shockwaves[i]
+    sw.radius += (sw.maxRadius - sw.radius) * 0.16 + 2.2
+    sw.alpha = Math.max(0, 1 - sw.radius / sw.maxRadius)
+
+    if (sw.radius >= sw.maxRadius || sw.alpha <= 0) {
+      shockwaves.splice(i, 1)
+      continue
+    }
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2)
+    ctx.strokeStyle = sw.color
+    ctx.globalAlpha = sw.alpha
+    ctx.lineWidth = sw.lineWidth * (1 - sw.radius / sw.maxRadius) + 0.6
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // 2. Neon Kıvılcımlar Render & Fizik
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i]
+    s.life++
+    s.x += s.vx
+    s.y += s.vy
+    s.vx *= 0.94
+    s.vy *= 0.94
+    s.vy += 0.08 // Yerçekimi
+    s.alpha = Math.max(0, 1 - s.life / s.maxLife)
+
+    if (s.life >= s.maxLife || s.alpha <= 0) {
+      sparks.splice(i, 1)
+      continue
+    }
+
+    ctx.save()
+    ctx.globalAlpha = s.alpha
+    ctx.fillStyle = s.color
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, Math.max(0.5, s.size * (1 - s.life / s.maxLife)), 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // 3. Metin Parçacıkları Render & Fizik
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]
     p.life++
@@ -162,7 +305,7 @@ function loop() {
 
   ctx.restore()
 
-  if (particles.length > 0) {
+  if (particles.length > 0 || shockwaves.length > 0 || sparks.length > 0) {
     animId = requestAnimationFrame(loop)
   } else {
     animId = null
@@ -173,6 +316,13 @@ function handleTapEvent(e: Event) {
   const customEvent = e as CustomEvent<JuiceTriggerOptions>
   if (customEvent.detail) {
     triggerJuice(customEvent.detail)
+  }
+}
+
+function handleShockwaveEvent(e: Event) {
+  const customEvent = e as CustomEvent<ShockwaveTriggerOptions>
+  if (customEvent.detail) {
+    triggerShockwave(customEvent.detail)
   }
 }
 
@@ -203,17 +353,23 @@ onMounted(() => {
   window.addEventListener('resize', resizeCanvas)
   window.addEventListener('doomscroll:tap', handleTapEvent)
   window.addEventListener('doomscroll:shake', handleShakeEvent)
+  window.addEventListener('doomscroll:shockwave', handleShockwaveEvent)
 
   window.__triggerJuice = triggerJuice
+  window.__triggerShockwave = triggerShockwave
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeCanvas)
   window.removeEventListener('doomscroll:tap', handleTapEvent)
   window.removeEventListener('doomscroll:shake', handleShakeEvent)
+  window.removeEventListener('doomscroll:shockwave', handleShockwaveEvent)
 
   if (window.__triggerJuice === triggerJuice) {
     delete window.__triggerJuice
+  }
+  if (window.__triggerShockwave === triggerShockwave) {
+    delete window.__triggerShockwave
   }
 
   if (animId !== null) {
@@ -228,6 +384,8 @@ onUnmounted(() => {
   document.body.classList.remove('screen-shake')
 
   particles.length = 0
+  shockwaves.length = 0
+  sparks.length = 0
 })
 </script>
 

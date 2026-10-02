@@ -135,11 +135,12 @@ function confirmExit() {
       <div
         v-for="def in CHALLENGES"
         :key="def.id"
-        class="p-3 rounded-xl border flex flex-col gap-1.5 transition-all"
+        v-tilt="{ max: 8, scale: 1.015, disabled: !(store.settings.holoCardsEnabled ?? true) }"
+        class="card-tilt-surface p-3 rounded-xl border flex flex-col gap-1.5 transition-all relative overflow-hidden"
         :class="isCompleted(def.id)
-          ? 'bg-emerald-500/[0.05] border-emerald-500/25'
+          ? 'edition-holo bg-emerald-950/40 border-emerald-500/40'
           : isActive(def.id)
-            ? 'bg-rose-500/[0.06] border-rose-500/40 shadow-[0_0_18px_rgba(244,63,94,0.12)]'
+            ? 'edition-poly bg-rose-950/40 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
             : isLocked(def)
               ? 'bg-black/30 border-white/[0.04] opacity-45'
               : 'bg-black/30 border-white/[0.07] hover:border-rose-500/30'"
@@ -155,8 +156,8 @@ function confirmExit() {
             {{ def.name }}
           </span>
           <span class="ml-auto shrink-0">
-            <span v-if="isCompleted(def.id)" class="ds-badge ds-badge-emerald">✔ TAMAM</span>
-            <span v-else-if="isActive(def.id)" class="ds-badge ds-badge-rose animate-pulse">● AKTİF</span>
+            <span v-if="isCompleted(def.id)" class="edition-tag edition-tag-holo">✔ HOLO MÜHÜR</span>
+            <span v-else-if="isActive(def.id)" class="edition-tag edition-tag-poly animate-pulse">● POLY AKTİF</span>
             <span v-else-if="isLocked(def)" class="ds-badge">KİLİTLİ</span>
           </span>
         </div>

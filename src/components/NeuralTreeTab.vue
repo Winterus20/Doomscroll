@@ -22,10 +22,11 @@ const ACTIVE_ROWS: TreeRow[] = [
   ['fast_charger', 'cps_sync'],
   ['combo_unlock', 'caffeine_drip'],
   ['click_momentum', 'crisis_bounty'],
+  ['guilt_immunity'],
   ['frenzy_thumb', 'iron_patience']
 ]
 const HYBRID_ROWS: TreeRow[] = [
-  ['synaptic_bridge', 'neural_symphony', 'apex_doomscroll']
+  ['synaptic_bridge', 'neural_symphony', 'apex_doomscroll', 'break_singularity']
 ]
 
 const NODE_MAP: Record<string, NeuralNode> = Object.fromEntries(

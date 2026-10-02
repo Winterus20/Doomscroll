@@ -47,9 +47,10 @@ const shiftProgressPercent = computed(() => {
 })
 
 const galaxyReq = computed(() => store.galaxyRequirement)
+const galaxyTier = computed(() => store.galaxyRequirementTier)
 const currentGalaxyDimAmount = computed(() => {
-  const dim8 = store.dimensions[7]
-  return dim8 ? dim8.amount : D_0
+  const dim = store.dimensions[galaxyTier.value - 1]
+  return dim ? dim.amount : D_0
 })
 
 const galaxyProgressPercent = computed(() => {
@@ -154,7 +155,7 @@ function triggerShift(e: MouseEvent) {
       detail: {
         x,
         y,
-        text: isShiftUnlock.value ? 'Yeni Format!' : `×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} Boost!`,
+        text: isShiftUnlock.value ? 'Yeni Format!' : `×${format(store.singleShiftPower, 1, store.settings.notation)} Boost!`,
         color: '#d8b4fe',
         big: true
       }
@@ -514,7 +515,9 @@ function handleSlackerClick(e: MouseEvent, id: string) {
     >
       <!-- Akış Sıçraması (Shift) -->
       <div
-        class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06]"
+        v-tilt="{ max: 6, scale: 1.015, disabled: !(store.settings.holoCardsEnabled ?? true) }"
+        class="card-tilt-surface glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06] transition-all"
+        :class="store.canShift && (store.settings.holoCardsEnabled ?? true) ? 'edition-foil' : ''"
         v-tip="isShiftUnlock ? 'Yeni format açar' : `Tüm üretimi kalıcı ×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} katlar`"
       >
         <div class="flex items-center gap-2.5 min-w-0">
@@ -543,14 +546,16 @@ function handleSlackerClick(e: MouseEvent, id: string) {
             ? 'bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border-purple-500/40 cursor-pointer'
             : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
         >
-          {{ isShiftUnlock ? 'Format Aç' : `×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} Boost` }}
+          {{ isShiftUnlock ? 'Format Aç' : `×${format(store.singleShiftPower, 1, store.settings.notation)} Boost` }}
         </button>
       </div>
 
       <!-- Sonsuz Akış Kümeleri (Galaxies — D8 çağında açılır) -->
       <div
         v-if="showGalaxyCard"
-        class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06]"
+        v-tilt="{ max: 6, scale: 1.015, disabled: !(store.settings.holoCardsEnabled ?? true) }"
+        class="card-tilt-surface glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06] transition-all"
+        :class="store.canBuyGalaxy && (store.settings.holoCardsEnabled ?? true) ? 'edition-poly' : ''"
         v-tip="'Tüm içerikleri sıfırlar; Frekans (Hz) çarpan gücünü katlar'"
       >
         <div class="flex items-center gap-2.5 min-w-0">
@@ -563,7 +568,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
               <span class="text-[10px] font-mono text-amber-400">Adet: {{ store.galaxies }}</span>
             </div>
             <div class="text-[11px] font-mono text-slate-400 tabular-nums">
-              {{ format(currentGalaxyDimAmount, 0, store.settings.notation) }} / {{ galaxyReq }} D8
+              {{ format(currentGalaxyDimAmount, 0, store.settings.notation) }} / {{ galaxyReq }} D{{ galaxyTier }}
             </div>
             <div class="progress-track progress-track-mini w-20 sm:w-24 mt-1">
               <div class="progress-fill progress-fill-amber" :style="{ width: `${galaxyProgressPercent}%` }"></div>
@@ -596,7 +601,9 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       <!-- Önbelleği Temizleme (Dimension Sacrifice - Antimatter Dimensions) -->
       <div
         v-if="isSacrificeUnlocked"
-        class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-rose-500/20 bg-rose-950/10"
+        v-tilt="{ max: 6, scale: 1.015, disabled: !(store.settings.holoCardsEnabled ?? true) }"
+        class="card-tilt-surface glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-rose-500/20 bg-rose-950/10 transition-all"
+        :class="store.canSacrifice && (store.settings.holoCardsEnabled ?? true) ? 'edition-negative' : ''"
         v-tip="'D1-D7 üretmeye devam eder; biriken D1 miktarına göre D8 Saf Beyin Çürümesine kalıcı çarpan kazandırır!'"
       >
         <div class="flex items-center gap-2.5 min-w-0">

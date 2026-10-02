@@ -62,8 +62,13 @@ export class GameLoop {
       if (document.hidden) {
         SaveSystem.save(useGameStore().serialize())
       } else {
-        // Dönüşte lastTime tazelensin; büyük delta loop içinde offline'a devredilir
-        this.lastTime = performance.now()
+        const now = performance.now()
+        const rawDelta = now - this.lastTime
+        if (rawDelta > BACKGROUND_CATCHUP_THRESHOLD * 1000) {
+          useGameStore().simulateOfflineProgress(Math.min(rawDelta / 1000, OFFLINE_CAP_SECONDS))
+          this.accumulator = 0
+        }
+        this.lastTime = now
       }
     }
     document.addEventListener('visibilitychange', this.handleVisibility)

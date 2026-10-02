@@ -6,6 +6,7 @@ import { gameLoop } from './core/game-loop'
 import { sounds } from './core/audio'
 import { musicEngine } from './core/music-engine'
 import JuiceLayer from './components/JuiceLayer.vue'
+import ScreenOverlay from './components/ScreenOverlay.vue'
 import Header from './components/Header.vue'
 import DimensionsTab from './components/DimensionsTab.vue'
 import LabTab from './components/LabTab.vue'
@@ -231,6 +232,9 @@ onUnmounted(() => {
     <!-- Gece Krizleri Overlay'i -->
     <AnomalyOverlay />
 
+    <!-- Doomscroll Gece Ekran Dokuları (Parmak İzi & Kriz Çatlak Camı) -->
+    <ScreenOverlay />
+
     <!-- Başarım Bildirimleri -->
     <AchievementToast />
 
@@ -282,9 +286,9 @@ onUnmounted(() => {
           <span>Botlar</span>
           <span v-if="hasBotAlert" class="tab-dot tab-dot-blue" v-tip="'Açılabilir bot kademesi veya alınabilir bot var'"></span>
         </button>
-        <div v-else :class="NAV_LOCKED" v-tip="'1M (1e6) Dopamin biriktir'">
+        <div v-else :class="NAV_LOCKED" v-tip="'1B (1e9) Dopamin biriktir'">
           <Lock class="w-3 h-3" />
-          <span>Botlar (1M)</span>
+          <span>Botlar (1B)</span>
         </div>
 
         <!-- Nöral İzleme Kolonisi Sekmesi -->

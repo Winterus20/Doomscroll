@@ -59,8 +59,8 @@ function show(el: HTMLElement, text: string, x: number): void {
   if (top + tipRect.height > window.innerHeight - 8) {
     top = rect.top - tipRect.height - 8
   }
-  tip.style.left = `${Math.round(left)}`
-  tip.style.top = `${Math.round(Math.max(8, top))}`
+  tip.style.left = `${Math.round(left)}px`
+  tip.style.top = `${Math.round(Math.max(8, top))}px`
 }
 
 function hide(delay = 0): void {

@@ -575,9 +575,144 @@ body::after {
 .anomaly-wobble:hover {
   animation-play-state: paused;
 }
-.anomaly-glow-purple { box-shadow: 0 0 24px -4px rgba(168, 85, 247, 0.55); }
-.anomaly-glow-rose { box-shadow: 0 0 24px -4px rgba(244, 63, 94, 0.55); }
-.anomaly-glow-amber { box-shadow: 0 0 24px -4px rgba(245, 158, 11, 0.55); }
+.anomaly-glow-purple {
+  box-shadow: 0 0 28px -2px rgba(168, 85, 247, 0.65), 0 0 12px rgba(192, 132, 252, 0.4);
+  --beam-color: #c084fc;
+}
+.anomaly-glow-rose {
+  box-shadow: 0 0 28px -2px rgba(244, 63, 94, 0.65), 0 0 12px rgba(251, 113, 133, 0.4);
+  --beam-color: #fb7185;
+}
+.anomaly-glow-amber {
+  box-shadow: 0 0 28px -2px rgba(245, 158, 11, 0.65), 0 0 12px rgba(252, 211, 77, 0.4);
+  --beam-color: #fcd34d;
+}
+
+/* ==========================================================================
+   Gece Krizleri Hibrit Görsel Sistemi (Border Beam, Shimmer, Auralar)
+   ========================================================================== */
+
+/* 1. Dönen Lazer Çerçeve (Border Beam) */
+@keyframes beam-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.anomaly-beam-border {
+  position: absolute;
+  inset: -120%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 240deg,
+    var(--beam-color, #a855f7) 310deg,
+    #ffffff 360deg
+  );
+  animation: beam-spin 2.6s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* 2. Holografik Cam Sweep (Shimmer Line) */
+@keyframes crisis-shimmer-sweep {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  50%, 100% { transform: translateX(250%) skewX(-20deg); }
+}
+.crisis-shimmer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
+    transparent 100%
+  );
+  animation: crisis-shimmer-sweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+/* 3. Telaşlı Kalan Süre Nabzı (Panic Pulse) */
+@keyframes panic-pulse-anim {
+  0% {
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.6), inset 0 0 10px rgba(239, 68, 68, 0.3);
+    border-color: rgba(248, 113, 113, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.95), inset 0 0 18px rgba(239, 68, 68, 0.5);
+    border-color: rgba(254, 202, 202, 1);
+  }
+}
+.panic-pulse {
+  animation: panic-pulse-anim 0.42s ease-in-out infinite alternate !important;
+}
+
+/* 4. Ekran Kenar Ambiyansı (Crisis Perimeter Aura) */
+.crisis-perimeter-aura {
+  pointer-events: none;
+}
+.crisis-aura-purple {
+  box-shadow: inset 0 0 75px 12px rgba(168, 85, 247, 0.32);
+}
+.crisis-aura-rose {
+  box-shadow: inset 0 0 75px 12px rgba(244, 63, 94, 0.35);
+}
+.crisis-aura-amber {
+  box-shadow: inset 0 0 75px 12px rgba(245, 158, 11, 0.32);
+}
+@keyframes combo-aura-pulse-anim {
+  0% {
+    box-shadow: inset 0 0 85px 20px rgba(168, 85, 247, 0.45), inset 0 0 130px 40px rgba(244, 63, 94, 0.25);
+  }
+  100% {
+    box-shadow: inset 0 0 95px 28px rgba(6, 182, 212, 0.45), inset 0 0 140px 48px rgba(245, 158, 11, 0.32);
+  }
+}
+.crisis-aura-combo {
+  animation: combo-aura-pulse-anim 1.6s ease-in-out infinite alternate;
+}
+
+/* 5. SVG Vektör Mikro-Animasyonları */
+@keyframes flame-sub-dance {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.08) translateY(-1px); }
+}
+.animate-flame-sub {
+  animation: flame-sub-dance 1.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes cyber-heart-beat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.18); }
+  30% { transform: scale(1.04); }
+  45% { transform: scale(1.14); }
+  60% { transform: scale(1); }
+}
+.animate-cyber-heart {
+  animation: cyber-heart-beat 1.1s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+@keyframes starburst-spin-anim {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-starburst-spin {
+  animation: starburst-spin-anim 9s linear infinite;
+  transform-origin: center center;
+}
+
+@keyframes ekg-dash-anim {
+  0% { stroke-dashoffset: 40; }
+  100% { stroke-dashoffset: 0; }
+}
+.animate-ekg-line {
+  stroke-dasharray: 20 8;
+  animation: ekg-dash-anim 1.2s linear infinite;
+}
 
 /* Foil milestone — nadir kalite rozeti holo şerit taşır */
 .foil-badge {
@@ -591,6 +726,180 @@ body::after {
   background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
   animation: sheen-sweep-anim 3.4s ease-in-out infinite;
   pointer-events: none;
+}
+
+/* ==========================================================================
+   Balatro 4 Editions & Simon Goellner Holo-Foil Sistemi (v0.18.0)
+   CSS 3D + Pointer Koordinatları (--pointer-x, --pointer-y, --pointer-angle)
+   ========================================================================== */
+
+/* 3D Kart Tabanı */
+.card-tilt-surface {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* 1. FOIL: Metalik Mavi/Gümüş Işık Yansıması (+Çipler/Fişler) */
+.edition-foil {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(96, 165, 250, 0.55) !important;
+  box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.38), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+.edition-foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle 140px at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255, 255, 255, 0.45), rgba(147, 197, 253, 0.25) 35%, transparent 70%),
+    linear-gradient(115deg, transparent 20%, rgba(191, 219, 254, 0.25) 45%, rgba(255, 255, 255, 0.55) 50%, rgba(191, 219, 254, 0.25) 55%, transparent 80%);
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  opacity: calc(0.35 + var(--pointer-from-center, 0) * 0.65);
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+
+/* 2. HOLOGRAPHIC: Simon Goellner Stili Prizmatik Gökkuşağı + Sim (+Mult) */
+.edition-holo {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(244, 114, 182, 0.65) !important;
+  box-shadow: 0 0 22px -2px rgba(236, 72, 153, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+.edition-holo::after {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from var(--pointer-angle, 0deg) at var(--pointer-x, 50%) var(--pointer-y, 50%),
+    rgba(244, 63, 94, 0.6) 0deg,
+    rgba(251, 146, 60, 0.6) 60deg,
+    rgba(250, 204, 21, 0.6) 120deg,
+    rgba(74, 222, 128, 0.6) 180deg,
+    rgba(56, 189, 248, 0.6) 240deg,
+    rgba(192, 132, 252, 0.6) 300deg,
+    rgba(244, 63, 94, 0.6) 360deg
+  );
+  mix-blend-mode: color-dodge;
+  opacity: calc(0.35 + var(--pointer-from-center, 0) * 0.65);
+  pointer-events: none;
+  border-radius: inherit;
+  transition: opacity 0.2s ease;
+}
+.edition-holo::before {
+  /* İnce sim/glitter mikro-gren */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.9) 1px, transparent 1px);
+  background-size: 7px 7px;
+  mix-blend-mode: overlay;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* 3. POLYCHROME: Balatro Akışkan Psikedelik Gökkuşağı Girdabı (xMult) */
+.edition-poly {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(168, 85, 247, 0.75) !important;
+  box-shadow: 0 0 28px -2px rgba(168, 85, 247, 0.6), inset 0 0 16px rgba(236, 72, 153, 0.3);
+  animation: poly-border-pulse 4s ease-in-out infinite;
+}
+.edition-poly::after {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  background: conic-gradient(
+    from 0deg,
+    #ff0055,
+    #ff8800,
+    #ffe600,
+    #00ff77,
+    #00ccee,
+    #7700ff,
+    #ff00bb,
+    #ff0055
+  );
+  animation: poly-spin 7s linear infinite;
+  mix-blend-mode: color-dodge;
+  opacity: 0.36;
+  filter: blur(14px) saturate(2);
+  pointer-events: none;
+  border-radius: inherit;
+}
+@keyframes poly-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes poly-border-pulse {
+  0%, 100% { border-color: rgba(168, 85, 247, 0.75); }
+  50% { border-color: rgba(236, 72, 153, 0.9); }
+}
+
+/* 4. NEGATIVE: Tersyüz Karanlık Madde & Glitch */
+.edition-negative {
+  position: relative;
+  overflow: hidden;
+  background: rgba(3, 5, 12, 0.96) !important;
+  border: 2px solid #c084fc !important;
+  box-shadow: 0 0 22px rgba(192, 132, 252, 0.55), inset 0 0 18px rgba(6, 182, 212, 0.28);
+}
+.edition-negative::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.22) 0px,
+    rgba(0, 0, 0, 0.22) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Balatro Tarzı Kompakt Rozet Çipleri */
+.edition-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  border: 1px solid;
+  transform: rotate(-1.5deg);
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.4);
+}
+.edition-tag-foil {
+  background: rgba(30, 58, 138, 0.6);
+  border-color: rgba(96, 165, 250, 0.8);
+  color: #dbeafe;
+}
+.edition-tag-holo {
+  background: rgba(131, 24, 67, 0.6);
+  border-color: rgba(244, 114, 182, 0.8);
+  color: #fce7f3;
+}
+.edition-tag-poly {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.7), rgba(157, 23, 77, 0.7));
+  border-color: rgba(216, 180, 254, 0.85);
+  color: #f3e8ff;
+  animation: mult-hot-anim 1.5s ease-in-out infinite;
+}
+.edition-tag-negative {
+  background: #000;
+  border-color: #c084fc;
+  color: #e9d5ff;
 }
 
 /* Minimalist Dark Scrollbar */
@@ -632,8 +941,13 @@ body::after {
   .count-pop-combo,
   .buy-bounce,
   .cta-beacon,
-  .arrow-nudge {
-    animation: none;
+  .arrow-nudge,
+  .edition-poly::after,
+  .edition-tag-poly {
+    animation: none !important;
+  }
+  .card-tilt-surface {
+    transform: none !important;
   }
   .progress-fill {
     transition: none;

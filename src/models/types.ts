@@ -165,6 +165,8 @@ export interface GameSettings {
   reduceAnimations: boolean // Animasyonları ve parçacıkları azalt
   crtEffect: boolean // Gece 3 CRT: scanline + vinyet zemin efekti
   juiceMode: 'calm' | 'balanced' | 'tilt' // Balatro juice yoğunluğu
+  screenOverlayEffects: boolean // Doomscroll ekran dokuları (parmak izi lekesi ve kriz çatlağı)
+  holoCardsEnabled: boolean // Balatro tarzı 3D kart tilt ve holo kaplamalar
 }
 
 // Çevrimdışı / arka plan yakalama raporu — "Tekrar hoş geldin" modalı bunu gösterir
@@ -174,6 +176,17 @@ export interface OfflineReport {
   dopamineGained: Decimal
 }
 
+/** Son 10 Sabah 06:00 Çöküşünün telemetri kaydı (Antimatter Dimensions Past 10 modeli) */
+export interface PastSingularityRecord {
+  id: number
+  duration: number // saniye
+  spGained: Decimal
+  spPerMinute: Decimal
+  peakMatter: Decimal
+  timestamp: number
+  challengeId?: string | null
+}
+
 export interface PlayerStats {
   manualClicks: number // Yukarı Kaydırma Sayısı
   totalMatterProduced: Decimal // Toplam Üretilen Dopamin
@@ -181,6 +194,8 @@ export interface PlayerStats {
   totalPlaytime: number // saniye
   singularityCount: number // Sabah 06:00 Çöküş Sayısı
   fastestSingularity: number // saniye
+  highestDps: Decimal // Anlık ulaşılan zirve saniyelik üretim
+  totalManualDopamine: Decimal // Başparmak kaydırmasından gelen toplam dopamin
   anomaliesClicked: number // Tıklanan Gece Krizleri
   combosTriggered: number // Süper Rezonans Hipnozları
   slackersFired: number // Susturulan Vicdan Azapları
@@ -330,7 +345,18 @@ export interface SerializedPlayerState {
     spellsCast?: number
     seedsPlanted?: number
     challengesCompleted?: number
+    highestDps?: string
+    totalManualDopamine?: string
   }
+  pastSingularities?: Array<{
+    id: number
+    duration: number
+    spGained: string
+    spPerMinute: string
+    peakMatter: string
+    timestamp: number
+    challengeId?: string | null
+  }>
   achievements?: string[]
   achievementsSeenCount?: number
   unlockedFeatures?: string[] // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilit açılışları

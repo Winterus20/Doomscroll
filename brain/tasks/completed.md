@@ -1,5 +1,141 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-02] — Hibrit Rapor ve Gece Telemetrisi Mimarisi (v0.21.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"Rapor sekmesini cok daha iyi hale getirmek istiyorum neler yapabiliriz hem koddan hem internetten derin arastir"* -> *"en iyi plani yap hibrit"*.
+- Rapor sekmesi pasif, 11 kartlık bir sayfadan; *Antimatter Dimensions* (Past 10 & Çarpan Laboratuvarı), *Cookie Clicker* (Aktif/Pasif oran & Kriz bilançosu) ve gece uykusuzluğu hiciv temalarını (Başparmak kilometresi, REM uykusu, Biyometrik teşhis, Paylaşım kartı) birleştiren 5 alt sekmeli kapsamlı bir **Telemetri ve Teşhis Merkezine** dönüştürüldü.
+
+### Yapılan İşler ve Mimari Yenilikler:
+1. **Beş Alt Sekmeli (Sub-Tabs) Modüler Navigasyon (`StatsTab.vue`):**
+   - **`overview` (Genel Bakış):** 6'lı Hero KPI Grid (Uykusuz Süre, Bu Koşu, Zirve Debi, Rekor Çöküş, Tıklamalar), Aktif vs Pasif Üretim Oran Barı (% parmak vs % otonom akış), İnteraktif SVG Zaman Çizelgesi (Zirve debi çizgisi, hover değeri, -10 dk dökümü).
+   - **`multipliers` (Çarpan Laboratuvarı):** Pasif Dopamin Çarpanları, Manuel Dokunuş Gücü Formülü (Base, Shift, Stance, Combo, Buff, CPS Sync), Algoritma Frekansı (Hz) ve 8 İstasyonun tekil güç dökümü.
+   - **`past10` (Son 10 Gece Günlüğü — Antimatter Dimensions Standartı):** Son 10 çöküşün süresi, kazanılan SP'si, **SP / Dakika verimi (yeşil neon parlayan optimizasyon metriği)**, zirve dopamini ve ortalama koşu süresi ile ortalama SP/dk göstergesi.
+   - **`challenges` (Kriz & Rekorlar):** C1–C8 meydan okuma hız rekorları (`challengeBestTimes`), tamamlanma rozetleri, anomali tür dağılımları ve Vicdan Azabı susturma kâr bilançosu.
+   - **`biometrics` (Gece Biyometrisi & Hiciv):**
+     - Fiziksel Başparmak Kaydırma Mesafesi ($clicks \times 0.05$ m) ve Eyfel/Everest/Galata Kulesi dönüm noktaları.
+     - Feda Edilen Kaliteli Uyku (saat/dakika) ve dinamik Zihinsel Pil Seviyesi (%).
+     - Retinaya Çarpan Mavi Işık Foton Dozu ($playtime \times 1.25\times 10^{15}$).
+     - Gece Nöbeti Bağımlılık Teşhisi (6 kademeli dinamik unvan).
+     - **"Gece Raporunu Kopyala" Butonu:** Tek tıkla Discord/Reddit/WhatsApp için emojili karneli özet metni kopyalama.
+2. **Kritik Hata Düzeltmeleri & Veri Modeli (`types.ts` & `game.ts`):**
+   - **`fastestSingularity` Bug Fix:** `singularityReset()` içinde en hızlı çöküş süresinin daima `Infinity` kalması hatası düzeltildi; her reset ve meydan okumada en iyi süre güncelleniyor.
+   - **`pastSingularities` Hafızası:** Son 10 koşunun süre, SP ve SP/dk verileri store state ve serileştirme döngüsüne dahil edildi.
+   - **`highestDps` & `totalManualDopamine`:** Anlık ulaşılan zirve saniyelik debi ve başparmakla üretilen kümülatif dopamin takibi bağlandı.
+3. **Doğrulama & Standartlar:**
+   - `npx vue-tsc --noEmit` ile TypeScript 5.7+ strict kontrollerinden 0 hata ile geçildi.
+   - `npm run build` ile production paketi (1642 modül) başarıyla derlendi.
+   - ADR: `brain/decisions/0019-hybrid-stats-and-telemetry-system.md`
+   - Plan & Araştırma: `brain/research/stats-tab-hybrid-plan.md`
+
+---
+
+## [2026-10-02] — Gece Krizleri Hibrit Görsel ve Ses Sistemi (v0.20.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"gece krizleri icin bir seyler yapalim nasil bir teknoloji kullansak en guzel gozukur secenekler neler"* -> *"en iyi sekilde nasil oluyorsa hibrit seklinde oyle yap en iyisini"*.
+- Oyunun en kritik dopamin patlama mekaniği olan Gece Krizleri (Altın Kurabiye eşdeğeri anomaliler), standart kartlardan Balatro ve Cyberpunk neon estetiğini birleştiren yüksek taktil doyuma sahip bir hibrit görsel/ses sistemine dönüştürüldü.
+
+### Yapılan İşler ve Mimari Yenilikler:
+1. **Özel Neon Animasyonlu SVG Vektör Varlıkları (`AnomalyOverlay.vue`):**
+   - Jenerik ikonlar yerine her kriz türüne özel katmanlı neon SVG grafikleri modellendi:
+     - `fyp` (🔥 Gece 3 Çılgınlığı): Dış mor alev aurası + iç dans eden pembe alev çekirdeği (`animate-flame-sub`) + yükselen parıltı parçacığı.
+     - `heart_frenzy` (👆 Başparmak Histerisi): Çift vuruşlu atan sibernetik neon kalp (`animate-cyber-heart`) + kesintisiz akan dinamik EKG nabız çizgisi (`animate-ekg-line`).
+     - `sponsor` (💎 50 Milyonluk Viral Video): Dönen 8 köşeli altın halo yıldızı (`animate-starburst-spin`) + altın prizmatik elmas fasetleri.
+2. **Balatro Tarzı Lazer Çerçeve ve Holografik Kapsül (`AnomalyOverlay.vue` & `src/style.css`):**
+   - Kapsül etrafında 360° dönen neon lazer şeridi (`conic-gradient` border beam, `anomaly-beam-border`).
+   - Kapsül yüzeyinden periyodik olarak süzülen holografik cam parlaması (`crisis-shimmer`).
+   - Kalan süre $\le 3.5\text{s}$ altına düştüğünde oyuncuyu uyaran telaşlı kırmızı nabız (`panic-pulse`).
+3. **Canvas 2D Neon Şok Dalgaları ve Kıvılcım Fiziği (`JuiceLayer.vue`):**
+   - Kriz tıklandığı anda tıklama merkezinden dışa doğru genişleyen çift katmanlı neon şok dalgası halkaları (`shockwaves`).
+   - 360 derece saçılan, hafif yerçekimi ve hız sürtünmesi içeren 20–32 adet neon kıvılcım parçacığı (`sparks`).
+   - `doomscroll:shockwave` CustomEvent veri yolu üzerinden tam senkronizasyon.
+4. **Gece Kriz Ambiyansı ve Ekran Kenar Aurası (`ScreenOverlay.vue` & `src/style.css`):**
+   - Ekranda kriz belirdiğinde veya aktif kriz buff'ı varken ekran kenarlarında nefes alan renkli neon perimetre aurası (`crisis-perimeter-aura`): Mor (`fyp`), Gül Kırmızısı (`heart_frenzy`), Altın Sarısı (`sponsor`).
+   - Rezonans Hipnozu kombo modunda çift renkli psikedelik nabız (`crisis-aura-combo`).
+   - Kriz toplandığında anlık parlayan ekran flaşı tepkisi.
+5. **Web Audio API Sentezleyici Derinliği (`src/core/audio.ts` & `src/stores/game.ts`):**
+   - `playAnomalySpawn`: Kriz ekranda belirdiğinde gizemli, uzaysal yükselen 4'lü kristal synth arpeji.
+   - `playCrisisCollect`: Kriz tipine göre imza tınılar: Mor alev için enerjik arpej, kalp histerisi için sub-kick + voltaj cızırtısı, viral video için altın çan kaskadı.
+   - `src/stores/game.ts` içinde `spawnAnomaly` ve `clickAnomaly` akışlarına bağlandı.
+6. **Ekonomi / Mutasyon Düzeltmesi (`src/stores/game.ts`):**
+   - Lab mutasyon döngüsünde eksik tanımlanmış `neighborTypes` dizisi giderildi.
+
+### Doğrulama & Kanıt:
+- `npm run build` (`vue-tsc && vite build`): **0 hata**, 1642 modül derlendi (6.18s).
+- ADR dokümante edildi: `brain/decisions/0018-hybrid-night-crisis-visual-and-audio-system.md`.
+
+---
+
+## [2026-10-02] — Derin Ekonomi & İlerleme Denetimi, Akış Sıçraması (Shift 5+) & Küme Duvarı Düzeltmesi (v0.19.0)
+
+### Motivasyon & Kullanıcı Bildirimi:
+- Kullanıcı tespiti: *"akış sıçraması 5. seviyeden sonra 3 bin istiyor ama kullanıcı en fazla 50 zorlasa 60 yapabiliyor onu bi kontrol et ve bunun gibi bugları iste oyunun ekonomisini subagentlar kullan detayli ve derin"*.
+- Subagent araştırması ve matematiksel analiz sonucunda `shiftRequirement` içinde `25 * 100^(shifts - 4)` formülünün Shift 5'te 2.500 D8 istediği ve 250 paket ($10^{3759}$ Dopamin) gerektirdiği kanıtlandı. Singularity sınırı ($1.79 \times 10^{308}$) aşıldığı için oyunun fiziksel olarak tıkandığı doğrulandı.
+
+### Yapılan Düzeltmeler ve İyileştirmeler:
+1. **Akış Sıçraması (Shift 5+) Lineer Ölçeklemesi:**
+   - `src/stores/game.ts`: Üstel $100^{\text{shifts}-4}$ formülü kaldırılarak *Antimatter Dimensions* standardı lineer artışa geçildi: `20 + 15 * (shifts - 4)` D8.
+   - Sıçrama 4: 20 D8 ($10^{39}$ Dopamin), Sıçrama 5: 35 D8 ($10^{69}$ Dopamin), Sıçrama 6: 50 D8 ($10^{84}$ Dopamin), Sıçrama 7: 65 D8 ($10^{99}$ Dopamin). Oyuncunun 50–60 D8 biriktirdiği evrede Sıçrama 5 ve 6 tamamen erişilebilir hale getirildi.
+2. **Sonsuz Akış Kümesi (Galaxy) Gereksinimi Yeniden Dengelendi:**
+   - `src/stores/game.ts`: `100 + 60 * galaxies` ($10^{159}$ Dopamin) olan 1. Küme maliyeti, Sıçrama 5–6 seviyesine uyumlu `40 + 20 * galaxies` ($10^{69}$ Dopamin) olarak güncellendi.
+   - Dinamik `galaxyRequirementTier` getter'ı eklendi (normalde D8, C7'de D6).
+3. **Akış Sıçraması Çarpanı (`BASE_SHIFT_POWER`):**
+   - `src/game/challenges.ts`: %7 (1.07) olan taban çarpan, tahtayı sıfırlamaya değer gerçek bir boost hissi için **2.0×** değerine çekildi (C7 ödülü 2.2×).
+4. **Gece Kriz Meydan Okumaları Hata Düzeltmeleri:**
+   - **C7 (Hesap Kısıtlaması):** Üstel D6 gereksinimleri kaldırıldı; D6 üst sınırı için lineer artış ve $1.5\times$ küme çarpanı getirildi.
+   - **C5 (Gece Enflasyonu):** `relieveChallengeOnPrestige` içine `challengeCostInflation = 0` eklendi; sıçrama veya küme yapıldığında enflasyon sıfırlanarak $10^{308}$ softlock'u önlendi.
+   - **C4 (Sansür Matrisi):** Çift boyutların üretimi 0 iken tek boyut zinciri bağlandı: $D_7 \to D_5 \to D_3 \to D_1 \to \text{Dopamin}$.
+5. **Autobuyer İlerleme Kilitleri:**
+   - `AUTOBUYER_PROGRESS_REQ` içinde D7 ve D8 botlarının Sıçrama 2'de erken açılma hatası düzeltildi (`dim7: shifts 3, dim8: shifts 4`).
+6. **Nöral Ağaç & SP Kazanç Düzeltmeleri:**
+   - `guilt_immunity` ve `break_singularity` düğümleri `NEURAL_TREE` ve `NEURAL_LEGACY_UPGRADE_IDS` içine entegre edildi. `gui_drug` başarımının kilitli kalması ve Break Singularity botlarının çalışmaması düzeltildi.
+   - `dawn_harbinger` tekillik çarpanı $2.0\times$'a çıkarıldı ve `singularityGain` erken floor kesintisi giderildi (en az 1 SP garanti).
+   - `spUpgradesTotal` sayacı hem Nöral Ağaç hem legacy dükkan düğümlerini kapsayacak şekilde birleştirildi.
+7. **UI Cila & İletişim:**
+   - `DimensionsTab.vue`: Küme kartında C7'de D8 yerine D6 dinamik gösterimi sağlandı (`currentGalaxyDimAmount` ve `D{{ galaxyTier }}`).
+   - Sıçrama butonu üzerindeki metin mevcut kümülatif çarpan yerine bir sonraki boost değerini gösterecek şekilde `×${format(store.singleShiftPower, 1)} Boost` yapıldı.
+
+### Doğrulama:
+- Node.js simülasyonları (`brain/scratchpad/simulate-economy.js` ve `verify-updated-logic.js`) ile 5 saatlik kesintisiz ilerleme test edildi: 0 softlock, 0 NaN, 0 çökme.
+- `npm run build`: **0 hata** (1642 modül).
+- ADR belgelendi: `brain/decisions/0017-economy-rebalancing-and-progression-wall-fix.md`.
+
+## [2026-10-02] — Balatro Tarzı Hibrit Görsel Mimari & Gece Ekran Dokuları (v0.18.0)
+
+### Motivasyon:
+- Oyuncunun oyundaki taktil geri bildirimini ve gece telefon bağımlılığı atmosferini AAA seviyesine taşımak.
+- WebGL batarya yükü yerine Simon Goellner stili Pure CSS 3D donanım hızlandırması + SVG gürültü filtreleri + Balatro 4 Edition (Foil, Holo, Poly, Negative) + Gece Ekran Dokuları (yağlı parmak izi, kriz çatlak camı) entegre edildi.
+
+### Yapılan İşler:
+1. **`src/core/tilt.ts`:** Donanım hızlandırmalı `v-tilt` direktifi (`useCardTilt` deseni). `pointermove` üzerinden `--pointer-x`, `--pointer-y`, `--tilt-rx`, `--tilt-ry`, `--pointer-angle` değişkenlerini rAF ile reflow yapmadan elemente aktarır. `prefers-reduced-motion` desteğiyle otomatik devre dışı kalır. `src/main.ts` içinde global olarak tanımlandı.
+2. **`src/style.css`:** Balatro 4 Editions sınıfları:
+   - `.card-tilt-surface`: 3D `preserve-3d` perspektif yüzeyi.
+   - `.edition-foil`: Gümüş/mavi metalik ışık süpürmesi (`color-dodge`).
+   - `.edition-holo`: Simon Goellner prizmatik gökkuşağı (`conic-gradient` + SVG sim/glitter mikro-gren dokusu).
+   - `.edition-poly`: Balatro akışkan psikedelik sıvı petrol girdabı (`conic-gradient` + dönen plazma).
+   - `.edition-negative`: İnvert edilmiş siyah-mor karanlık madde ve neon kontürler.
+   - `.edition-tag` (Foil, Holo, Poly, Negative): Kartlar ve milestone'lar için minyatür eğimli etiket çipleri.
+   - `prefers-reduced-motion` korumaları eklendi.
+3. **`src/components/ScreenOverlay.vue`:**
+   - Gece boyunca ekranda oluşan hafif saydam **Yağlı Başparmak İzi** lekesi (`mix-blend-mode: screen`). Tıklama/kaydırma yapıldıkça parıldayan taktil geri bildirim.
+   - Kriz Meydan Okumalarında (C1-C8) veya kriz ters tepmesinde ekranın sol üst köşesinden uzanan **Çatlak Cam** vektörü.
+   - `App.vue` ana hiyerarşisine bağlandı.
+4. **`src/models/types.ts` & `src/stores/game.ts`:**
+   - Yeni ayarlar: `screenOverlayEffects: boolean` (varsayılan true) + `holoCardsEnabled: boolean` (varsayılan true).
+   - Kayıt serileştirme/deserializasyon geriye dönük uyumluluk fallbacks.
+5. **`src/components/SettingsModal.vue`:**
+   - "3D Kart & Holo Efektleri" ve "Gece Ekran Dokuları" aç/kapa ayar butonları eklendi.
+6. **Oyun İçi Entegrasyonlar:**
+   - `ChallengesTab.vue`: Tamamlanan challenge'lara Holo Mühür (`edition-holo`), aktif olanlara Polychrome (`edition-poly`), 3D tilt kart yüzeyi.
+   - `DimensionRow.vue`: Çözünürlük seviyelerine göre (50+ Foil, 100+ Holo, 500+ Poly) rozetler ve 100+/500+ alımlarda kart gövdesinde dinamik Foil/Holo ışıması.
+   - `AnomalyOverlay.vue`: Toast kapsüllerine 3D tilt, Gece 3 / Başparmak krizlerine Polychrome/Foil/Holo ışıması, Rezonans Hipnozu banner'ına canlı Polychrome kaplama.
+   - `DimensionsTab.vue`: Akış Sıçraması (Foil), Akış Kümesi (Polychrome) ve Önbellek Silme (Negative) bento kartlarına 3D tilt ve Balatro kaplamaları.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1642 modül).
+- ADR belgelendi: `brain/decisions/0016-balatro-hybrid-visual-system.md`.
+
 ## [2026-10-02] — Minimalist + Balatro P0: Gece 3 CRT, kart bounce/tilt, kromatik kombo, kademeli shake (v0.17.2 adayı)
 
 ### Motivasyon:

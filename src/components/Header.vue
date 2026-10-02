@@ -169,13 +169,13 @@ const nextGoal = computed<{ label: string; value: string; ready: boolean }>(() =
       return { label: `D${i} alınabilir`, value: format(cost, 2, store.settings.notation), ready: true }
     }
   }
-  // En yakın alınabilir hedefe kalan yüzde (ucuz olanı seç)
-  let best = { label: 'Sıradaki hedef', value: '', ready: false, ratio: 1 }
+  // En yakın alınabilir hedefe kalan yüzde (en yüksek tamamlanma oranını seç)
+  let best = { label: 'Sıradaki hedef', value: '', ready: false, ratio: -1 }
   if (canAffordAny.value) return { label: 'Alınabilir var', value: '', ready: true }
   for (let i = 1; i <= store.unlockedDimensionsCount; i++) {
     const cost = store.getDimensionCost(i)
     const ratio = store.matter.div(cost).toNumber()
-    if (ratio < best.ratio) {
+    if (ratio > best.ratio) {
       best = {
         label: `D${i} için kalan`,
         value: `%${Math.min(99, Math.floor(ratio * 100))}`,

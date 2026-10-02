@@ -36,6 +36,11 @@
 - [x] **Sabah 06:00 Çöküşü & Kalıcı Uykusuzluk Dükkanı (Singularity & SP Upgrades):**
   - [x] 1.79e308 Dopamin tekilliği ve Uykusuzluk Puanı (SP) kazanımı.
   - [x] 6 kalıcı dükkan yükseltmesi (Göz Damlası, Sessize Alınmış Bildirimler, GaN Adaptör, Kafein Serumu, Otonom Çip, Vicdan Uyuşturucu).
+- [x] **Hibrit Rapor & Gece Telemetrisi Mimarisi (v0.21.0 - Stats Tab Evolution):**
+  - [x] 5 alt sekmeli kontrol paneli (Genel Bakış, Çarpan Lab, Son 10 Gece SP/dk, Kriz Rekorları, Biyometri).
+  - [x] İnteraktif SVG zaman çizelgesi grafiği (hover, peak DPS çizgisi, zaman aralıkları).
+  - [x] Fastest Singularity bug fix ve son 10 koşunun hafızada saklanması.
+  - [x] Tek tıkla Discord/sosyal medya karne paylaşımı.
 - [ ] **Otonom İzleme Botları & Toplu Uyku (Ant Sacrifice - Synergism):**
   - [ ] Arka planda kendi kendine üreyen nöral alt-bot kolonisi.
   - [ ] "Toplu Uyku (Power Nap)" ile botları feda edip kalıcı kök dopamin çarpanı katlama.

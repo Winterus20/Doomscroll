@@ -23,6 +23,7 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
   if (!dec.isFinite()) return 'Sonsuz'
   if (dec.sign < 0) return '-' + format(dec.neg(), precision, notation)
   if (dec.eq(0)) return '0'
+  if (dec.layer >= 2) return dec.toString()
 
   // 1000'den küçük sayılar için standart gösterim
   if (dec.lt(1000)) {
@@ -79,6 +80,7 @@ function formatScientific(dec: Decimal, precision = 2): string {
 }
 
 export function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—'
   if (seconds < 60) return `${seconds.toFixed(1)} sn`
   const minutes = Math.floor(seconds / 60)
   const remSec = Math.floor(seconds % 60)

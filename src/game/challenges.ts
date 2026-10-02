@@ -135,12 +135,12 @@ export const CHALLENGES: ChallengeDef[] = [
     icon: '🔒',
     name: 'Hesap Kısıtlaması',
     flavor: 'Platform hesabını kısıtladı: 6 format kotası.',
-    ruleDesc: 'Yalnızca 6 boyut açık; Sıçrama/Küme maliyetleri yeniden dengeli.',
-    rewardDesc: 'Kalıcı ödül: Sıçrama gücü 1.07 → 1.09',
+    ruleDesc: 'Yalnızca 6 boyut açık; Sıçrama/Küme gereksinimleri D6 formatına göre ölçeklenir.',
+    rewardDesc: 'Kalıcı ödül: Sıçrama gücü 2.0 → 2.2',
     goalMatter: CHALLENGE_GOAL_MATTER,
     unlock: { kind: 'singularities', count: 5 },
     modifiers: { maxDimensions: 6 },
-    reward: { kind: 'shift_power', value: 1.09 },
+    reward: { kind: 'shift_power', value: 2.2 },
     repeatable: false
   },
   {
@@ -171,11 +171,11 @@ export interface ChallengeRewardEffects {
   tickspeedEffectMult: number // C2: frekans etkisi
   dimCostMult: number // C5: boyut maliyet çarpanı (<1 = indirim)
   tickspeedCostMult: number // C6: frekans maliyet çarpanı (<1 = indirim)
-  shiftPower: number // C7: sıçrama gücü (taban 1.07)
+  shiftPower: number // C7: sıçrama gücü (taban 2.0)
   spMult: number // C8: SP kazancı
 }
 
-export const BASE_SHIFT_POWER = 1.07
+export const BASE_SHIFT_POWER = 2.0
 
 /** 8/8 tamamlama rozeti ("Zombi Bakışı"): tüm boyutlara kalıcı çarpan. */
 export const ALL_CHALLENGES_COMPLETE_MULT = 1.25

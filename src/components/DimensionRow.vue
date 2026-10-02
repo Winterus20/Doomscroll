@@ -119,7 +119,26 @@ const TIER_ACCENTS: Record<number, string> = {
   7: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]',
   8: 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]'
 }
+
 const tierAccent = computed(() => TIER_ACCENTS[props.dimension.tier] || 'bg-purple-500')
+
+const milestoneEdition = computed(() => {
+  const m = milestoneInfo.value.current
+  if (!m) return null
+  if (m.count >= 500) return 'edition-tag-poly'
+  if (m.count >= 100) return 'edition-tag-holo'
+  if (m.count >= 50) return 'edition-tag-foil'
+  return null
+})
+
+const rowEditionClass = computed(() => {
+  if (!(store.settings.holoCardsEnabled ?? true)) return ''
+  if (props.dimension.tier === 8 && props.dimension.bought >= 10) return 'edition-poly'
+  if (props.dimension.bought >= 500) return 'edition-poly'
+  if (props.dimension.bought >= 100) return 'edition-holo'
+  if (props.dimension.bought >= 50) return 'edition-foil'
+  return ''
+})
 
 function getClickCoordinates(e?: MouseEvent): { x: number; y: number } {
   if (e && (e.clientX || e.clientY)) {
@@ -172,7 +191,9 @@ function buyMax(e?: MouseEvent) {
 <template>
   <div
     ref="cardRef"
-    class="tilt-card glass-panel-card relative pl-4 pr-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors overflow-hidden"
+    v-tilt="{ max: 6, scale: 1.01, disabled: !(store.settings.holoCardsEnabled ?? true) }"
+    class="card-tilt-surface tilt-card glass-panel-card relative pl-4 pr-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors overflow-hidden"
+    :class="rowEditionClass"
     v-tip="tierConfig.subtitle"
   >
     <!-- Tier kimlik şeridi -->
@@ -184,11 +205,11 @@ function buyMax(e?: MouseEvent) {
       <!-- Mobilde sahip olunan adet (milestone eşikleri bought üzerinden) -->
       <span class="sm:hidden text-[10px] font-mono tabular-nums text-slate-400 shrink-0">×{{ props.dimension.bought }}</span>
 
-      <!-- Video Çözünürlük Rozeti (Milestone — foil: holo şeritli nadir kart) -->
+      <!-- Video Çözünürlük Rozeti (Milestone — Balatro holo rozet) -->
       <span
         v-if="milestoneInfo.current"
-        class="foil-badge text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 uppercase tracking-wider"
-        :class="milestoneInfo.current.colorClass"
+        class="edition-tag shrink-0"
+        :class="[milestoneEdition || milestoneInfo.current.colorClass]"
         v-tip="`${milestoneInfo.current.name}: ${milestoneInfo.current.desc}`"
       >
         {{ milestoneInfo.current.shortName }}

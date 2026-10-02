@@ -9,12 +9,15 @@ import TabHero from './TabHero.vue'
 
 const store = useGameStore()
 
-const speedMultiplier = computed(() => {
-  return Math.pow(1.5, store.singularityUpgrades?.neural_chip || 0).toFixed(1)
+const speedMultiplierRaw = computed(() => {
+  const chipBonus = Math.pow(1.5, store.singularityUpgrades?.neural_chip || 0)
+  const overclock = store.neuralEffects?.botFrequencyMult || 1
+  return chipBonus * overclock
 })
 
-// QoL: hassas hız çarpanı — gösterim string'i değil ham değer üzerinden hesap
-const speedMultiplierRaw = computed(() => Math.pow(1.5, store.singularityUpgrades?.neural_chip || 0))
+const speedMultiplier = computed(() => {
+  return speedMultiplierRaw.value.toFixed(1)
+})
 
 const allEnabled = computed(() => {
   const bots = Object.values(store.autobuyers).filter((b) => b.unlocked)
