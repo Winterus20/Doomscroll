@@ -112,6 +112,20 @@ watch(
   { immediate: true }
 )
 
+// Performans: juice modu sıcak döngüde diskten okunmaz; tek yazan burası.
+function syncJuiceMode(mode: string) {
+  try {
+    localStorage.setItem('doomscroll-juice-mode', mode)
+  } catch { /* yoksay */ }
+  window.__setJuiceMode?.(mode)
+  window.dispatchEvent(new CustomEvent('doomscroll:juice-mode', { detail: mode }))
+}
+watch(
+  () => store.settings.juiceMode,
+  (mode) => syncJuiceMode(mode),
+  { immediate: true }
+)
+
 // Sonraki Açılacak — Özellik Merdiveni (nav altı bandı)
 const nextUnlock = computed(() =>
   nextLocked(store.unlockContext, new Set(store.unlockedFeatures))

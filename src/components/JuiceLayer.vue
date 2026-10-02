@@ -21,6 +21,7 @@ declare global {
   interface Window {
     __triggerJuice?: (options: JuiceTriggerOptions) => void
     __triggerShockwave?: (options: ShockwaveTriggerOptions) => void
+    __setJuiceMode?: (mode: string) => void
   }
 }
 
@@ -70,6 +71,13 @@ const sparks: Spark[] = []
 let width = 0
 let height = 0
 
+// Performans: juice modu sıcak döngüde diskten okunmaz; App.vue'daki watcher besler.
+let juiceModeCache = 'balanced'
+
+function getJuiceMode(): string {
+  return juiceModeCache
+}
+
 function resizeCanvas() {
   if (!canvasRef.value) return
   const canvas = canvasRef.value
@@ -84,16 +92,7 @@ function resizeCanvas() {
 
 function spawnParticle(x: number, y: number, text: string, color = '#e2e8f0', big = false) {
   // P0 Balatro: juice moduna göre yoğunluk — calm sade, tilt parti
-  const mode = (() => {
-    try {
-      const raw = localStorage.getItem('doomscroll-save')
-      if (raw) {
-        const parsed = JSON.parse(raw) as { settings?: { juiceMode?: string } }
-        return parsed.settings?.juiceMode ?? 'balanced'
-      }
-    } catch { /* yoksay */ }
-    return 'balanced'
-  })()
+  const mode = getJuiceMode()
   const repeats = big ? (mode === 'tilt' ? 5 : mode === 'calm' ? 1 : 3) : 1
   for (let r = 0; r < repeats; r++) {
     spawnSingle(x, y, text, color, big, mode, r)
@@ -147,16 +146,7 @@ function triggerJuice(options: JuiceTriggerOptions) {
 }
 
 function spawnShockwave(x: number, y: number, color = '#a855f7', maxRadius = 180) {
-  const mode = (() => {
-    try {
-      const raw = localStorage.getItem('doomscroll-save')
-      if (raw) {
-        const parsed = JSON.parse(raw) as { settings?: { juiceMode?: string } }
-        return parsed.settings?.juiceMode ?? 'balanced'
-      }
-    } catch { /* yoksay */ }
-    return 'balanced'
-  })()
+  const mode = getJuiceMode()
 
   if (mode === 'calm') return
 
@@ -344,19 +334,39 @@ function handleShakeEvent(e: Event) {
   }, ms)
 }
 
+function handleJuiceModeEvent(e: Event) {
+  const mode = (e as CustomEvent<string>).detail
+  if (mode === 'calm' || mode === 'balanced' || mode === 'tilt') {
+    juiceModeCache = mode
+  }
+}
+
 onMounted(() => {
   if (canvasRef.value) {
     ctx = canvasRef.value.getContext('2d')
     resizeCanvas()
   }
 
+  try {
+    const tiny = localStorage.getItem('doomscroll-juice-mode')
+    if (tiny === 'calm' || tiny === 'balanced' || tiny === 'tilt') {
+      juiceModeCache = tiny
+    }
+  } catch { /* yoksay */ }
+
   window.addEventListener('resize', resizeCanvas)
   window.addEventListener('doomscroll:tap', handleTapEvent)
   window.addEventListener('doomscroll:shake', handleShakeEvent)
   window.addEventListener('doomscroll:shockwave', handleShockwaveEvent)
+  window.addEventListener('doomscroll:juice-mode', handleJuiceModeEvent as EventListener)
 
   window.__triggerJuice = triggerJuice
   window.__triggerShockwave = triggerShockwave
+  window.__setJuiceMode = (mode: string) => {
+    if (mode === 'calm' || mode === 'balanced' || mode === 'tilt') {
+      juiceModeCache = mode
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -364,12 +374,16 @@ onUnmounted(() => {
   window.removeEventListener('doomscroll:tap', handleTapEvent)
   window.removeEventListener('doomscroll:shake', handleShakeEvent)
   window.removeEventListener('doomscroll:shockwave', handleShockwaveEvent)
+  window.removeEventListener('doomscroll:juice-mode', handleJuiceModeEvent as EventListener)
 
   if (window.__triggerJuice === triggerJuice) {
     delete window.__triggerJuice
   }
   if (window.__triggerShockwave === triggerShockwave) {
     delete window.__triggerShockwave
+  }
+  if (window.__setJuiceMode) {
+    delete window.__setJuiceMode
   }
 
   if (animId !== null) {

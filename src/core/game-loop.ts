@@ -39,10 +39,16 @@ export class GameLoop {
         this.accumulator = 0
       } else {
         this.accumulator += rawDelta
-        // Ticksel simülasyon: sabit adımlı accumulator pattern
+        // Ticksel simülasyon: sabit adımlı accumulator pattern (spiral-of-death korumalı: kare başına max 5 tick)
+        let steps = 0
         while (this.accumulator >= this.TICK_RATE) {
           store.update(this.TICK_RATE / 1000)
           this.accumulator -= this.TICK_RATE
+          steps++
+          if (steps >= 5) {
+            this.accumulator = 0
+            break
+          }
         }
       }
 

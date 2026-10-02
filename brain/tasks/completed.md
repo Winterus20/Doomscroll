@@ -1,5 +1,22 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-02] — Tick / Satın Alma / UI Performans Optimizasyonu (v0.21.1)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"saniyede binlerce hızlı şey olurken işte satın alma ve sayının artması falan böyle olunca sayfa donmaya başlıyor onu bi kontrol et"* -> *"en iyi şekilde optimize et"*.
+- Kök neden: `buyMax` 500 turlu `Decimal.pow` döngüleri + iç-fonksiyon getter'larının her tick yeniden hesaplanması + her 50 ms başarım/unlock taraması + juice sıcak döngüde disk okuma + sınırsız tick kaskadı.
+
+### Yapılan İşler:
+1. **Matematiksel toplu alım (`src/stores/game.ts`):** `calcGeometricTotal + calcMaxPacks` ile `buyMaxDimension`, `buyMaxTickspeed` (yeni), `maxAll`, bot `max` ve `getDimensionPackCost` O(1) oldu. Aynı toplam maliyet ve `registerChallengeBuy` birimi korunur.
+2. **Memo'lar:** `memoChallengeEffects`, `memoNeuralEffects`, tier bazlı `_dimMultCache / _dimCostCache` (içerik-anahtarlı). `singularityGain`, `shiftPower`, `tickspeed` ve maliyet yolları memo'lu hale geldi.
+3. **Tick sadeleştirme:** zincir + D1 üretimi tick başına tek çarpan seti (`dimMults[]`), `highestDps` tek `matterPerSecond` çağrısı, `syncUnlocks/checkAchievements` 0,5 sn seyreltilir + tam açıkken erken çıkış.
+4. **Offline:** 1 sn → 10 sn → 60 sn kademesi (uzun süreler ~6 kat hızlı).
+5. **Juice (`JuiceLayer.vue` + `App.vue`):** sıcak döngüde `localStorage` yok; `juiceModeCache + __setJuiceMode + doomscroll:juice-mode` olayı + `doomscroll-juice-mode` minik anahtarı.
+6. **Döngü koruması (`src/core/game-loop.ts`):** kare başına max 5 tick.
+7. **Doğrulama:** `npm run build` 0 hata (1642 modül). ADR: `brain/decisions/0020-performance-optimization-tick-buy-max-ui.md`.
+
+---
+
 ## [2026-10-02] — Hibrit Rapor ve Gece Telemetrisi Mimarisi (v0.21.0)
 
 ### Motivasyon & Kullanıcı Talebi:

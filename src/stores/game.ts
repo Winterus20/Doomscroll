@@ -892,6 +892,114 @@ export const COLONY_MIN_NAP_BOTS = 100
 export const COLONY_BREED_RATE = 0.008 // %0.8/s baz üreme hızı (~87 sn'de çiftlenme)
 export const COLONY_PASSIVE_LOG_FACTOR = 0.3 // pasif çarpan: 1 + log10(bots) × 0.3
 
+// ---- Performans: pahalı kontrollerin seyreltilmesi ----
+export const ACH_CHECK_INTERVAL = 0.5 // başarım kontrolü en sık 0.5 sn'de bir
+export const UNLOCK_CHECK_INTERVAL = 0.5 // özellik merdiveni en sık 0.5 sn'de bir
+const MAX_BUY_PACKS_CAP = 10000 // matematik max alımda paket üst sınırı (100k adet)
+
+// ---- Performans: geometrik seri yardımcıları (buyMax döngüsüz) ----
+function calcGeometricTotal(base: Decimal, ratio: Decimal, startBucket: number, packs: number): Decimal {
+  if (packs <= 0) return D_0
+  const denom = ratio.minus(1)
+  if (denom.eq(0)) {
+    return base.times(Decimal.pow(ratio, startBucket)).times(packs)
+  }
+  const ratioPowStart = Decimal.pow(ratio, startBucket)
+  const ratioPowPacks = Decimal.pow(ratio, packs)
+  return base.times(ratioPowStart).times(ratioPowPacks.minus(1)).div(denom)
+}
+
+function calcMaxPacks(base: Decimal, ratio: Decimal, startBucket: number, budget: Decimal, cap = MAX_BUY_PACKS_CAP): number {
+  if (budget.lte(0)) return 0
+  const first = base.times(Decimal.pow(ratio, startBucket))
+  if (budget.lt(first)) return 0
+  const ratioNum = ratio.toNumber()
+  if (!Number.isFinite(ratioNum) || ratioNum <= 1) {
+    const linear = budget.div(first).floor().toNumber()
+    if (!Number.isFinite(linear)) return 0
+    return Math.max(0, Math.min(cap, Math.floor(linear)))
+  }
+  const budgetLog = budget.log10().toNumber()
+  const firstLog = first.log10().toNumber()
+  const ratioLog = Math.log10(ratioNum)
+  if (!Number.isFinite(budgetLog) || !Number.isFinite(firstLog) || !Number.isFinite(ratioLog) || ratioLog <= 0) return 0
+  const rMinus1 = ratioNum - 1
+  let est: number
+  const diff = budgetLog - firstLog
+  if (diff > 15) {
+    est = Math.floor((diff + Math.log10(rMinus1)) / ratioLog)
+  } else {
+    const approx = budget.div(first).toNumber() * rMinus1 + 1
+    if (!Number.isFinite(approx) || approx <= 1) return 0
+    est = Math.floor(Math.log10(approx) / ratioLog)
+  }
+  if (!Number.isFinite(est)) return 0
+  let n = Math.max(0, Math.min(cap, est))
+  for (let guard = 0; guard < 8; guard++) {
+    if (n <= 0) break
+    if (calcGeometricTotal(base, ratio, startBucket, n).lte(budget)) break
+    n--
+  }
+  for (let guard = 0; guard < 8; guard++) {
+    if (n >= cap) break
+    if (calcGeometricTotal(base, ratio, startBucket, n + 1).lte(budget)) n++
+    else break
+  }
+  return n
+}
+
+// ---- Performans: saf-fonksiyon memo'ları (Vue computed iç fonksiyonları her çağrıda yeniden hesaplar) ----
+let _challengeEffKey = ''
+let _challengeEffVal: ChallengeRewardEffects | null = null
+function memoChallengeEffects(completed: readonly string[]): ChallengeRewardEffects {
+  const key = completed.join(',')
+  if (_challengeEffVal && _challengeEffKey === key) return _challengeEffVal
+  _challengeEffKey = key
+  _challengeEffVal = computeChallengeRewardEffects(completed)
+  return _challengeEffVal
+}
+
+let _neuralEffKey = ''
+let _neuralEffVal: NeuralEffects | null = null
+function memoNeuralEffects(bought: Record<string, number>): NeuralEffects {
+  const keys = Object.keys(bought).sort()
+  let key = ''
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i]
+    key += k + ':' + (bought[k] || 0) + ';'
+  }
+  if (_neuralEffVal && _neuralEffKey === key) return _neuralEffVal
+  _neuralEffKey = key
+  _neuralEffVal = computeNeuralEffects(bought)
+  return _neuralEffVal
+}
+
+// Boyut çarpanı iç-fonksiyon memo'su (tier başına tek girdi)
+const _dimMultCache = new Map<number, { key: string; val: Decimal }>()
+function dimMultCacheKey(
+  tier: number,
+  bought: number,
+  shifts: number,
+  eyeLvl: number,
+  sac: string,
+  partnerBought: number,
+  neuralProd: number,
+  offlineBoost: number,
+  bass: boolean,
+  activeChallenge: string | null,
+  dim1Growth: string,
+  completedJoin: string
+): string {
+  return (
+    tier + '|' + bought + '|' + shifts + '|' + eyeLvl + '|' + sac + '|' + partnerBought + '|' +
+    neuralProd + '|' + offlineBoost + '|' + (bass ? 1 : 0) + '|' + (activeChallenge || '') + '|' +
+    dim1Growth + '|' + completedJoin
+  )
+}
+
+// Boyut maliyeti iç-fonksiyon memo'su (paket başına değil, kova başına)
+const _dimCostCache = new Map<number, { key: string; val: Decimal }>()
+
 function getAutobuyerCategory(id: string): 'dim' | 'tickspeed' | 'shift' | 'galaxy' | 'singularity' {
   if (id.startsWith('dim')) return 'dim'
   if (id === 'tickspeed') return 'tickspeed'
@@ -1034,6 +1142,9 @@ export const useGameStore = defineStore('game', {
     // QoL: saniyelik üretim geçmişi (Rapor sparkline, max 600 örnek; kayıt edilmez)
     dpsHistory: [] as number[],
     dpsSampleAcc: 0,
+    // Performans: pahalı taramaların seyreltilmesi (kayıt edilmez)
+    achCheckAcc: 0,
+    unlockCheckAcc: 0,
 
     // Telemetri: Son 10 Sabah 06:00 Çöküşünün geçmişi (Antimatter Dimensions Past 10 modeli)
     pastSingularities: [] as PastSingularityRecord[],
@@ -1154,7 +1265,7 @@ export const useGameStore = defineStore('game', {
       if (espresso) {
         mult = mult.times(espresso.multiplier)
       }
-      const challengeEff = computeChallengeRewardEffects(state.completedChallenges)
+      const challengeEff = memoChallengeEffects(state.completedChallenges)
       if (challengeEff.tickspeedEffectMult !== 1) {
         mult = mult.times(challengeEff.tickspeedEffectMult)
       }
@@ -1176,7 +1287,7 @@ export const useGameStore = defineStore('game', {
       if (this.collectiveMinBought >= 100) {
         cost = cost.times(0.9).floor()
       }
-      const challengeEff = computeChallengeRewardEffects(state.completedChallenges)
+      const challengeEff = memoChallengeEffects(state.completedChallenges)
       if (challengeEff.tickspeedCostMult !== 1) {
         cost = cost.times(challengeEff.tickspeedCostMult).floor()
       }
@@ -1383,11 +1494,11 @@ export const useGameStore = defineStore('game', {
 
     // Akış Sıçraması (Shift / Boost) Gereksinimi
     shiftPowerMultiplier(state): Decimal {
-      return Decimal.pow(computeChallengeRewardEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
+      return Decimal.pow(memoChallengeEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
     },
 
     singleShiftPower(state): number {
-      return computeChallengeRewardEffects(state.completedChallenges).shiftPower
+      return memoChallengeEffects(state.completedChallenges).shiftPower
     },
 
     // C7 (Hesap Kısıtlaması): kilitli tier yerine D6 istenir; lineer artış
@@ -1703,8 +1814,8 @@ export const useGameStore = defineStore('game', {
       if (state.activeChallenge) return D_0
       if (state.matter.lt(D_INFINITY)) return D_0
       const logMatter = state.matter.log10().toNumber()
-      const dawnSpeedMult = computeNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
-      const spMult = computeChallengeRewardEffects(state.completedChallenges).spMult
+      const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
+      const spMult = memoChallengeEffects(state.completedChallenges).spMult
       const totalMult = dawnSpeedMult * spMult
       const rawGain = Decimal.pow(10, Math.max(0, (logMatter - 308) / 308)).times(totalMult)
       const floored = Decimal.floor(rawGain)
@@ -1715,6 +1826,22 @@ export const useGameStore = defineStore('game', {
     getDimensionMultiplier: (state) => (tier: number): Decimal => {
       const dim = state.dimensions[tier - 1]
       if (!dim) return D_1
+
+      const eyeDropsLvl = state.singularityUpgrades?.eye_drops || 0
+      const partnerDim = state.dimensions[9 - tier - 1]
+      const partnerBought = partnerDim ? partnerDim.bought : 0
+      const neuralProd = memoNeuralEffects(state.neuralNodesBought || {}).productionMult
+      const completedJoin = state.completedChallenges.join(',')
+      const sacStr = tier === 8 ? state.sacrificeMultiplier.toString() : '1'
+      const dim1GrowthStr = tier === 1 ? state.challengeDim1Growth.toString() : '1'
+      const bass = (tier === 3 || tier === 4) && state.algorithmUpgrades.includes('bass_boost')
+      const cacheKey = dimMultCacheKey(
+        tier, dim.bought, state.dimensionShifts, eyeDropsLvl, sacStr,
+        partnerBought, neuralProd, state.offlineSimBoost, bass,
+        state.activeChallenge, dim1GrowthStr, completedJoin
+      )
+      const cached = _dimMultCache.get(tier)
+      if (cached && cached.key === cacheKey) return cached.val
 
       // Satın alınan her 10 adet için 2x
       let mult = Decimal.pow(2, Math.floor(dim.bought / 10))
@@ -1733,12 +1860,11 @@ export const useGameStore = defineStore('game', {
       // Akış Sıçraması (Shift/Boost) bonusu (C7 ödülü tabanı 1.07 → 1.09 yükseltir)
       if (state.dimensionShifts > 0) {
         mult = mult.times(
-          Decimal.pow(computeChallengeRewardEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
+          Decimal.pow(memoChallengeEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
         )
       }
 
       // Göz Damlası Yükseltmesi
-      const eyeDropsLvl = state.singularityUpgrades?.eye_drops || 0
       if (eyeDropsLvl > 0) {
         mult = mult.times(Decimal.pow(2, eyeDropsLvl))
       }
@@ -1749,19 +1875,17 @@ export const useGameStore = defineStore('game', {
       }
 
       // Algoritmik Ayna Sinerjisi (D1 <-> D8, D2 <-> D7, D3 <-> D6, D4 <-> D5 yakıt pompası)
-      const partnerTier = 9 - tier
-      const partnerDim = state.dimensions[partnerTier - 1]
-      if (partnerDim && partnerDim.bought > 0) {
-        mult = mult.times(1 + Math.sqrt(partnerDim.bought) * 0.15)
+      if (partnerDim && partnerBought > 0) {
+        mult = mult.times(1 + Math.sqrt(partnerBought) * 0.15)
       }
 
       // Nöral Ağaç pasif dalı: kalıcı üretim çarpanı (tüm istasyonlar)
-      mult = mult.times(computeNeuralEffects(state.neuralNodesBought || {}).productionMult)
+      mult = mult.times(neuralProd)
       // Çevrimdışı simülasyonda 1'den büyük olur; normal tick'te etkisiz
       mult = mult.times(state.offlineSimBoost)
 
       // Algoritma Yaması: Bass Boost (D3 ASMR ve D4 Subway Surfers 3×)
-      if ((tier === 3 || tier === 4) && state.algorithmUpgrades.includes('bass_boost')) {
+      if (bass) {
         mult = mult.times(3)
       }
 
@@ -1773,7 +1897,7 @@ export const useGameStore = defineStore('game', {
       if (activeChallengeMods?.oddTiersOnly && tier % 2 === 0) {
         return D_0
       }
-      const challengeEff = computeChallengeRewardEffects(state.completedChallenges)
+      const challengeEff = memoChallengeEffects(state.completedChallenges)
       // C1 ödülü (Uçak Modu): tüm boyutlar ×1.5
       if (challengeEff.dimMult !== 1) {
         mult = mult.times(challengeEff.dimMult)
@@ -1798,6 +1922,7 @@ export const useGameStore = defineStore('game', {
         }
       }
 
+      _dimMultCache.set(tier, { key: cacheKey, val: mult })
       return mult
     },
 
@@ -1806,12 +1931,18 @@ export const useGameStore = defineStore('game', {
     getDimensionCost: (state) => (tier: number): Decimal => {
       const dim = state.dimensions[tier - 1]
       if (!dim) return D_INFINITY
-      let cost = dim.baseCost.times(Decimal.pow(dim.costMult, Math.floor(dim.bought / 10)))
+      const bucket = Math.floor(dim.bought / 10)
+      const infl = challengeCostInflationMult(state).toString()
+      const eff = memoChallengeEffects(state.completedChallenges)
+      const cacheKey = bucket + '|' + infl + '|' + eff.dimCostMult
+      const cached = _dimCostCache.get(tier)
+      if (cached && cached.key === cacheKey) return cached.val
+      let cost = dim.baseCost.times(Decimal.pow(dim.costMult, bucket))
       cost = cost.times(challengeCostInflationMult(state))
-      const challengeEff = computeChallengeRewardEffects(state.completedChallenges)
-      if (challengeEff.dimCostMult !== 1) {
-        cost = cost.times(challengeEff.dimCostMult)
+      if (eff.dimCostMult !== 1) {
+        cost = cost.times(eff.dimCostMult)
       }
+      _dimCostCache.set(tier, { key: cacheKey, val: cost })
       return cost
     },
 
@@ -1820,12 +1951,9 @@ export const useGameStore = defineStore('game', {
       const dim = state.dimensions[tier - 1]
       if (!dim) return D_INFINITY
       const startBucket = Math.floor(dim.bought / 10)
-      let total = D_0
-      for (let p = 0; p < packs; p++) {
-        total = total.plus(dim.baseCost.times(Decimal.pow(dim.costMult, startBucket + p)))
-      }
+      let total = calcGeometricTotal(dim.baseCost, dim.costMult, startBucket, packs)
       total = total.times(challengeCostInflationMult(state))
-      const challengeEff = computeChallengeRewardEffects(state.completedChallenges)
+      const challengeEff = memoChallengeEffects(state.completedChallenges)
       if (challengeEff.dimCostMult !== 1) {
         total = total.times(challengeEff.dimCostMult)
       }
@@ -1916,7 +2044,7 @@ export const useGameStore = defineStore('game', {
     },
 
     challengeRewardEffects(): ChallengeRewardEffects {
-      return computeChallengeRewardEffects(this.completedChallenges)
+      return memoChallengeEffects(this.completedChallenges)
     },
 
     challengesUnlocked(): boolean {
@@ -2167,7 +2295,7 @@ export const useGameStore = defineStore('game', {
 
     // Nöral Ağaç: satın alınan düğümlerin toplanmış sayısal etkileri (tek kaynak)
     neuralEffects(state): NeuralEffects {
-      return computeNeuralEffects(state.neuralNodesBought || {})
+      return memoNeuralEffects(state.neuralNodesBought || {})
     },
 
     // Combo çarpanı: yalnızca Hipnotik Seri düğümü alındıysa eşiklere göre uygulanır
@@ -2399,29 +2527,32 @@ export const useGameStore = defineStore('game', {
       return false
     },
 
-    // Bir İstasyondan Alınabildiği Kadar Satın Al (döngü güvenlik üst sınırı: 500 paket/kare)
+    // Bir İstasyondan Alınabildiği Kadar Satın Al (matematiksel: döngüsüz geometrik seri)
     buyMaxDimension(tier: number, playSound = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
-      let boughtAny = false
+      const dim = this.dimensions[tier - 1]
+      if (!dim) return false
+      const startBucket = Math.floor(dim.bought / 10)
+      const infl = challengeCostInflationMult({
+        activeChallenge: this.activeChallenge,
+        challengeCostInflation: this.challengeCostInflation
+      })
+      const eff = memoChallengeEffects(this.completedChallenges)
+      const flat = infl.times(eff.dimCostMult)
+      const budget = this.matter.div(flat)
+      const packs = calcMaxPacks(dim.baseCost, dim.costMult, startBucket, budget)
+      if (packs <= 0) return false
+      const total = calcGeometricTotal(dim.baseCost, dim.costMult, startBucket, packs).times(flat)
+      if (this.matter.lt(total)) return false
+      this.matter = this.matter.minus(total)
+      dim.amount = dim.amount.plus(10 * packs)
+      dim.bought += 10 * packs
+      this.registerChallengeBuy(packs)
 
-      for (let guard = 0; guard < 500; guard++) {
-        const cost = this.getDimensionCost(tier)
-        if (this.matter.gte(cost)) {
-          this.matter = this.matter.minus(cost)
-          const dim = this.dimensions[tier - 1]
-          dim.amount = dim.amount.plus(10)
-          dim.bought += 10
-          boughtAny = true
-          this.registerChallengeBuy(1)
-        } else {
-          break
-        }
-      }
-
-      if (boughtAny && playSound) {
+      if (playSound) {
         sounds.playBuy(tier)
       }
-      return boughtAny
+      return true
     },
 
     // Algoritma Frekansı (Tickspeed) Yükselt
@@ -2439,15 +2570,48 @@ export const useGameStore = defineStore('game', {
       return false
     },
 
+    // Frekanstan alınabildiği kadar al (matematiksel: 1000×13^n geometrik seri)
+    buyMaxTickspeed(playSound = true): boolean {
+      const start = this.tickspeedBought
+      const base = new Decimal(1000)
+      const ratio = new Decimal(13)
+      const infl = challengeCostInflationMult({
+        activeChallenge: this.activeChallenge,
+        challengeCostInflation: this.challengeCostInflation
+      })
+      let flat = infl
+      if (this.currentStance === 'private_mode') {
+        flat = flat.times(this.algorithmUpgrades.includes('amoled_black') ? 0.75 : 0.85)
+      }
+      if (hasAchievementReward(this.achievements, 'tickspeed_discount')) {
+        flat = flat.times(0.95)
+      }
+      if (this.collectiveMinBought >= 100) {
+        flat = flat.times(0.9)
+      }
+      const eff = memoChallengeEffects(this.completedChallenges)
+      if (eff.tickspeedCostMult !== 1) {
+        flat = flat.times(eff.tickspeedCostMult)
+      }
+      const budget = this.matter.div(flat)
+      const n = calcMaxPacks(base, ratio, start, budget)
+      if (n <= 0) return false
+      const total = calcGeometricTotal(base, ratio, start, n).times(flat)
+      if (this.matter.lt(total)) return false
+      this.matter = this.matter.minus(total)
+      this.tickspeedBought += n
+      this.registerChallengeBuy(n)
+      if (playSound) {
+        sounds.playBuy(0)
+      }
+      return true
+    },
+
     // Tüm İstasyonları ve Frekansı Optimize Al (Max All)
     maxAll(): void {
       let boughtAny = false
-      for (let guard = 0; guard < 500 && this.matter.gte(this.tickspeedCost); guard++) {
-        if (this.buyTickspeed(false)) {
-          boughtAny = true
-        } else {
-          break
-        }
+      if (this.buyMaxTickspeed(false)) {
+        boughtAny = true
       }
 
       for (let t = this.unlockedDimensionsCount; t >= 1; t--) {
@@ -3298,6 +3462,7 @@ export const useGameStore = defineStore('game', {
 
     // ---- Başarım Kontrol Motoru (update() sonunda çalışır; offline'da da tetiklenir) ----
     checkAchievements(): void {
+      if (this.achievements.length >= ACHIEVEMENTS.length) return
       const unlocked = new Set(this.achievements)
       const ctx: AchievementContext = {
         manualClicks: this.stats.manualClicks,
@@ -3404,6 +3569,7 @@ export const useGameStore = defineStore('game', {
     // Özellik Merdiveni: sağlanan kilitlere yapışkan (sticky) olarak kaydet.
     // Bir kez açılan özellik Sıçrama / Küme sıfırlamalarına rağmen açık kalır.
     syncUnlocks(): void {
+      if (this.unlockedFeatures.length >= FEATURE_UNLOCKS.length) return
       for (const feature of FEATURE_UNLOCKS) {
         if (this.unlockedFeatures.includes(feature.id)) continue
         if (checkUnlock(this.unlockContext, feature)) {
@@ -3416,8 +3582,14 @@ export const useGameStore = defineStore('game', {
     update(deltaSeconds: number): void {
       if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return
 
-      // 0. Özellik Merdiveni senkronizasyonu (yapışkan kilitlemeler)
-      this.syncUnlocks()
+      // 0. Özellik Merdiveni senkronizasyonu (yapışkan kilitlemeler — 0.5 sn seyreltilir)
+      this.unlockCheckAcc += deltaSeconds
+      if (this.unlockedFeatures.length < FEATURE_UNLOCKS.length && this.unlockCheckAcc >= UNLOCK_CHECK_INTERVAL) {
+        this.unlockCheckAcc = 0
+        this.syncUnlocks()
+      } else if (this.unlockedFeatures.length >= FEATURE_UNLOCKS.length) {
+        this.unlockCheckAcc = 0
+      }
 
       // G2: Challenge hedefi = Şafak eşiği; koşul sağlanınca otomatik tamamla.
       if (this.activeChallenge && this.canSingularity) {
@@ -3643,9 +3815,7 @@ export const useGameStore = defineStore('game', {
               }
             } else if (key === 'tickspeed') {
               if (effectiveMode === 'max' && this.autobuyerMaxUnlocked) {
-                for (let i = 0; i < 100; i++) {
-                  if (!this.buyTickspeed(false)) break
-                }
+                this.buyMaxTickspeed(false)
               } else if (effectiveMode === 'bulk' && this.autobuyerBulkUnlocked) {
                 for (let i = 0; i < AUTOBUYER_BULK_BATCH; i++) {
                   if (!this.buyTickspeed(false)) break
@@ -3699,9 +3869,14 @@ export const useGameStore = defineStore('game', {
         this.neuralBots = this.neuralBots.plus(this.neuralBots.times(breedRate * deltaSeconds))
       }
 
-      // 9. Boyut Zinciri Simülasyonu
+      // 9. Boyut Zinciri Simülasyonu (tick başına çarpanlar bir kez hesaplanır)
       const unlocked = this.unlockedDimensionsCount
       const speed = this.tickspeedMultiplier
+      const achMultForChain = this.achievementMultiplier
+      const dimMults: Decimal[] = []
+      for (let t = 1; t <= unlocked; t++) {
+        dimMults[t] = this.getDimensionMultiplier(t)
+      }
       const activeChallengeMods = this.activeChallenge
         ? getChallengeById(this.activeChallenge)?.modifiers
         : undefined
@@ -3713,11 +3888,11 @@ export const useGameStore = defineStore('game', {
             const higherDim = this.dimensions[i]
             const lowerDim = this.dimensions[i - 2]
             if (higherDim && lowerDim && higherDim.amount.gt(0)) {
-              const mult = this.getDimensionMultiplier(i + 1)
+              const mult = dimMults[i + 1]
               const produced = higherDim.amount
                 .times(mult)
                 .times(speed)
-                .times(this.achievementMultiplier)
+                .times(achMultForChain)
                 .times(DIMENSION_CHAIN_RATE)
                 .times(deltaSeconds)
               lowerDim.amount = lowerDim.amount.plus(produced)
@@ -3729,11 +3904,11 @@ export const useGameStore = defineStore('game', {
           const higherDim = this.dimensions[i]
           const lowerDim = this.dimensions[i - 1]
           if (higherDim && lowerDim && higherDim.amount.gt(0)) {
-            const mult = this.getDimensionMultiplier(i + 1)
+            const mult = dimMults[i + 1]
             const produced = higherDim.amount
               .times(mult)
               .times(speed)
-              .times(this.achievementMultiplier)
+              .times(achMultForChain)
               .times(DIMENSION_CHAIN_RATE)
               .times(deltaSeconds)
             lowerDim.amount = lowerDim.amount.plus(produced)
@@ -3745,12 +3920,12 @@ export const useGameStore = defineStore('game', {
       const dim1 = this.dimensions[0]
       if (dim1 && dim1.amount.gt(0) && !this.challengeHalted) {
         let rawProduced = dim1.amount
-          .times(this.getDimensionMultiplier(1))
+          .times(dimMults[1])
           .times(speed)
           .times(this.stanceMultipliers.production)
           .times(this.productionBuffMultiplier)
           .times(this.labPassiveMultiplier)
-          .times(this.achievementMultiplier)
+          .times(achMultForChain)
           .times(this.collectiveMultiplier)
           .times(this.colonyMultiplier)
           .times(this.napMultiplier)
@@ -3782,8 +3957,9 @@ export const useGameStore = defineStore('game', {
         if (this.matter.gt(this.stats.highestMatter)) {
           this.stats.highestMatter = this.matter
         }
-        if (this.matterPerSecond.gt(this.stats.highestDps)) {
-          this.stats.highestDps = this.matterPerSecond
+        const curMpsForHigh = this.matterPerSecond
+        if (curMpsForHigh.gt(this.stats.highestDps)) {
+          this.stats.highestDps = curMpsForHigh
         }
       }
 
@@ -3814,7 +3990,7 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // Başarım kontrolü: offline simülasyonda 120 adımda bir seyreltilir (yük kontrolü)
+      // Başarım kontrolü: canlı oyunda 0.5 sn seyreltilir; offline simülasyonda 120 adımda bir
       if (this.offlineSimActive) {
         this.offlineAchTick++
         if (this.offlineAchTick >= 120) {
@@ -3822,7 +3998,11 @@ export const useGameStore = defineStore('game', {
           this.checkAchievements()
         }
       } else {
-        this.checkAchievements()
+        this.achCheckAcc += deltaSeconds
+        if (this.achCheckAcc >= ACH_CHECK_INTERVAL) {
+          this.achCheckAcc = 0
+          this.checkAchievements()
+        }
       }
       this.lastUpdate = Date.now()
     },
@@ -3876,18 +4056,24 @@ export const useGameStore = defineStore('game', {
         this.update(0.1)
       }
 
-      // Kalan süre: 1 sn adımları (1 saate kadar), sonrasında 10 sn adımları (yoğun simülasyondan kaçınmak için)
+      // Kalan süre: 1 sn adımları (1 saate kadar), sonrasında 10 sn (2 saate kadar), ardından 60 sn
       let remainingSeconds = cappedSeconds - detailedSeconds
       const fineSteps = Math.min(remainingSeconds, 3600)
       for (let s = 0; s < fineSteps; s++) {
         this.update(1)
       }
       remainingSeconds -= fineSteps
-      const coarseSteps = Math.floor(remainingSeconds / 10)
-      for (let s = 0; s < coarseSteps; s++) {
+      const mediumBudget = Math.min(remainingSeconds, 3600)
+      const mediumSteps = Math.floor(mediumBudget / 10)
+      for (let s = 0; s < mediumSteps; s++) {
         this.update(10)
       }
-      const leftover = remainingSeconds - coarseSteps * 10
+      remainingSeconds -= mediumSteps * 10
+      const coarseSteps = Math.floor(remainingSeconds / 60)
+      for (let s = 0; s < coarseSteps; s++) {
+        this.update(60)
+      }
+      const leftover = remainingSeconds - coarseSteps * 60
       if (leftover > 0) this.update(leftover)
 
       this.offlineSimBoost = previousBoost
