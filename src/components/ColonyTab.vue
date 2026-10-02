@@ -45,7 +45,7 @@ function nap() {
 
 function doNap() {
   if (store.powerNap()) {
-    window.dispatchEvent(new CustomEvent('doomscroll:shake'))
+    window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'hard' } }))
   }
 }
 

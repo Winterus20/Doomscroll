@@ -163,6 +163,8 @@ export interface GameSettings {
   // QoL ayarları (v10)
   confirmDialogs: boolean // Prestij/sıfırlama onay diyaloğu göster
   reduceAnimations: boolean // Animasyonları ve parçacıkları azalt
+  crtEffect: boolean // Gece 3 CRT: scanline + vinyet zemin efekti
+  juiceMode: 'calm' | 'balanced' | 'tilt' // Balatro juice yoğunluğu
 }
 
 // Çevrimdışı / arka plan yakalama raporu — "Tekrar hoş geldin" modalı bunu gösterir

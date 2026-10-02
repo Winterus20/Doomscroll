@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useGameStore } from '../stores/game'
 import { format } from '../core/format'
 import type { DimensionData } from '../models/types'
@@ -9,6 +9,20 @@ const props = defineProps<{
 }>()
 
 const store = useGameStore()
+const cardRef = ref<HTMLElement | null>(null)
+let bounceTimer: number | null = null
+
+// P0 Balatro: satın almada kart spring bounce (tek tetik, tick değil)
+function bounceCard() {
+  if (store.settings.reduceAnimations) return
+  const el = cardRef.value
+  if (!el) return
+  el.classList.remove('buy-bounce')
+  void el.offsetWidth
+  el.classList.add('buy-bounce')
+  if (bounceTimer !== null) clearTimeout(bounceTimer)
+  bounceTimer = window.setTimeout(() => el.classList.remove('buy-bounce'), 260)
+}
 
 interface FormatMeta {
   tier: number
@@ -78,6 +92,9 @@ const displayCost = computed(() =>
   store.buyAmount === 'max' ? cost.value : store.getDimensionPackCost(props.dimension.tier, store.buyAmount / 10)
 )
 const canAfford = computed(() => store.matter.gte(displayCost.value))
+// Maks tek paket fiyatına bakmalıdır: ×100 modunda 10 pakete güç yetmese bile
+// tek paket alınabilirken butonun kilitli görünmesi hataydı.
+const canAffordSingle = computed(() => store.matter.gte(cost.value))
 const buyLabel = computed(() => (store.buyAmount === 'max' ? 'Maks' : `×${store.buyAmount}:`))
 
 const progressCount = computed(() => {
@@ -90,6 +107,19 @@ const progressCount = computed(() => {
 const progressPercent = computed(() => {
   return (progressCount.value / 10) * 100
 })
+
+// P1 Balatro: tier kimlik şeridi — her formatın kendi rengine ait sol bar
+const TIER_ACCENTS: Record<number, string> = {
+  1: 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]',
+  2: 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.8)]',
+  3: 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]',
+  4: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]',
+  5: 'bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]',
+  6: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]',
+  7: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]',
+  8: 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]'
+}
+const tierAccent = computed(() => TIER_ACCENTS[props.dimension.tier] || 'bg-purple-500')
 
 function getClickCoordinates(e?: MouseEvent): { x: number; y: number } {
   if (e && (e.clientX || e.clientY)) {
@@ -108,6 +138,7 @@ function buy(e?: MouseEvent) {
   const coords = getClickCoordinates(e)
   const success = store.buyDimensionByMode(props.dimension.tier)
   if (success) {
+    bounceCard()
     window.dispatchEvent(
       new CustomEvent('doomscroll:tap', {
         detail: {
@@ -124,6 +155,7 @@ function buyMax(e?: MouseEvent) {
   const coords = getClickCoordinates(e)
   const success = store.buyMaxDimension(props.dimension.tier)
   if (success) {
+    bounceCard()
     window.dispatchEvent(
       new CustomEvent('doomscroll:tap', {
         detail: {
@@ -139,18 +171,23 @@ function buyMax(e?: MouseEvent) {
 
 <template>
   <div
-    class="glass-panel-card relative px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors"
+    ref="cardRef"
+    class="tilt-card glass-panel-card relative pl-4 pr-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors overflow-hidden"
     v-tip="tierConfig.subtitle"
   >
+    <!-- Tier kimlik şeridi -->
+    <span class="absolute left-0 top-0 bottom-0 w-1 shrink-0" :class="tierAccent"></span>
     <!-- Sol: Tier + Kısa İsim + Çözünürlük Rozeti + Çarpan -->
     <div class="flex items-center gap-2 min-w-0">
       <span class="text-xs font-mono font-bold text-purple-400 shrink-0">D{{ props.dimension.tier }}</span>
       <span class="text-xs font-medium text-slate-200 truncate max-w-[90px] sm:max-w-[140px] md:max-w-none">{{ tierConfig.shortName }}</span>
+      <!-- Mobilde sahip olunan adet (milestone eşikleri bought üzerinden) -->
+      <span class="sm:hidden text-[10px] font-mono tabular-nums text-slate-400 shrink-0">×{{ props.dimension.bought }}</span>
 
-      <!-- Video Çözünürlük Rozeti (Milestone) -->
+      <!-- Video Çözünürlük Rozeti (Milestone — foil: holo şeritli nadir kart) -->
       <span
         v-if="milestoneInfo.current"
-        class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 uppercase tracking-wider"
+        class="foil-badge text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 uppercase tracking-wider"
         :class="milestoneInfo.current.colorClass"
         v-tip="`${milestoneInfo.current.name}: ${milestoneInfo.current.desc}`"
       >
@@ -226,24 +263,24 @@ function buyMax(e?: MouseEvent) {
         :disabled="!canAfford"
         class="btn-tactile hit-44 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex items-center gap-1 border shrink-0"
         :class="canAfford
-          ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse'
+          ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse btn-sheen'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
       >
         <span>{{ buyLabel }}</span>
         <span v-if="store.buyAmount !== 'max'" class="tabular-nums font-semibold">{{ format(displayCost, 2, store.settings.notation) }}</span>
       </button>
 
-      <!-- Maks (x10/x100 modlarında ayrıca görünür) -->
+      <!-- Maks (x10/x100 modlarında ayrıca görünür; tek paket fiyatı baz alınır) -->
       <button
         v-if="store.buyAmount !== 'max'"
         @click="buyMax($event)"
         v-hold="buyMax"
-        :disabled="!canAfford"
+        :disabled="!canAffordSingle"
         class="btn-tactile hit-44 px-2 py-1.5 rounded-lg text-xs font-mono transition-all border shrink-0"
-        :class="canAfford
+        :class="canAffordSingle
           ? 'bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 border-white/10 cursor-pointer'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
-        v-tip="'Maksimum al'"
+        v-tip="'Paran yettiği kadar paket al'"
       >
         Maks
       </button>

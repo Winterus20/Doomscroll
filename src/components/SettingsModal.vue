@@ -185,6 +185,16 @@ function toggleAnimations() {
   sounds.playClick()
 }
 
+function toggleCrt() {
+  store.settings.crtEffect = !(store.settings.crtEffect ?? true)
+  sounds.playClick()
+}
+
+function setJuiceMode(mode: 'calm' | 'balanced' | 'tilt') {
+  store.settings.juiceMode = mode
+  sounds.playClick()
+}
+
 function hardReset() {
   SaveSystem.hardReset()
   window.location.reload()
@@ -465,6 +475,50 @@ function hardReset() {
             >
               {{ store.settings.reduceAnimations ? 'Azaltıldı' : 'Tam' }}
             </button>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div>
+              <div class="text-xs font-mono font-medium text-slate-300">Gece 3 CRT</div>
+              <div class="text-[10px] text-slate-500">Scanline + vinyet tüp hissi (Balatro zemini)</div>
+            </div>
+            <button
+              @click="toggleCrt"
+              class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="(store.settings.crtEffect ?? true) ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ (store.settings.crtEffect ?? true) ? 'Açık' : 'Kapalı' }}
+            </button>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-black/40 border border-white/[0.06]">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-xs font-mono font-medium text-slate-300">Juice Yoğunluğu</div>
+              <div class="text-[10px] text-slate-500">Sade: sakin · Dengeli: önerilen · Full Tilt: parti</div>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button
+                @click="setJuiceMode('calm')"
+                class="px-2 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border"
+                :class="(store.settings.juiceMode ?? 'balanced') === 'calm' ? 'bg-slate-500/20 text-slate-200 border-slate-400/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+              >
+                Sade
+              </button>
+              <button
+                @click="setJuiceMode('balanced')"
+                class="px-2 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border"
+                :class="(store.settings.juiceMode ?? 'balanced') === 'balanced' ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+              >
+                Dengeli
+              </button>
+              <button
+                @click="setJuiceMode('tilt')"
+                class="px-2 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border"
+                :class="(store.settings.juiceMode ?? 'balanced') === 'tilt' ? 'bg-rose-500/20 text-rose-200 border-rose-500/30' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+              >
+                Full Tilt
+              </button>
+            </div>
           </div>
 
           <div class="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-[10px] text-slate-500 font-mono leading-relaxed">

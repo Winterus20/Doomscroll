@@ -3,10 +3,10 @@ class SoundManager {
   public enabled = true
   public volume = 0.2
 
-  // Hızlı tıklama / kombo frekans takibi (Pitch ramp)
+  // Hızlı tıklama / kombo frekans takibi (Pitch ramp — P0 Balatro: pentatonik C-D-E-G-A)
   private lastClickTime = 0
   private clickCombo = 0
-  private readonly PITCH_SCALES = [1.0, 1.1, 1.25, 1.4, 1.6]
+  private readonly PITCH_SCALES = [1.0, 1.125, 1.25, 1.5, 1.667]
 
   private getContext(): AudioContext | null {
     if (!this.enabled) return null

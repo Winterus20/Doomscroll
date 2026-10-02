@@ -155,10 +155,12 @@ function triggerShift(e: MouseEvent) {
         x,
         y,
         text: isShiftUnlock.value ? 'Yeni Format!' : `×${format(store.shiftPowerMultiplier, 2, store.settings.notation)} Boost!`,
-        color: '#d8b4fe'
+        color: '#d8b4fe',
+        big: true
       }
     })
   )
+  window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
   store.dimensionShift()
 }
 
@@ -175,10 +177,12 @@ function triggerGalaxy(e: MouseEvent) {
         x,
         y,
         text: 'Küme Kuruldu!',
-        color: '#fcd34d'
+        color: '#fcd34d',
+        big: true
       }
     })
   )
+  window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
   store.buyGalaxy()
 }
 
@@ -194,7 +198,7 @@ function triggerSingularity(e: MouseEvent) {
 
 function doSingularity(e?: MouseEvent) {
   if (!store.canSingularity) return
-  window.dispatchEvent(new CustomEvent('doomscroll:shake'))
+  window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'hard' } }))
 
   const target = e?.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
@@ -219,15 +223,25 @@ function doSingularity(e?: MouseEvent) {
 const showSingularityConfirm = ref(false)
 const showSacrificeConfirm = ref(false)
 
-// QoL: satın alma modu seçenekleri (10'luk paketler üzerinden)
+// QoL: satın alma modu seçenekleri (1 paket = 10 adet üzerinden)
 const BUY_MODES: Array<{ value: 10 | 100 | 'max'; label: string; tip: string }> = [
-  { value: 10, label: '×10', tip: 'Tek paket al (10 adet)' },
-  { value: 100, label: '×100', tip: '10 paket birden al (100 adet)' },
-  { value: 'max', label: 'Maks', tip: 'Alınabildiği kadar al' }
+  { value: 10, label: '×10', tip: '×10: 10 adet al (1 paket — en küçük alım)' },
+  { value: 100, label: '×100', tip: '×100: 100 adet al (10 paket birden)' },
+  { value: 'max', label: 'Maks', tip: 'Maks: paran yettiği kadar paket al' }
 ]
 
+// Kolektif Trend erken oyunda korkutucu olmasın: ilk eşik (25) uzaktayken
+// darboğaz rozeti + bar gizlenir, tek satır hedef gösterilir.
+const isCollectiveEarly = computed(() => store.collectiveMinBought < 10)
+
+// Akış Kümesi kartı D8 çağında anlamlıdır: ilk sıçrama öncesi ve D5 kapalıysa
+// ölü kart yerine tek satır hedef gösterilir.
+const showGalaxyCard = computed(
+  () => store.dimensionShifts >= 1 || store.galaxies > 0 || store.unlockedDimensionsCount >= 5
+)
+
 function handleSlackerClick(e: MouseEvent, id: string) {
-  window.dispatchEvent(new CustomEvent('doomscroll:shake'))
+  window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
 
   let x = e.clientX
   let y = e.clientY
@@ -323,8 +337,11 @@ function handleSlackerClick(e: MouseEvent, id: string) {
         </div>
       </div>
 
-      <!-- Sağ: İlerleme Barı + Darboğaz Uyarısı -->
-      <div v-if="collectiveInfo.next" class="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 w-full md:w-auto shrink-0">
+      <!-- Sağ: İlerleme Barı + Darboğaz Uyarısı (erken oyunda tek satır hedef) -->
+      <div v-if="isCollectiveEarly" class="text-[11px] font-mono text-slate-500 shrink-0">
+        Hedef: tüm açık formatları <span class="text-indigo-300 font-semibold">10 adete</span> çıkar → ilk bonus
+      </div>
+      <div v-else-if="collectiveInfo.next" class="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 w-full md:w-auto shrink-0">
         <div class="flex flex-col gap-1 w-full sm:w-36">
           <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
             <span>En Düşük: {{ collectiveInfo.minBought }}</span>
@@ -419,7 +436,7 @@ function handleSlackerClick(e: MouseEvent, id: string) {
           {{ mode.label }}
         </button>
       </div>
-      <span class="text-[10px] font-mono text-slate-500">satın alma modu</span>
+      <span class="text-[10px] font-mono text-slate-500">satın alma modu (1 paket = 10 adet)</span>
     </div>
 
     <!-- 4. Format Listesi (D1-D8 Kompakt Satırlar) -->
@@ -530,8 +547,9 @@ function handleSlackerClick(e: MouseEvent, id: string) {
         </button>
       </div>
 
-      <!-- Sonsuz Akış Kümeleri (Galaxies) -->
+      <!-- Sonsuz Akış Kümeleri (Galaxies — D8 çağında açılır) -->
       <div
+        v-if="showGalaxyCard"
         class="glass-panel-card p-3 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06]"
         v-tip="'Tüm içerikleri sıfırlar; Frekans (Hz) çarpan gücünü katlar'"
       >
@@ -563,6 +581,16 @@ function handleSlackerClick(e: MouseEvent, id: string) {
         >
           Küme Kur
         </button>
+      </div>
+
+      <!-- Erken oyun: küme kartı yerine tek satır hedef -->
+      <div
+        v-if="!showGalaxyCard"
+        class="px-3 py-2 rounded-xl border border-white/[0.04] bg-black/20 text-[11px] font-mono text-slate-500 flex items-center gap-2"
+        v-tip="'Akış Kümesi D8 çağında açılır; önce Akış Sıçraması ile yeni formatlar aç'"
+      >
+        <Radio class="w-3.5 h-3.5 text-slate-600 shrink-0" />
+        <span>Akış Kümesi D8 çağında açılır — önce Sıçrama ile yeni formatlar aç</span>
       </div>
 
       <!-- Önbelleği Temizleme (Dimension Sacrifice - Antimatter Dimensions) -->

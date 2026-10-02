@@ -361,6 +361,10 @@
   animation-iteration-count: 1 !important;
   transition-duration: 0.001s !important;
 }
+.reduce-anim .tilt-card:hover,
+.reduce-anim .tilt-card:active {
+  transform: none;
+}
 
 /* 0-state onboarding: ilk kaydırma çağrısı — Kaydır butonunda nefes alan halka */
 @keyframes cta-beacon-anim {
@@ -377,6 +381,216 @@
 }
 .arrow-nudge {
   animation: arrow-nudge-anim 1.2s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Gece 3 CRT + Balatro P0 — sakin zemin, coşkulu an
+   - CRT overlay: animasyonsuz scanline + vinyet (ucuz, tek katman)
+   - buy-bounce: satın almada spring hissi (tek tetik, tick değil)
+   - tilt-card: hover'da 1px yükselme + parlama (Balatro tilt'in sade hali)
+   - count-pop-combo: kombo anında kromatik sayaç
+   - shake kademesi: soft (alınabilir) / shake (orta) / hard (tekillik)
+   Hepsi .reduce-anim ve prefers-reduced-motion'da kapalı.
+   ========================================================================== */
+
+/* CRT zemin — tüm oyunun üstünde ince tüp katmanı (Balatro gibi).
+   pointer-events yok, sadece görsel. Modal/toast dahil her şeyi sarar. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 40%, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 201;
+  pointer-events: none;
+  opacity: 0.85;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+/* CRT kapalı veya animasyon azaltma: katmanları kaldır (performans + erişilebilirlik) */
+.crt-off body::before,
+.crt-off body::after,
+.reduce-anim body::before,
+.reduce-anim body::after {
+  display: none;
+}
+
+/* Satın alma bounce — Balatro kart snap hissi */
+@keyframes buy-bounce-anim {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.975); }
+  65% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+.buy-bounce {
+  animation: buy-bounce-anim 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Kart tilt — hover'da hafif yükselme + sheen süpürmesi */
+.tilt-card {
+  transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.tilt-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+.tilt-card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Kombo kromatiği — sayaç + rozet anlık elektriklenir */
+@keyframes combo-chroma-anim {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 0 transparent;
+  }
+  35% {
+    transform: scale(1.05);
+    text-shadow: -2px 0 0 rgba(255, 99, 104, 0.65), 2px 0 0 rgba(60, 180, 255, 0.65), 0 0 22px rgba(168, 85, 247, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 transparent;
+  }
+}
+.count-pop-combo {
+  animation: combo-chroma-anim 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+}
+
+/* Shake kademeleri — soft: hafif dürtme, hard: tekillik sarsıntısı */
+@keyframes shake-soft-anim {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-1px, 1px); }
+}
+.shake-soft {
+  animation: shake-soft-anim 0.18s ease both;
+}
+@keyframes shake-hard-anim {
+  0% { transform: translate(0, 0); }
+  15% { transform: translate(-4px, 2px); }
+  35% { transform: translate(4px, -2px); }
+  55% { transform: translate(-3px, -2px); }
+  75% { transform: translate(3px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+.shake-hard {
+  animation: shake-hard-anim 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ==========================================================================
+   Balatro P1 — her zaman görünen kimlik öğeleri
+   ========================================================================== */
+
+/* Skor kutuları — Balatro chip (mavi) + mult (kırmızı) dili */
+.balatro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.6rem;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  border: 2px solid;
+  font-variant-numeric: tabular-nums;
+}
+.balatro-chip-blue {
+  background: rgba(0, 140, 227, 0.22);
+  border-color: rgba(60, 180, 255, 0.7);
+  color: #bfe6ff;
+  box-shadow: 0 0 14px -2px rgba(60, 180, 255, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+.balatro-chip-red {
+  background: rgba(200, 40, 60, 0.2);
+  border-color: rgba(255, 99, 104, 0.55);
+  color: #ffc9cd;
+}
+.balatro-chip-red.hot {
+  border-color: rgba(255, 99, 104, 0.95);
+  color: #fff;
+  background: rgba(220, 50, 70, 0.35);
+  box-shadow: 0 0 18px -2px rgba(255, 99, 104, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  animation: mult-hot-anim 0.9s ease-in-out infinite;
+}
+@keyframes mult-hot-anim {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.balatro-chip-dim {
+  opacity: 0.55;
+}
+
+/* Sayaç glow — imza sayacı hep hafif parlar, tekillik hazırsa altına döner */
+.counter-glow {
+  text-shadow: 0 0 26px rgba(168, 85, 247, 0.35), 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.counter-gold {
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Sheen süpürmesi — alınabilir birincil butonda ışık gezinir */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  left: -60%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: skewX(-18deg);
+  animation: sheen-sweep-anim 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sheen-sweep-anim {
+  0%, 55% { left: -60%; }
+  90%, 100% { left: 130%; }
+}
+
+/* Anomali wobble — Balatro kartı gibi canlı durur */
+@keyframes anomaly-wobble-anim {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-1.2deg); }
+  50% { transform: translate(-50%, -48%) rotate(1.2deg); }
+}
+.anomaly-wobble {
+  animation: anomaly-wobble-anim 3.2s ease-in-out infinite;
+}
+.anomaly-wobble:hover {
+  animation-play-state: paused;
+}
+.anomaly-glow-purple { box-shadow: 0 0 24px -4px rgba(168, 85, 247, 0.55); }
+.anomaly-glow-rose { box-shadow: 0 0 24px -4px rgba(244, 63, 94, 0.55); }
+.anomaly-glow-amber { box-shadow: 0 0 24px -4px rgba(245, 158, 11, 0.55); }
+
+/* Foil milestone — nadir kalite rozeti holo şerit taşır */
+.foil-badge {
+  position: relative;
+  overflow: hidden;
+}
+.foil-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  animation: sheen-sweep-anim 3.4s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* Minimalist Dark Scrollbar */
@@ -408,7 +622,15 @@
   .affordance-pulse,
   .tab-dot,
   .screen-shake,
+  .shake-soft,
+  .shake-hard,
+  .balatro-chip-red.hot,
+  .btn-sheen::before,
+  .anomaly-wobble,
+  .foil-badge::after,
   .count-pop,
+  .count-pop-combo,
+  .buy-bounce,
   .cta-beacon,
   .arrow-nudge {
     animation: none;

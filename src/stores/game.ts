@@ -1065,7 +1065,9 @@ export const useGameStore = defineStore('game', {
       sleepTimerMinutes: 0,
       customAudioUrl: '',
       confirmDialogs: true,
-      reduceAnimations: false
+      reduceAnimations: false,
+      crtEffect: true,
+      juiceMode: 'balanced' as const
     } as GameSettings,
 
     stats: {
@@ -4002,6 +4004,9 @@ export const useGameStore = defineStore('game', {
           musicEngine.rainEnabled = this.settings.rainEnabled ?? true
           musicEngine.rainLevel = this.settings.rainLevel ?? 0.5
           musicEngine.intensity = this.settings.musicIntensity ?? 0.5
+          // P0 Balatro: eski kayıtlarda eksik alanlar varsayılanla dolar
+          if (this.settings.crtEffect === undefined) this.settings.crtEffect = true
+          if (this.settings.juiceMode === undefined) this.settings.juiceMode = 'balanced'
           if (this.settings.customAudioUrl) {
             musicEngine.customUrl = this.settings.customAudioUrl
           }

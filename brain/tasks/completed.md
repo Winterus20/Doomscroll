@@ -1,5 +1,38 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-02] — Minimalist + Balatro P0: Gece 3 CRT, kart bounce/tilt, kromatik kombo, kademeli shake (v0.17.2 adayı)
+
+### Motivasyon:
+- Kullanıcı talebi: minimalist iskelet korunacak ama sıkıcı olmayacak — Balatro havası. Kod denetimi (9 bileşen) + internet araştırması (Balatro juice-stack/CRT, Linear/Apple minimalizm, teemo.dev prestij UX) sentezlendi. İlke: sakin zemin, coşkulu an.
+
+### Yapılan İşler:
+1. **`src/models/types.ts` + `src/stores/game.ts`:** yeni ayarlar `crtEffect: boolean` (varsayılan true) + `juiceMode: 'calm'|'balanced'|'tilt'` (varsayılan balanced). Eski kayıt uyumu: deserialize'da `undefined` ise varsayılan dolar; state/serialize dokunulmadı.
+2. **`src/style.css`:** CSS-only CRT (body::before vinyet + body::after scanline, animasyonsuz, `mix-blend-mode: overlay`); `.crt-off`/`.reduce-anim`'de katmanlar `display:none`. Yeni: `buy-bounce` (spring), `tilt-card` (hover -1px), `count-pop-combo` (kromatik text-shadow), `shake-soft`/`shake-hard` kademeleri. Hepsi `prefers-reduced-motion` + `.reduce-anim`'da kapalı.
+3. **`src/App.vue`:** `syncEffectClasses()` — reduce + crt tek elden (`reduce-anim` / `crt-off`).
+4. **`src/components/SettingsModal.vue`:** "Gece 3 CRT" toggle + "Juice Yoğunluğu" 3'lü seçici (Sade/Dengeli/Full Tilt).
+5. **`src/components/DimensionRow.vue`:** karta `tilt-card`, satın almada `buy-bounce` tetikleme (reduce açıkken atlanır).
+6. **`src/components/Header.vue`:** kombo aktifken sayaç `count-pop-combo` (kromatik) ile patlar; normalde eski `count-pop`.
+7. **`src/components/JuiceLayer.vue`:** big anlarda burst (balanced 3, tilt 5 + büyük font, calm 1); cap moda göre (30/60/120); shake `detail.level` destekler (soft/medium/hard).
+8. **`src/components/DimensionsTab.vue` + `ColonyTab.vue`:** shake kademeleri bağlandı (Shift/Galaksi/vicdan soft, sacrifice/anomali medium, tekillik/Toplu Uyku hard; Shift/Galaksi big juice).
+9. **`src/core/audio.ts`:** tıklama pitch ramp pentatoniğe çekildi (C-D-E-G-A oranları: 1.0/1.125/1.25/1.5/1.667).
+10. **P1 görünen kimlik (aynı sürüm, devam turu):** CRT bug fix (katman `z-index:1` ile içeriğin arkasındaydı → 200/201, opaklık artırıldı, `mix-blend-mode` kaldırıldı); Header'da Balatro skor kutuları (mavi Fiş + kırmızı Mult, mult>1'de nabız + `hot`); sayaçta kalıcı glow (tekillik hazırsa altın); Kaydır + alınabilir boyut butonlarında sheen süpürmesi; `DimensionRow`'da 8 tier renk şeridi + foil milestone rozeti; `AnomalyOverlay`'de wobble + tip glow'u. Yeni CSS'lerin tamamı `prefers-reduced-motion` + `.reduce-anim`'da kapalı.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1639 modül).
+
+## [2026-10-02] — İlk prestij öncesi cila: B paketi Satın alma UX (v0.17.1 adayı)
+
+### Kapsam:
+- Kullanıcı kararı: 2. prestij (Kolektif Nöbet) kapalı; önce ilk prestije kadar olan kısım cilalanacak. İki paralel denetim (pacing + UX) yapıldı, B paketi seçildi.
+
+### Yapılan İşler:
+1. **`src/components/DimensionRow.vue`:** Maks butonu artık tek paket fiyatına (`canAffordSingle`) bakıyor — ×100 modunda 10 pakete güç yetmezken tek paket alınabilirken kilitli görünme hatası düzeltildi. Mobilde isim yanına `×bought` rozeti eklendi (orta miktar bloğu `sm:` altında gizliydi).
+2. **`src/components/DimensionsTab.vue`:** satın alma modu ipuçları netleştirildi (`1 paket = 10 adet`, en küçük alım vurgusu) + seçici yanına kalıcı açıklama. Kolektif Trend kartı `collectiveMinBought < 10` iken tek satır hedef gösterir (darboğaz rozeti + bar gizli). Akış Kümesi kartı ilk sıçrama + D5 öncesi gizli, yerine tek satır hedef satırı.
+3. Save uyumlu: yalnızca görünürlük koşulları + buton disabled mantığı; state/serialize dokunulmadı.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`): **0 hata** (1639 modül).
+
 ## [2026-10-02] — Hotfix: GODMODE paneli açılmıyordu (M kısayolu kodu bölüyordu)
 
 ### Neden:

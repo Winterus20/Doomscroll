@@ -36,6 +36,13 @@ function getCapsuleBorder(type: AnomalyType | string) {
   return 'border-amber-500/40 hover:border-amber-400'
 }
 
+// P1 Balatro: tipe göre dış glow (kart parıltısı)
+function getCapsuleGlow(type: AnomalyType | string) {
+  if (type === 'fyp') return 'anomaly-glow-purple'
+  if (type === 'heart_frenzy') return 'anomaly-glow-rose'
+  return 'anomaly-glow-amber'
+}
+
 function getTagStyle(type: AnomalyType | string) {
   if (type === 'fyp') return 'text-purple-300 bg-purple-500/10 border-purple-500/30'
   if (type === 'heart_frenzy') return 'text-rose-300 bg-rose-500/10 border-rose-500/30'
@@ -99,11 +106,11 @@ function handleAnomalyClick(anomaly: FloatingAnomaly, event: MouseEvent) {
       :key="anomaly.id"
       :style="{ left: `${anomaly.x}%`, top: `${anomaly.y}%` }"
       @click="handleAnomalyClick(anomaly, $event)"
-      class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer select-none group transition-transform duration-150 hover:scale-105 active:scale-95"
+      class="anomaly-wobble pointer-events-auto absolute cursor-pointer select-none active:scale-95"
     >
       <div
         class="glass-panel relative overflow-hidden rounded-xl border backdrop-blur-md px-3.5 py-2.5 flex items-center gap-3 min-w-[260px] max-w-[320px] transition-colors bg-[#0e121a]/95"
-        :class="getCapsuleBorder(anomaly.type)"
+        :class="[getCapsuleBorder(anomaly.type), getCapsuleGlow(anomaly.type)]"
       >
         <!-- Sol İkon -->
         <div class="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shrink-0">

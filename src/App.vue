@@ -99,11 +99,15 @@ watch(
 )
 
 // QoL: animasyon azaltma ayarı — kök elemana sınıf bağlar (style.css: .reduce-anim)
+// P0 Balatro: CRT efekti kapalıysa veya animasyon azaltma açıksa body katmanları gizlenir (.crt-off)
+function syncEffectClasses() {
+  document.documentElement.classList.toggle('reduce-anim', store.settings.reduceAnimations)
+  const crtOn = store.settings.crtEffect !== false && !store.settings.reduceAnimations
+  document.documentElement.classList.toggle('crt-off', !crtOn)
+}
 watch(
-  () => store.settings.reduceAnimations,
-  (reduce) => {
-    document.documentElement.classList.toggle('reduce-anim', reduce)
-  },
+  () => [store.settings.reduceAnimations, store.settings.crtEffect],
+  () => syncEffectClasses(),
   { immediate: true }
 )
 

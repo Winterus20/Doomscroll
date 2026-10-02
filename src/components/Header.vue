@@ -33,16 +33,17 @@ const swipeBtnRef = ref<HTMLButtonElement | null>(null)
 const counterRef = ref<HTMLElement | null>(null)
 let popTimer: number | null = null
 
-// Faz 4 juice: tıklama/space anında sayaç mikro-pop (reduced-motion CSS'te kapalı)
+// Faz 4 juice + P0 Balatro: tıklamada sayaç pop; kombo aktifken kromatik versiyon
 function popCounter() {
   const el = counterRef.value
   if (!el) return
-  el.classList.remove('count-pop')
+  const comboClass = comboActive.value ? 'count-pop-combo' : 'count-pop'
+  el.classList.remove('count-pop', 'count-pop-combo')
   // Reflow ile animasyonu yeniden tetikle
   void el.offsetWidth
-  el.classList.add('count-pop')
+  el.classList.add(comboClass)
   if (popTimer !== null) clearTimeout(popTimer)
-  popTimer = window.setTimeout(() => el.classList.remove('count-pop'), 320)
+  popTimer = window.setTimeout(() => el.classList.remove('count-pop', 'count-pop-combo'), 360)
 }
 
 // Canlı Ekolayzır (Visualizer) Barları
@@ -399,7 +400,8 @@ onUnmounted(() => {
       <!-- Sayıların zıplamaması ve taşmaması için tabular-nums; imza tipografi: Chakra Petch -->
       <div
         ref="counterRef"
-        class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums text-white tracking-tight my-0.5 select-all will-change-transform"
+        class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
+        :class="singularityReady ? 'text-amber-200 counter-gold' : 'text-white counter-glow'"
       >
         {{ formattedDopamine }}
       </div>
@@ -411,6 +413,21 @@ onUnmounted(() => {
           class="text-rose-400 font-semibold text-[11px] bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 tabular-nums shrink-0"
         >
           -{{ (store.slackerLeechPercent * 100).toFixed(0) }}% Vicdan
+        </span>
+      </div>
+
+      <!-- Balatro skor kutuları: FİŞ (mavi, tıklama gücü) × MULT (kırmızı, kombo) -->
+      <div class="mt-2 flex items-center justify-center gap-2">
+        <span class="balatro-chip balatro-chip-blue" v-tip="'Fiş: her kaydırmada bu kadar dopamin'">
+          Fiş +{{ formattedClickPower }}
+        </span>
+        <span class="text-slate-600 font-black font-mono text-sm select-none">×</span>
+        <span
+          class="balatro-chip"
+          :class="currentComboMult() > 1 ? 'balatro-chip-red hot' : 'balatro-chip-red balatro-chip-dim'"
+          v-tip="'Mult: üst üste kaydırmalarla yükselir, 1.5 sn durursan söner'"
+        >
+          {{ currentComboMult() > 1 ? `Mult ×${currentComboMult()}` : 'Mult ×1' }}
         </span>
       </div>
 
@@ -507,7 +524,7 @@ onUnmounted(() => {
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
-          class="btn-tactile h-11 px-2.5 sm:px-3.5 rounded-xl bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border border-purple-500/40 text-xs font-bold font-mono flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm active:scale-95 shrink-0 min-w-[85px] sm:min-w-[110px]"
+          class="btn-tactile btn-sheen h-11 px-2.5 sm:px-3.5 rounded-xl bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border border-purple-500/40 text-xs font-bold font-mono flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm active:scale-95 shrink-0 min-w-[85px] sm:min-w-[110px]"
           :class="{ 'cta-beacon': showFirstSwipeHint }"
           v-tip="'Space tuşuna basarak da kaydırabilirsiniz'"
         >

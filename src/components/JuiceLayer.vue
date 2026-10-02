@@ -37,7 +37,6 @@ const particles: Particle[] = []
 
 let width = 0
 let height = 0
-const MAX_PARTICLES = 60
 
 function resizeCanvas() {
   if (!canvasRef.value) return
@@ -52,13 +51,45 @@ function resizeCanvas() {
 }
 
 function spawnParticle(x: number, y: number, text: string, color = '#e2e8f0', big = false) {
-  // Hafif rastgele dikey açı ve hız
-  const vx = (Math.random() - 0.5) * 1.5
-  const vy = -(2.5 + Math.random() * 2.0)
+  // P0 Balatro: juice moduna göre yoğunluk — calm sade, tilt parti
+  const mode = (() => {
+    try {
+      const raw = localStorage.getItem('doomscroll-save')
+      if (raw) {
+        const parsed = JSON.parse(raw) as { settings?: { juiceMode?: string } }
+        return parsed.settings?.juiceMode ?? 'balanced'
+      }
+    } catch { /* yoksay */ }
+    return 'balanced'
+  })()
+  const repeats = big ? (mode === 'tilt' ? 5 : mode === 'calm' ? 1 : 3) : 1
+  for (let r = 0; r < repeats; r++) {
+    spawnSingle(x, y, text, color, big, mode, r)
+  }
 
+  if (animId === null) {
+    animId = requestAnimationFrame(loop)
+  }
+}
+
+function spawnSingle(
+  x: number,
+  y: number,
+  text: string,
+  color: string,
+  big: boolean,
+  mode: string,
+  index: number
+) {
+  // Hafif rastgele dikey açı ve hız (burst'te yana saçılım genişler)
+  const spread = big ? 2.6 : 1.5
+  const vx = (Math.random() - 0.5) * spread
+  const vy = -(2.5 + Math.random() * 2.0) - (big ? index * 0.35 : 0)
+
+  const cap = mode === 'tilt' ? 120 : mode === 'calm' ? 30 : 60
   const p: Particle = {
     // Yatay saçılım: aynı noktadan üst üste spawn'da metin yığını yerine şerit
-    x: x + (Math.random() - 0.5) * 28,
+    x: x + (Math.random() - 0.5) * (big ? 64 : 28),
     y,
     vx,
     vy,
@@ -67,17 +98,13 @@ function spawnParticle(x: number, y: number, text: string, color = '#e2e8f0', bi
     life: 0,
     text,
     color,
-    size: big ? 20 : 15
+    size: big ? (mode === 'tilt' ? 24 : 20) : 15
   }
 
-  if (particles.length >= MAX_PARTICLES) {
+  if (particles.length >= cap) {
     particles.shift()
   }
   particles.push(p)
-
-  if (animId === null) {
-    animId = requestAnimationFrame(loop)
-  }
 }
 
 function triggerJuice(options: JuiceTriggerOptions) {
@@ -149,18 +176,22 @@ function handleTapEvent(e: Event) {
   }
 }
 
-function handleShakeEvent() {
+function handleShakeEvent(e: Event) {
+  // P0 Balatro: shake kademesi — detail.level: 'soft' | 'medium' | 'hard'
+  const level = (e as CustomEvent<{ level?: string }>).detail?.level ?? 'medium'
+  const cls = level === 'hard' ? 'shake-hard' : level === 'soft' ? 'shake-soft' : 'screen-shake'
+  const ms = level === 'hard' ? 400 : level === 'soft' ? 200 : 250
   if (shakeTimeout) {
     clearTimeout(shakeTimeout)
   }
-  document.body.classList.remove('screen-shake')
+  document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
   void document.body.offsetWidth
-  document.body.classList.add('screen-shake')
+  document.body.classList.add(cls)
 
   shakeTimeout = setTimeout(() => {
-    document.body.classList.remove('screen-shake')
+    document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
     shakeTimeout = null
-  }, 250)
+  }, ms)
 }
 
 onMounted(() => {

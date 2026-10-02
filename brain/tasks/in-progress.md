@@ -11,6 +11,10 @@
 ## 🔎 Araştırması tamamlanan (2026-10-02)
 - **Gece Kriz Meydan Okumaları (Normal Challenges):** Codebase + internet araştırması tamamlandı, uygulama planı **v2'ye yükseltildi** → `brain/research/challenges-research-and-plan.md`. v2 yenilikleri: wiki.gg ile doğrulanmış AD tablosu + Revolution Idle Trials referansı, satır numaralı codebase denetimi (2 v1 hatası düzeltildi: 59 başarım/tempo hedefleri), C8 yeniden tasarımı (fail-state yok), offline/save kenar durumları, kademeli açılış + kademeli süre-metas. **Onay bekleniyor** — hedef sürüm v0.17.0 adayı.
 
+## ✅ Tamamlanan: İlk prestij öncesi cila — B paketi (Satın alma UX, v0.17.1 adayı)
+- Kapsam: Maks disabled fix (tek paket maliyeti), mobil miktar rozeti, satın alma modu açıklaması (1 paket = 10 adet), Kolektif Trend erken sadeleştirme, Galaksi kartı erken gizleme. Faz 2 kapalı.
+- Durum: tamamlandı (detay completed.md v0.17.1 girdisinde).
+
 ## 🔜 Sıradaki adaylar (backlog'tan)
 - P2 QoL kalıntıları: başarımlar için ilerleme kesri önizlemesi (ach progress fraction), olay geçmişi günlüğü ("Gece Kaydı"), achievements filtre çipleri, kilitli sekmeye mobilde dokununca gereksinim toast'ı.
 - Faz 2: Kolektif Gece Nöbeti katmanı içeriği (1e4000 sonrası şu an boş).
