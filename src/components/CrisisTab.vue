@@ -1,11 +1,20 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore, CRISIS_SPELLS } from '../stores/game'
+import { getTierIdentity } from '../game/dimension_identity'
 import { Zap, Flame, AlertTriangle, BatteryCharging, ShieldAlert, Sparkles } from 'lucide-vue-next'
 import type { CrisisSpellType } from '../models/types'
 import TabHero from './TabHero.vue'
 import LockedFeature from './LockedFeature.vue'
 
 const store = useGameStore()
+
+// D4 (Bölünmüş Dikkat) pasifi: kriz spawn hızını artırır — etkinse hero'da rozet
+const d4Passive = computed(() => {
+  const id = getTierIdentity(4)
+  if (!store.passiveBadges.d4Anomaly || !id) return null
+  return { label: `D4 +${Math.round((id.passive.value - 1) * 100)}%`, desc: id.passive.desc }
+})
 
 // Büyü kademesi (Özellik Merdiveni): Şarj başlangıçta, Espresso/Kulaklık/Yalan sırayla açılır
 const SPELL_UNLOCK_FEATURES: Partial<Record<CrisisSpellType, string>> = {
@@ -52,6 +61,13 @@ function handleCast(spellId: CrisisSpellType) {
           </div>
           <span class="text-[10px] font-mono text-emerald-400 ml-1 tabular-nums">(+1.2/sn)</span>
         </div>
+        <span
+          v-if="d4Passive"
+          class="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/25 shrink-0 cursor-help select-none"
+          v-tip="`D4 Bölünmüş Dikkat Pasifi: ${d4Passive.desc}`"
+        >
+          {{ d4Passive.label }}
+        </span>
       </template>
       <template #progress>
         <div class="progress-track progress-track-md progress-track-bordered">

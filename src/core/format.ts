@@ -25,10 +25,10 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
   if (dec.eq(0)) return '0'
   if (dec.layer >= 2) return dec.toString()
 
-  // 1000'den küçük sayılar için standart gösterim
+  // Ones/tens/hundreds: whole numbers only (tr-TR grouping, no fractional part)
   if (dec.lt(1000)) {
     return dec.toNumber().toLocaleString('tr-TR', {
-      maximumFractionDigits: precision,
+      maximumFractionDigits: 0,
       minimumFractionDigits: 0
     })
   }
@@ -66,6 +66,34 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
 
 export function formatNumber(value: DecimalSource, notation: NotationType = 'standard', precision = 2): string {
   return format(value, precision, notation)
+}
+
+export type FormatPartKind = 'plain' | 'suffix' | 'exponent'
+
+export interface FormattedParts {
+  main: string
+  suffix: string
+  kind: FormatPartKind
+}
+
+// Okunabilirlik: "1.23 M" → { main: "1.23", suffix: "M" },
+// "1.23e45" → { main: "1.23", suffix: "e45" }. Sonek ayrı stille çizilir.
+export function formatParts(value: DecimalSource, precision = 2, notation: NotationType = 'scientific'): FormattedParts {
+  const full = format(value, precision, notation)
+  if (notation === 'standard') {
+    const idx = full.lastIndexOf(' ')
+    if (idx > 0) return { main: full.slice(0, idx), suffix: full.slice(idx + 1), kind: 'suffix' }
+    return { main: full, suffix: '', kind: 'plain' }
+  }
+  if (notation === 'logarithm') {
+    const m = /^(-?)e(\d+)(\.\d+)?$/.exec(full)
+    if (m) return { main: `${m[1]}e${m[2]}`, suffix: m[3] ?? '', kind: m[3] ? 'exponent' : 'plain' }
+    return { main: full, suffix: '', kind: 'plain' }
+  }
+  // scientific + engineering: 1.23e45 (regex dışı her şey plain düşer)
+  const m = /^(-?[\d.,]+)e(-?\d+)$/.exec(full)
+  if (m) return { main: m[1], suffix: `e${m[2]}`, kind: 'exponent' }
+  return { main: full, suffix: '', kind: 'plain' }
 }
 
 function formatScientific(dec: Decimal, precision = 2): string {

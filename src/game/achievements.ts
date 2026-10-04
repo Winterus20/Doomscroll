@@ -34,11 +34,19 @@ export const ACHIEVEMENT_CATEGORIES: AchievementCategoryMeta[] = [
 const N1E6 = new Decimal('1e6')
 const N1E12 = new Decimal('1e12')
 const N1E30 = new Decimal('1e30')
+const N1E50 = new Decimal('1e50')
+const N1E75 = new Decimal('1e75')
+const N1E105 = new Decimal('1e105')
+const N1E140 = new Decimal('1e140')
+const N1E180 = new Decimal('1e180')
+const N1E225 = new Decimal('1e225')
+const N1E270 = new Decimal('1e270')
+const N1E308 = new Decimal('1e308')
 const SP10 = new Decimal(10)
 const SP1000 = new Decimal(1000)
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  // ---- 1. Dopamin Bağımlılığı ----
+  // ---- 1. Dopamin Bağımlılığı (ADR-0032: 0 → 1e308 ölçek merdiveni) ----
   { id: 'dop_first', name: 'İlk Yukarı Kaydırma', desc: '1 kez yukarı kaydır', icon: '👆', category: 'dopamine', check: (c) => c.manualClicks >= 1 },
   { id: 'dop_100', name: 'Başparmak Isınması', desc: '100 kez yukarı kaydır', icon: '👍', category: 'dopamine', check: (c) => c.manualClicks >= 100 },
   { id: 'dop_1000', name: 'Kaydırma Maratonu', desc: '1.000 kez yukarı kaydır', icon: '🔥', category: 'dopamine', check: (c) => c.manualClicks >= 1000 },
@@ -50,6 +58,34 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'dop_million', name: 'İlk Viral Patlama', desc: 'Toplam 1e6 Dopamin üret', icon: '📈', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E6) },
   { id: 'dop_trillion', name: 'Gece 3 Fenomeni', desc: 'Toplam 1e12 Dopamin üret', icon: '🌙', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E12) },
   { id: 'dop_baron', name: 'Dopamin Baronu', desc: 'Toplam 1e30 Dopamin üret', icon: '👑', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E30) },
+  { id: 'dop_50', name: 'Gece Nöbetçisi', desc: 'Toplam 1e50 Dopamin üret', icon: '🕯️', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E50) },
+  { id: 'dop_75', name: 'Uykusuzluğun Eşiği', desc: 'Toplam 1e75 Dopamin üret', icon: '👁️', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E75) },
+  {
+    id: 'dop_padisah', name: 'Dopamin Padişahı', desc: 'Toplam 1e105 Dopamin üret', icon: '💎', category: 'dopamine',
+    reward: { kind: 'prod_x125', desc: 'Kalıcı ödül: Tüm üretim ×1.25' },
+    check: (c) => c.totalMatter.gte(N1E105)
+  },
+  {
+    id: 'dop_yasa', name: 'Gece Yasası', desc: 'Toplam 1e140 Dopamin üret', icon: '📜', category: 'dopamine',
+    reward: { kind: 'dim_cost_x085', desc: 'Kalıcı ödül: Boyut maliyeti -%15' },
+    check: (c) => c.totalMatter.gte(N1E140)
+  },
+  {
+    id: 'dop_donus_yok', name: 'Sabaha Dönüş Yok', desc: 'Toplam 1e180 Dopamin üret', icon: '⚡', category: 'dopamine',
+    reward: { kind: 'click_x3', desc: 'Kalıcı ödül: Yukarı Kaydırma ×3' },
+    check: (c) => c.totalMatter.gte(N1E180)
+  },
+  {
+    id: 'dop_sonsuz_akis', name: 'Sonsuz Akış', desc: 'Toplam 1e225 Dopamin üret', icon: '🌌', category: 'dopamine',
+    reward: { kind: 'shift_power_boost', desc: 'Kalıcı ödül: Sıçrama tabanı 1.66 → 1.9' },
+    check: (c) => c.totalMatter.gte(N1E225)
+  },
+  { id: 'dop_safak_yolu', name: 'Şafak Yolu', desc: 'Toplam 1e270 Dopamin üret', icon: '🌅', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E270) },
+  {
+    id: 'dop_tekillik', name: 'Dopamin Tekilliği', desc: 'Toplam 1e308 Dopamin üret — Şafak kapısı', icon: '☀️', category: 'dopamine',
+    reward: { kind: 'prod_x2', desc: 'Kalıcı ödül: Tüm üretim ×2' },
+    check: (c) => c.totalMatter.gte(N1E308)
+  },
   { id: 'dop_247', name: 'Gece 02:47 Kulübü', desc: 'Saat 02:00-03:00 arasında oyunu aç', icon: '🦉', category: 'dopamine', secret: true, check: (c) => c.wallHour === 2 },
 
   // ---- 2. Boyut Yozlaşması ----
@@ -87,7 +123,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: { kind: 'anomaly_rate', desc: 'Kalıcı ödül: Kriz sıklığı +%10' },
     check: (c) => c.anomaliesClicked >= 50
   },
-  { id: 'cri_combo', name: 'Rezonans Hipnozu', desc: 'İlk Süper Rezonans komboyu tetikle (7× + 777×)', icon: '💥', category: 'crisis', check: (c) => c.combosTriggered >= 1 },
+  { id: 'cri_combo', name: 'Rezonans Hipnozu', desc: 'İlk Süper Rezonans komboyu tetikle (7× + 300×)', icon: '💥', category: 'crisis', check: (c) => c.combosTriggered >= 1 },
+  { id: 'cri_void', name: 'Void Reel Avcısı', desc: 'Nadir Void Reel Tekilliğini yakala', icon: '🌌', category: 'crisis', secret: true, check: (c) => (c.mythicsClicked || 0) >= 1 },
   { id: 'cri_combo5', name: 'Hipnoz Ustası', desc: '5 Süper Rezonans kombo tetikle', icon: '💫', category: 'crisis', check: (c) => c.combosTriggered >= 5 },
   { id: 'cri_spell', name: 'İlk Gece Kararı', desc: '1 gece kriz kararı al', icon: '☕', category: 'crisis', check: (c) => c.spellsCast >= 1 },
   {

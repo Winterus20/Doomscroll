@@ -4,6 +4,7 @@ import { useGameStore } from '../stores/game'
 import { formatNumber } from '../core/format'
 import { D_INFINITY } from '../core/math'
 import { NIGHT_WATCH_THRESHOLD } from '../stores/game'
+import { ARC_LOG10_MAX } from '../game/pacing'
 import { Sunrise, Sparkles, Sun, Moon } from 'lucide-vue-next'
 import TabHero from './TabHero.vue'
 import NeuralTreeTab from './NeuralTreeTab.vue'
@@ -15,13 +16,14 @@ const store = useGameStore()
 // Break Singularity alındıysa hero rozeti "Sınır Yıkıldı" durumuna geçer
 const singularityBroken = computed(() => (store.singularityUpgrades?.break_singularity || 0) >= 1)
 
-// Faz 2 kilometre taşı: Kolektif Gece Nöbeti (1e4000 Dopamin — GDD "İkinci Çöküş")
+// Faz 2 kilometre taşı: Kolektif Gece Nöbeti (1e308 Dopamin — ADR-0033).
+// İlerleme şafak yoluyla aynı ölçekte: 0 → 1e308 = %0 → %100.
 const nightWatchUnlocked = computed(() => store.nightWatchUnlocked)
 const nightWatchProgress = computed(() => {
   if (store.matter.lt(1)) return 0
   if (store.matter.gte(NIGHT_WATCH_THRESHOLD)) return 100
   const logVal = Math.max(0, store.matter.log10().toNumber())
-  return Math.min(100, Math.floor((logVal / 4000) * 100))
+  return Math.min(100, Math.floor((logVal / ARC_LOG10_MAX) * 100))
 })
 
 const progressToSingularity = computed(() => {
@@ -117,7 +119,7 @@ const challengeButtonLabel = computed(() => {
     <!-- Nöral Ağaç: eski düz SP dükkânının öncüllü kalıcı ağaç hâli -->
     <NeuralTreeTab />
 
-    <!-- Faz 2 Kilometre Taşı: Kolektif Gece Nöbeti (1e4000 Dopamin) -->
+    <!-- Faz 2 Kilometre Taşı: Kolektif Gece Nöbeti (1e308 Dopamin) -->
     <div
       class="glass-panel-card p-4 rounded-xl border"
       :class="nightWatchUnlocked ? 'border-amber-500/40 bg-amber-950/10' : 'border-white/[0.06]'"
@@ -134,7 +136,7 @@ const challengeButtonLabel = computed(() => {
       <p class="text-[11px] text-slate-400 font-mono leading-relaxed mb-2">
         <span v-if="!nightWatchUnlocked">
           Tüm insanlık yatakta aynı anda ekrana kilitleniyor — 2. Çöküş eşiği:
-          <span class="text-purple-300 font-bold tabular-nums">1e4000 Dopamin</span>. Uyku Sınırını Yık ve Dopamini eşiklerin ötesine taşı.
+          <span class="text-purple-300 font-bold tabular-nums">1e308 Dopamin</span>. Şafağa adım adım yaklaş — eşik, güneş doğmadan hemen önce açılır.
         </span>
         <span v-else>
           Faz 2 açıldı: Uyku Baskısı Matrisi (Corruptions) ve donanım soketleri yolda. Şimdilik nöbet ilerlemen burada sayılır.

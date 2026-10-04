@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { Decimal, D_0, D_1, D_INFINITY } from '../core/math'
 import { sounds } from '../core/audio'
 import { musicEngine } from '../core/music-engine'
+import { SaveSystem } from '../core/save'
+import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, SaveVersionError } from '../core/save-version'
 import confetti from 'canvas-confetti'
 import {
   ACHIEVEMENTS,
@@ -14,8 +16,12 @@ import {
   buildUnlockContext,
   checkUnlock,
   getFeatureById,
+  lifetimeUnlockDopamine,
+  meetsDopamineGate,
+  raisedLifetimePeak,
   type UnlockContext
 } from '../game/unlocks'
+import { log10Safe } from '../game/pacing'
 import {
   ALL_CHALLENGES_COMPLETE_MULT,
   challengeRewardEffects as computeChallengeRewardEffects,
@@ -25,6 +31,18 @@ import {
   type ChallengeDef,
   type ChallengeRewardEffects
 } from '../game/challenges'
+import {
+  FORMAT_UNLOCK_BUFF_SECONDS,
+  FORMAT_UNLOCK_BUFF_MULT,
+  formatUnlockBuffMult,
+  getTierIdentity,
+  tierAnomalyRateMult,
+  tierClickSyncCapBonus,
+  tierOfflineSimMult,
+  tierProductionMult,
+  tierShiftReqMult,
+  tierSlackerLeechMult
+} from '../game/dimension_identity'
 import type {
   AchievementContext,
   DimensionData,
@@ -44,15 +62,14 @@ import type {
   CrisisSpellType,
   AutobuyerConfig,
   AutobuyerMode,
-  AlgorithmUpgradeDef,
-  AlgorithmUpgradeId,
   ResolutionMilestone,
-  CollectiveMilestone,
   NeuralNode,
   NeuralEffects,
   OfflineReport,
-  PastSingularityRecord
+  PastSingularityRecord,
+  StrikeStage
 } from '../models/types'
+import { format } from '../core/format'
 
 function parseSavedDecimal(value: string | number | undefined, fallback: Decimal): Decimal {
   const parsed = new Decimal(value ?? fallback.toString())
@@ -68,21 +85,21 @@ function clampSavedNumber(value: unknown, fallback: number, min: number, max: nu
 }
 
 function isValidBuffType(value: unknown): value is BuffType {
-  return value === 'fyp' || value === 'heart_frenzy' || value === 'sponsor' || value === 'espresso'
+  return value === 'fyp' || value === 'heart_frenzy' || value === 'sponsor' || value === 'void' || value === 'espresso'
 }
 
 function isValidLabSeedType(value: unknown): value is LabSeedType {
   return typeof value === 'string' && LAB_SEEDS.some((seed) => seed.type === value)
 }
 
-export const COLLECTIVE_MILESTONES: CollectiveMilestone[] = [
-  { minBought: 25, mult: 2.0, desc: '2× Tüm Dopamin Akışı' },
-  { minBought: 50, mult: 3.0, desc: '3× Tüm Dopamin Akışı' },
-  { minBought: 100, mult: 5.0, desc: '5× Tüm Dopamin Akışı + Frekans -%10 İndirim' },
-  { minBought: 250, mult: 10.0, desc: '10× Tüm Dopamin Akışı' },
-  { minBought: 500, mult: 25.0, desc: '25× Tüm Dopamin Akışı' },
-  { minBought: 1000, mult: 50.0, desc: '50× Tüm Dopamin Akışı' }
-]
+// ADR-0029: kayıttan gelen enum değerleri doğrulanmadan state'e yazılmasın.
+// currentStance bir switch'te tüketiliyor (bkz. stanceMultipliers); geçersiz bir
+// değer tip yanılgısı yaratıyordu.
+const STANCE_TYPES: readonly StanceType[] = ['trend', 'spam', 'private_mode']
+
+function isValidStanceType(value: unknown): value is StanceType {
+  return typeof value === 'string' && STANCE_TYPES.includes(value as StanceType)
+}
 
 export const MIRROR_PAIRS: Record<number, { partnerTier: number; label: string }> = {
   1: { partnerTier: 8, label: 'Saf Beyin Çürümesi (D8)' },
@@ -96,57 +113,12 @@ export const MIRROR_PAIRS: Record<number, { partnerTier: number; label: string }
 }
 
 export const RESOLUTION_MILESTONES: ResolutionMilestone[] = [
-  { count: 25, name: '360p Mobil Veri', shortName: '360p', mult: 2, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', desc: '2× Çarpan' },
-  { count: 50, name: '720p HD Kalite', shortName: '720p HD', mult: 3, colorClass: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', desc: '3× Çarpan' },
-  { count: 100, name: '1080p 60 FPS', shortName: '1080p 60fps', mult: 4, colorClass: 'text-purple-400 bg-purple-500/10 border-purple-500/30', desc: '4× Çarpan + %1 Tıklama Payı' },
+  { count: 50, name: '360p Mobil Veri', shortName: '360p', mult: 2, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', desc: '2× Çarpan' },
+  { count: 100, name: '720p HD Kalite', shortName: '720p HD', mult: 3, colorClass: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', desc: '3× Çarpan' },
+  { count: 200, name: '1080p 60 FPS', shortName: '1080p 60fps', mult: 4, colorClass: 'text-purple-400 bg-purple-500/10 border-purple-500/30', desc: '4× Çarpan + %1 Tıklama Payı' },
   { count: 250, name: '4K HDR Dolby', shortName: '4K HDR', mult: 8, colorClass: 'text-amber-400 bg-amber-500/10 border-amber-500/30', desc: '8× Çarpan' },
   { count: 500, name: 'Nöro-Link Akışı', shortName: 'Nöro-Link', mult: 16, colorClass: 'text-rose-400 bg-rose-500/10 border-rose-500/30', desc: '16× Çarpan' },
   { count: 1000, name: 'Kozmik Tekillik', shortName: 'Kozmik', mult: 32, colorClass: 'text-white bg-white/20 border-white/40', desc: '32× Çarpan' }
-]
-
-export const ALGORITHM_UPGRADES: AlgorithmUpgradeDef[] = [
-  {
-    id: 'play_speed',
-    name: '1.25× Oynatma Hızı',
-    icon: '⏩',
-    desc: 'Videoları hızlandırır; Algoritma Frekansı (Hz) taban hızını %15 kalıcı artırır.',
-    cost: new Decimal(1e5)
-  },
-  {
-    id: 'double_tap',
-    name: 'Çift Dokunarak Beğen',
-    icon: '❤️',
-    desc: 'Başparmak refleksi; Yukarı Kaydır (manuel tıklama) gücünü kalıcı 2× katlar.',
-    cost: new Decimal(1e6)
-  },
-  {
-    id: 'amoled_black',
-    name: 'OLED Sonsuz Siyah',
-    icon: '🕶️',
-    desc: 'Gözleri yormaz; Düşük Parlaklık modunda Frekans indirimini %15 yerine %25 yapar.',
-    cost: new Decimal(1e7)
-  },
-  {
-    id: 'bg_listen',
-    name: 'Arka Planda Dinle',
-    icon: '🎧',
-    desc: 'Yorgan altında bile çalar; tüm pasif dopamin akışına kalıcı +%25 çarpan ekler.',
-    cost: new Decimal(1e8)
-  },
-  {
-    id: 'bookmark_pack',
-    name: 'Kayıtlılara Ekle',
-    icon: '🔖',
-    desc: 'Akış Sıçraması ve Küme sıfırlamalarında açık formatlar 0 yerine 10 adetle başlar.',
-    cost: new Decimal(1e9)
-  },
-  {
-    id: 'bass_boost',
-    name: 'Kulaklık Bass Boost',
-    icon: '🔊',
-    desc: 'Derin baslar beyni sallar; ASMR (D3) ve Subway Surfers (D4) çarpanını 3× katlar.',
-    cost: new Decimal(1e11)
-  }
 ]
 
 const BASE_COSTS = [
@@ -171,7 +143,36 @@ const COST_MULTS = [
   new Decimal(1e15)
 ]
 
-const DIMENSION_CHAIN_RATE = 0.1
+const DIMENSION_CHAIN_RATE = 0.060
+/** Erken koşu maliyet duvarı: D1/D2 için ×1000/adım yerine yumuşak merdiven (ADR-0026). */
+const EARLY_D1_COST_RATIO = 55
+const EARLY_D1_SOFT_BUCKETS = 4
+const EARLY_D2_COST_RATIO = 42
+const EARLY_D2_SOFT_BUCKETS = 3
+/** D3/D4 yumuşak merdiven: milyardan trilyona geçişteki 1e9-1e14 duvarını çözer */
+const EARLY_D3_COST_RATIO = 32
+const EARLY_D3_SOFT_BUCKETS = 3
+const EARLY_D4_COST_RATIO = 28
+const EARLY_D4_SOFT_BUCKETS = 2
+/** D5/D6 yumuşak merdiven: Shift 2 ve Shift 3'teki 1e9->1e17 ölümcül uçurumu çözer */
+const EARLY_D5_COST_RATIO = 24
+const EARLY_D5_SOFT_BUCKETS = 2
+const EARLY_D6_COST_RATIO = 20
+const EARLY_D6_SOFT_BUCKETS = 2
+/**
+ * Yeni koşuda açık format sayısı tabanı (her sıçrama +1, max 8).
+ * ADR-0033: 3 (D1+D2+D3). Oyuncu geri bildirimi: "milyardan trilyona geçiş çok uzun"
+ * ve "1. akış sıçramasında D4 yok". Taban 2 iken 1e9–1e12 bandında yalnızca 2 istasyon
+ * vardı; taban 3 ile D3 baştan açık, D4 ise 1. sıçramada gelir.
+ */
+export const BASE_UNLOCKED_DIMENSIONS = 3
+/** D2+ satın alımında alt kata anında aktarılan “zincir darbesi” (sn); üst sayaçların hissedilir hızlanması için. */
+const PURCHASE_CHAIN_BONUS_SECONDS = 2.5
+const PURCHASE_MATTER_TICK_SECONDS = 0.45
+
+// Satın alınan her 10 adette boyut çarpanı artışı (ADR-0023 ilk prestij dengelemesi):
+// 2.0 + sınırsız max-alım son koşuda dakikalar içinde 1e308'e fırlatıyordu.
+export const DIM_PER_TEN_MULT = 1.58
 
 // ---- Gece Kriz Meydan Okumaları (Faz 3: denge sabitleri) ----
 // C2: alım sonrası tam durma biter, üretim 60 sn'de lineer rampayla döner.
@@ -195,7 +196,26 @@ function challengeDimensionCap(state: { activeChallenge: string | null }): numbe
   return getChallengeById(state.activeChallenge)?.modifiers.maxDimensions
 }
 
-/** Aktif C5 koşusunun birikimli maliyet şişmesi (×1.5^sayaç); koşu-dışı ×1. */
+/** ADR-0025: shift cap + legacy save floor (v12). ADR-0035: cap kalıcıdır. */
+function resolvedUnlockedDimensionCount(state: {
+  dimensionShifts: number
+  lifetimePeakShifts?: number
+  dimensionCapFloor: number
+  activeChallenge: string | null
+}): number {
+  // ADR-0035: Boyut açılışı bir OLAYdır. `buyGalaxy()` koşu sayacını 0'a indirdiği
+  // için sadece `dimensionShifts`'e bakmak, ilk kümeden sonra D4–D8'i geri kilitliyordu.
+  // Hayat boyu en yüksek sıçrama sayısı kullanılır: bir kez açılan boyut kapanmaz.
+  const shiftCap = Math.min(
+    8,
+    BASE_UNLOCKED_DIMENSIONS + Math.max(state.lifetimePeakShifts ?? 0, state.dimensionShifts)
+  )
+  const base = Math.max(shiftCap, state.dimensionCapFloor)
+  const cap = challengeDimensionCap(state)
+  return cap === undefined ? base : Math.min(base, cap)
+}
+
+/** Aktif C5 koşusunun birikimli maliyet şişmesi (×1.5^sayaç); koşu-dışı ×1. Azami 1e12 softcap. */
 function challengeCostInflationMult(state: {
   activeChallenge: string | null
   challengeCostInflation: number
@@ -203,7 +223,9 @@ function challengeCostInflationMult(state: {
   if (!state.activeChallenge || state.challengeCostInflation <= 0) return D_1
   const step = getChallengeById(state.activeChallenge)?.modifiers.costInflationOnBuy
   if (step === undefined) return D_1
-  return Decimal.pow(step, state.challengeCostInflation)
+  // Denge: Enflasyon en fazla 1e12 katına kadar şişebilir; aşılamaz kilitlenmeyi (softlock) önler
+  const raw = Decimal.pow(step, state.challengeCostInflation)
+  return raw.gt(1e12) ? new Decimal(1e12) : raw
 }
 
 const GUILT_NAMES = [
@@ -466,7 +488,7 @@ export const SINGULARITY_UPGRADES = [
     name: 'Uyku Sınırını Yıkma',
     icon: '⚡',
     desc: 'Dopamin 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
-    baseCost: 8,
+    baseCost: 4,
     costMult: 1,
     maxLevel: 1
   }
@@ -591,8 +613,8 @@ export const NEURAL_TREE: NeuralNode[] = [
     icon: '⚡',
     desc: 'Dopamin 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
     branch: 'hybrid',
-    cost: 8,
-    requires: ['dawn_harbinger'],
+    cost: 4,
+    requires: ['eye_drops'], // Denge: taban 3 SP ile 2. koşudan sonra hemen açılabilir (4 SP)
     effect: 'dawn_speed'
   },
   {
@@ -735,7 +757,7 @@ export const NEURAL_TREE: NeuralNode[] = [
     id: 'neural_symphony',
     name: 'Nöral Senfoni',
     icon: '🎼',
-    desc: 'Botlar ve başparmak aynı orkestrada: tıklama gücü kalıcı 1.25× artar.',
+    desc: 'Botlar ve başparmak aynı orkestrada: tıklama gücü kalıcı 3× artar.',
     branch: 'hybrid',
     cost: 12,
     requires: ['neural_chip', 'combo_unlock'],
@@ -745,7 +767,7 @@ export const NEURAL_TREE: NeuralNode[] = [
     id: 'apex_doomscroll',
     name: 'Apex Doomscroll',
     icon: '🌀',
-    desc: 'Ağacın zirvesi: dopamin tekilliği — tüm üretim kalıcı 2× katlanır.',
+    desc: 'Ağacın zirvesi: dopamin tekilliği — tüm üretim kalıcı 10× katlanır.',
     branch: 'hybrid',
     cost: 20,
     requires: ['prod_echo', 'caffeine_drip'],
@@ -775,10 +797,10 @@ export const COMBO_THRESHOLDS: ReadonlyArray<{ count: number; mult: number }> = 
 /** Combo serisinin sönme süresi (ms) */
 export const COMBO_DECAY_MS = 1500
 
-/** CPS-to-click senkronu: taban %2, senkron düğümü seviyesi başına +%1.5, %8 tavan */
-export const CPS_SYNC_BASE = 0.02
-export const CPS_SYNC_PER_LEVEL = 0.015
-export const CPS_SYNC_CAP = 0.08
+/** CPS-to-click senkronu: taban %1, senkron düğümü seviyesi başına +%1, %5 tavan */
+export const CPS_SYNC_BASE = 0.01
+export const CPS_SYNC_PER_LEVEL = 0.01
+export const CPS_SYNC_CAP = 0.05
 
 /**
  * Satın alınan düğüm seviyelerinden sayısal etkileri hesaplar (saf fonksiyon).
@@ -798,10 +820,10 @@ export function computeNeuralEffects(bought: Record<string, number>): NeuralEffe
 
   if (lvl('prod_echo') > 0) productionMult *= Math.pow(1.25, lvl('prod_echo'))
   if (has('dream_lucid')) productionMult *= 1.75
-  if (has('apex_doomscroll')) productionMult *= 2
+  if (has('apex_doomscroll')) productionMult *= 10
 
   if (has('click_momentum')) clickMult *= 1.3
-  if (has('neural_symphony')) clickMult *= 1.25
+  if (has('neural_symphony')) clickMult *= 3.0
   if (has('frenzy_thumb')) clickMult *= 2
 
   offlineGainBonus += lvl('offline_dream_weaver') * 0.25
@@ -829,18 +851,21 @@ export function computeNeuralEffects(bought: Record<string, number>): NeuralEffe
   }
 }
 
+// ADR-0032: Idle bootstrap kilidini kaldırmak için bot maliyetleri gevşetildi.
+// Eski maliyetler (dim1 1e12, shift 1e26) pure-idle oyuncuyu log10=12.41'de
+// sonsuza dek kilitliyordu çünkü shift yapmadan 1e26'ya asla ulaşamıyordu.
 export const AUTOBUYER_COSTS: Record<string, Decimal> = {
-  dim1: new Decimal(5e5),
-  dim2: new Decimal(5e7),
-  dim3: new Decimal(5e9),
-  dim4: new Decimal(1e12),
-  dim5: new Decimal(1e16),
-  dim6: new Decimal(1e21),
-  dim7: new Decimal(1e27),
-  dim8: new Decimal(1e34),
-  tickspeed: new Decimal(5e8),
-  shift: new Decimal(5e13),
-  galaxy: new Decimal(1e23),
+  dim1: new Decimal(1e9),
+  dim2: new Decimal(1e12),
+  dim3: new Decimal(1e15),
+  dim4: new Decimal(1e18),
+  dim5: new Decimal(1e22),
+  dim6: new Decimal(1e26),
+  dim7: new Decimal(1e30),
+  dim8: new Decimal(1e35),
+  tickspeed: new Decimal(1e11),
+  shift: new Decimal(1e10), // Idle oyuncu artık ilk sıçrama botuna erken erişebilir
+  galaxy: new Decimal(1e28),
   singularity: new Decimal(1.79e308) // Şafak Nöbeti Botu: tekillik eşiğinin kendisi
 }
 
@@ -857,7 +882,7 @@ export const AUTOBUYER_PROGRESS_REQ: Record<string, { shifts?: number; galaxies?
   dim7: { shifts: 3 },
   dim8: { shifts: 4 },
   tickspeed: { needTier: 3 },
-  shift: { shifts: 1 },
+  shift: { shifts: 0 },
   galaxy: { galaxies: 1 },
   singularity: { singularities: 3 }
 }
@@ -874,28 +899,138 @@ export function getAutobuyerRequirementText(id: string): string {
 }
 
 // Hibrit kademe: tekli dopaminle açılır, toplu shift ister, max galaxy ister
-export const AUTOBUYER_BULK_COST = new Decimal(2.5e11)
+export const AUTOBUYER_BULK_COST = new Decimal(1e28)
 export const AUTOBUYER_BULK_SHIFT_REQ = 1
-export const AUTOBUYER_MAX_COST = new Decimal(1e22)
+export const AUTOBUYER_MAX_COST = new Decimal(1e32)
 export const AUTOBUYER_MAX_GALAXY_REQ = 1
-export const AUTOBUYER_BULK_BATCH = 5
 
-// ---- Faz 2 Kilometre Taşı: Kolektif Gece Nöbeti (GDD "İkinci Çöküş", 1e4000 Dopamin) ----
-export const NIGHT_WATCH_THRESHOLD = new Decimal('1e4000')
+// ---- Faz 2 Kilometre Taşı: Kolektif Gece Nöbeti (GDD "İkinci Çöküş") ----
+// ADR-0032/0033: eşik 1e4000'den 1e308'e taşındı. Özellik merdivenindeki
+// `night_watch` basamağı `decadeGate(308)` kullanıyor; iki değer ayrışırsa
+// panel "KİLİTLİ" gösterirken merdiven "açıldı" der. Şafak eşiğinin (1.79e308)
+// hemen altında tetiklenir, yani güneş doğmadan önceki son nöbet anıdır.
+export const NIGHT_WATCH_THRESHOLD = new Decimal('1e308')
+
+// Kayıt şeması sürümü ve hata tipi çekirdek katmanda yaşar (döngüsel bağımlılık
+// olmasın diye). Buradan yeniden dışa aktarıyoruz; mevcut import'lar bozulmasın.
+export { SAVE_VERSION, SaveVersionError } from '../core/save-version'
 
 // ---- QoL: Çevrimdışı/arka plan yakalama üst sınırı (24 saat) ----
 export const OFFLINE_CAP_SECONDS = 24 * 3600
 
 // ---- Nöral İzleme Kolonisi & Toplu Uyku (Synergism: Ant Colony & Sacrifice) ----
-export const COLONY_CORE_COST = new Decimal(1e13)
+export const COLONY_CORE_COST = new Decimal(1e22)
 export const COLONY_MIN_NAP_BOTS = 100
 export const COLONY_BREED_RATE = 0.008 // %0.8/s baz üreme hızı (~87 sn'de çiftlenme)
-export const COLONY_PASSIVE_LOG_FACTOR = 0.3 // pasif çarpan: 1 + log10(bots) × 0.3
+export const COLONY_PASSIVE_LOG_FACTOR = 0.5 // pasif çarpan: 1 + log10(bots) × 0.5
 
 // ---- Performans: pahalı kontrollerin seyreltilmesi ----
 export const ACH_CHECK_INTERVAL = 0.5 // başarım kontrolü en sık 0.5 sn'de bir
 export const UNLOCK_CHECK_INTERVAL = 0.5 // özellik merdiveni en sık 0.5 sn'de bir
-const MAX_BUY_PACKS_CAP = 10000 // matematik max alımda paket üst sınırı (100k adet)
+
+/** Önbellek Temizleme'nin açılış eşiği (ADR-0035): hayat boyu 5. Akış Sıçraması. */
+export const SACRIFICE_SHIFT_REQ = 5
+
+const MAX_BUY_PACKS_CAP_FIRST_RUN = 380
+const MAX_BUY_PACKS_CAP_PRESTIGE = 2800
+
+function maxBuyPacksCap(singularities: number): number {
+  return singularities > 0 ? MAX_BUY_PACKS_CAP_PRESTIGE : MAX_BUY_PACKS_CAP_FIRST_RUN
+}
+
+function dimensionCostForBucket(
+  tier: number,
+  bucket: number,
+  baseCost: Decimal,
+  fullMult: Decimal
+): Decimal {
+  if (tier === 1) {
+    if (bucket < EARLY_D1_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D1_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D1_COST_RATIO, EARLY_D1_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D1_SOFT_BUCKETS))
+  }
+  if (tier === 2) {
+    if (bucket < EARLY_D2_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D2_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D2_COST_RATIO, EARLY_D2_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D2_SOFT_BUCKETS))
+  }
+  if (tier === 3) {
+    if (bucket < EARLY_D3_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D3_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D3_COST_RATIO, EARLY_D3_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D3_SOFT_BUCKETS))
+  }
+  if (tier === 4) {
+    if (bucket < EARLY_D4_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D4_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D4_COST_RATIO, EARLY_D4_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D4_SOFT_BUCKETS))
+  }
+  if (tier === 5) {
+    if (bucket < EARLY_D5_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D5_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D5_COST_RATIO, EARLY_D5_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D5_SOFT_BUCKETS))
+  }
+  if (tier === 6) {
+    if (bucket < EARLY_D6_SOFT_BUCKETS) {
+      return baseCost.times(Decimal.pow(EARLY_D6_COST_RATIO, bucket))
+    }
+    return baseCost
+      .times(Decimal.pow(EARLY_D6_COST_RATIO, EARLY_D6_SOFT_BUCKETS))
+      .times(Decimal.pow(fullMult, bucket - EARLY_D6_SOFT_BUCKETS))
+  }
+  return baseCost.times(Decimal.pow(fullMult, bucket))
+}
+
+function calcDimensionPackTotal(
+  tier: number,
+  baseCost: Decimal,
+  fullMult: Decimal,
+  startBucket: number,
+  packs: number
+): Decimal {
+  if (packs <= 0) return D_0
+  let total = D_0
+  for (let i = 0; i < packs; i++) {
+    total = total.plus(dimensionCostForBucket(tier, startBucket + i, baseCost, fullMult))
+  }
+  return total
+}
+
+function calcMaxDimensionPacks(
+  tier: number,
+  baseCost: Decimal,
+  fullMult: Decimal,
+  startBucket: number,
+  budget: Decimal,
+  cap: number
+): number {
+  if (budget.lte(0)) return 0
+  const first = dimensionCostForBucket(tier, startBucket, baseCost, fullMult)
+  if (budget.lt(first)) return 0
+  let n = 0
+  let spent = D_0
+  while (n < cap) {
+    const next = dimensionCostForBucket(tier, startBucket + n, baseCost, fullMult)
+    if (spent.plus(next).gt(budget)) break
+    spent = spent.plus(next)
+    n++
+  }
+  return n
+}
 
 // ---- Performans: geometrik seri yardımcıları (buyMax döngüsüz) ----
 function calcGeometricTotal(base: Decimal, ratio: Decimal, startBucket: number, packs: number): Decimal {
@@ -909,7 +1044,13 @@ function calcGeometricTotal(base: Decimal, ratio: Decimal, startBucket: number, 
   return base.times(ratioPowStart).times(ratioPowPacks.minus(1)).div(denom)
 }
 
-function calcMaxPacks(base: Decimal, ratio: Decimal, startBucket: number, budget: Decimal, cap = MAX_BUY_PACKS_CAP): number {
+function calcMaxPacks(
+  base: Decimal,
+  ratio: Decimal,
+  startBucket: number,
+  budget: Decimal,
+  cap = MAX_BUY_PACKS_CAP_FIRST_RUN
+): number {
   if (budget.lte(0)) return 0
   const first = base.times(Decimal.pow(ratio, startBucket))
   if (budget.lt(first)) return 0
@@ -976,6 +1117,31 @@ function memoNeuralEffects(bought: Record<string, number>): NeuralEffects {
 
 // Boyut çarpanı iç-fonksiyon memo'su (tier başına tek girdi)
 const _dimMultCache = new Map<number, { key: string; val: Decimal }>()
+
+// Başarım çarpanı memo'su (ADR-0029). Başarımlar kalıcıdır ve yalnızca eklenir.
+let _achMultCache: { len: number; val: Decimal } | null = null
+
+/**
+ * Kayıttan gelen başarım id'lerini beyaz listeye karşı süzmek için.
+ * calcAchievementMultiplier() yalnızca listenin UZUNLUĞUNA bakar; bozuk bir
+ * kayıt bilinmeyen bir id enjekte ederse küresel çarpan sessizce şişerdi.
+ */
+const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id))
+
+/** achievementMultiplier memo'sunu düşürür — kayıt yüklendiğinde çağrılmalı. */
+function resetAchievementCache(): void {
+  _achMultCache = null
+}
+
+// ADR-0029: kategori -> başarım tanımları indeksi. Modül yükünde bir kez kurulur;
+// checkAchievements() içinde ACHIEVEMENTS.filter() çağırmak O(n²) idi (her aday
+// için 66 kayıt taranıyordu).
+const ACHIEVEMENTS_BY_CATEGORY = new Map<string, typeof ACHIEVEMENTS>()
+for (const def of ACHIEVEMENTS) {
+  const bucket = ACHIEVEMENTS_BY_CATEGORY.get(def.category)
+  if (bucket) bucket.push(def)
+  else ACHIEVEMENTS_BY_CATEGORY.set(def.category, [def])
+}
 function dimMultCacheKey(
   tier: number,
   bought: number,
@@ -985,15 +1151,27 @@ function dimMultCacheKey(
   partnerBought: number,
   neuralProd: number,
   offlineBoost: number,
-  bass: boolean,
   activeChallenge: string | null,
   dim1Growth: string,
-  completedJoin: string
+  completedJoin: string,
+  capFloor: number,
+  peakShifts: number,
+  formatBuffTier: number,
+  formatBuffUntil: number,
+  challengeTimeMult: number,
+  formatBuffActive: boolean
 ): string {
+  // NOT (ADR-0029): formatBuffActive ve challengeTimeMult TÜREV alanlardır. Ham
+  // formatBuffUntil zaman damgası tek başına yeterli değildir: süre dolduğunda damga
+  // değişmez, anahtar değişmez ve bayat (süresiz) çarpan cache'ten geri döner.
+  // Sürüm 12'de bu, geçici "Format Keşfi" bonusunun kalıcılaşmasına yol açıyordu.
+  // NOT (ADR-0035): peakShifts kalıcı boyut açılış tavanıdır; `shifts` (koşu sayacı)
+  // sıfırlandığında bile cap değişebildiği için ikisi de anahtarda yer almalı.
   return (
     tier + '|' + bought + '|' + shifts + '|' + eyeLvl + '|' + sac + '|' + partnerBought + '|' +
-    neuralProd + '|' + offlineBoost + '|' + (bass ? 1 : 0) + '|' + (activeChallenge || '') + '|' +
-    dim1Growth + '|' + completedJoin
+    neuralProd + '|' + offlineBoost + '|' + (activeChallenge || '') + '|' +
+    dim1Growth + '|' + completedJoin + '|' + capFloor + '|' + peakShifts + '|' + formatBuffTier +
+    '|' + formatBuffUntil + '|' + challengeTimeMult + '|' + (formatBuffActive ? 'A' : 'X')
   )
 }
 
@@ -1048,10 +1226,14 @@ export const useGameStore = defineStore('game', {
 
     tickspeedBought: 0, // Algoritma Frekansı (Hz) Seviyesi
     dimensionShifts: 0, // Akış Sıçraması (Feed Shift / Boost) Seviyesi
+    dimensionCapFloor: BASE_UNLOCKED_DIMENSIONS, // Save v12 legacy min açık tier (ADR-0033: taban 3)
+    formatDiscoverSeenCap: 3, // Kutlanmış / tanıtılmış max tier (yeni oyun 3; D4 1. Sıçramada kutlanır)
+    formatUnlockBuffTier: 0,
+    formatUnlockBuffUntil: 0,
     galaxies: 0, // Sonsuz Akış Kümeleri
     singularityPoints: new Decimal(0), // Uykusuzluk / Şöhret Puanı (SP)
     singularities: 0,
-    nightWatchUnlocked: false, // Faz 2 kilometre taşı: 1e4000 Dopamin (Kolektif Gece Nöbeti)
+    nightWatchUnlocked: false, // Faz 2 kilometre taşı: 1e308 Dopamin (Kolektif Gece Nöbeti)
 
     // Gece Duruşu (Trimps Stance)
     currentStance: 'trend' as StanceType,
@@ -1060,7 +1242,8 @@ export const useGameStore = defineStore('game', {
     activeBuffs: [] as ActiveBuff[],
     floatingAnomalies: [] as FloatingAnomaly[],
     anomalyTimer: 0,
-    nextAnomalyInterval: 45, // saniye
+    nextAnomalyInterval: 65, // saniye
+    mythicPity: 0, // Void Reel garanti sayacı (25 spawn'da 1 zorunlu void)
 
     // Vicdan Azabı ve Göz Batması (Wrinklers)
     slackers: [] as GuiltWrinkler[],
@@ -1136,9 +1319,6 @@ export const useGameStore = defineStore('game', {
     offlineSimActive: false,
     offlineAchTick: 0, // offline simülasyonda başarım kontrolü seyreltme sayacı
 
-    // QoL: Reels satın alma modu seçici (x10 paket / x100 / Maks)
-    buyAmount: 10 as 10 | 100 | 'max',
-
     // QoL: saniyelik üretim geçmişi (Rapor sparkline, max 600 örnek; kayıt edilmez)
     dpsHistory: [] as number[],
     dpsSampleAcc: 0,
@@ -1148,6 +1328,14 @@ export const useGameStore = defineStore('game', {
 
     // Telemetri: Son 10 Sabah 06:00 Çöküşünün geçmişi (Antimatter Dimensions Past 10 modeli)
     pastSingularities: [] as PastSingularityRecord[],
+
+    // ADR-0032: Hayat boyu ulaşılan dekad basamakları (bir kez talep edilir)
+    // ADR-0034: Bu basamaklar artık SP vermez; koşu içi "Dekad Yükselişi" çarpanı verir.
+    claimedBounties: [] as number[],
+    // ADR-0034: Koşu içi yükselişi çarpanı (1 = yükseliş yok). SP değildir, kalıcı değildir:
+    // şafak çöküşünde ve meydan okuma girişinde resetRunState() ile 1'e döner.
+    // claimedBounties'tan türetilemez (o liste hayat boyu, bu koşuya özeldir) — bu yüzden kaydedilir.
+    decadeSurgeMult: 1,
 
     // Önbelleği Temizleme (Dimension Sacrifice)
     sacrificeCount: 0,
@@ -1164,13 +1352,6 @@ export const useGameStore = defineStore('game', {
     challengeNotificationDoom: 0, // C8: bildirim sayacı 0-1+ (Faz 3'te işler)
     challengeDim1Growth: new Decimal(1), // C3: D1 üstel büyüme çarpanı (Faz 3'te işler)
 
-    // Algoritma Yamaları (Tek Seferlik Dopamin Dükkanı)
-    algorithmUpgrades: [] as AlgorithmUpgradeId[],
-
-    // Akışı Yenile (Pull to Refresh) Taktil Mekaniği
-    refreshCooldown: 0,
-    refreshActiveTime: 0,
-
     // Nöral İzleme Kolonisi (Otonom İzleme Botları & Toplu Uyku)
     neuralBots: new Decimal(0),
     napCount: 0,
@@ -1184,11 +1365,19 @@ export const useGameStore = defineStore('game', {
     // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilitleme listesi
     unlockedFeatures: [] as string[],
 
+    // ADR-0035 — "Açılış bir olaydır, kapı değil": hayat boyu yüksek su seviyeleri.
+    // `matter` Sıçrama/Küme/şafak ile sıfırlandığı için dopamin kapıları koşu içi
+    // sayaca bakamaz; bu iki tepe nokta hiç inmez ve kayıtta saklanır (v15).
+    // Tek yazım yolu: syncUnlocks() (update döngüsü + tüm reset giriş noktaları).
+    lifetimePeakMatter: new Decimal(10), // oyun 10 dopaminle başlar
+    lifetimePeakShifts: 0,
+
     lastUpdate: Date.now(),
     isSingularityReady: false,
 
     settings: {
       notation: 'standard' as const,
+      decimalPlaces: 2,
       soundEnabled: true,
       soundVolume: 0.3,
       theme: 'cyberpunk' as const,
@@ -1206,7 +1395,15 @@ export const useGameStore = defineStore('game', {
       crtEffect: true,
       juiceMode: 'balanced' as const,
       screenOverlayEffects: true,
-      holoCardsEnabled: true
+      holoCardsEnabled: true,
+      swirlShaderQuality: 'balanced' as const,
+      sequentialStrike: true,
+      batterySaver: false,
+      floatingTexts: true,
+      newsTickerEnabled: true,
+      offlineProgressModal: true,
+      hotkeysEnabled: true,
+      activeSlot: 1
     } as GameSettings,
 
     stats: {
@@ -1219,6 +1416,7 @@ export const useGameStore = defineStore('game', {
       highestDps: new Decimal(0),
       totalManualDopamine: new Decimal(0),
       anomaliesClicked: 0,
+      mythicsClicked: 0,
       combosTriggered: 0,
       slackersFired: 0,
       labHarvests: 0,
@@ -1234,33 +1432,57 @@ export const useGameStore = defineStore('game', {
       return state.matter
     },
 
-    // Kaç adet istasyonun açık olduğu (Başta 4 açık, Sıçrama yaptıkça 8'e kadar açılır)
+    // Kaç adet istasyonun açık olduğu (ADR-0025: başta 2, her sıçrama +1, legacy floor korunur)
     // C7 (Hesap Kısıtlaması): registry'deki maxDimensions üst sınırı uygulanır.
     unlockedDimensionsCount(state): number {
-      const base = Math.min(8, 4 + state.dimensionShifts)
-      const cap = challengeDimensionCap(state)
-      return cap === undefined ? base : Math.min(base, cap)
+      return resolvedUnlockedDimensionCount(state)
     },
 
-    // Algoritma Yaması Sahip Olunma Kontrolü
-    hasAlgorithmUpgrade: (state) => (id: AlgorithmUpgradeId): boolean => {
-      return state.algorithmUpgrades.includes(id)
+    formatUnlockBuffActive(state): boolean {
+      return state.formatUnlockBuffUntil > Date.now() && state.formatUnlockBuffTier > 0
     },
 
-    // Algoritma Frekansı (Tickspeed) indirim oranı (Hızlı Şarj Adaptörü ve 1.25x Hız Yaması ile güçlenir)
+    formatUnlockBuffSecondsRemaining(state): number {
+      if (state.formatUnlockBuffUntil <= Date.now() || state.formatUnlockBuffTier <= 0) return 0
+      return Math.max(0, Math.ceil((state.formatUnlockBuffUntil - Date.now()) / 1000))
+    },
+
+    /** En yüksek açık tier'dan gelen D→D-1 besleme hızı (UI ipucu). */
+    primaryFeedTier(state): number {
+      const unlocked = resolvedUnlockedDimensionCount(state)
+      const speed = this.tickspeedMultiplier
+      const achMult = this.achievementMultiplier
+      let bestTier = 0
+      let bestFeed = 0
+      for (let t = 2; t <= unlocked; t++) {
+        const dim = state.dimensions[t - 1]
+        if (!dim || dim.amount.lte(0)) continue
+        const feed = dim.amount
+          .times(this.getDimensionMultiplier(t))
+          .times(speed)
+          .times(achMult)
+          .times(DIMENSION_CHAIN_RATE)
+          .toNumber()
+        if (feed > bestFeed) {
+          bestFeed = feed
+          bestTier = t
+        }
+      }
+      return bestTier
+    },
+
+    // Algoritma Frekansı (Tickspeed) indirim oranı (Hızlı Şarj Adaptörü ile güçlenir)
     // C6 (Göz Kuruluğu): taban %40, alım ölçeği yarıya iner (registry üzerinden).
     // C2 ödülü (Şarj Aleti Temassızlığı): frekans etkisi +%15 (kalıcı).
     tickspeedMultiplier(state): Decimal {
       const chargerBonus = (state.singularityUpgrades?.fast_charger || 0) * 0.02
       const baseReduction = Math.max(0.7, 0.89 - chargerBonus)
-      const galaxyBonus = Math.max(0.01, baseReduction - state.galaxies * 0.02)
+      // Denge: Taban 0.08 yerine 0.35 ile sınırlandırılır (azami ~2.85x/alım); 12.5x kaçak patlamasını önler
+      const galaxyBonus = Math.max(0.35, baseReduction - state.galaxies * 0.008)
       const activeMods = state.activeChallenge ? getChallengeById(state.activeChallenge)?.modifiers : undefined
       const buyScale = activeMods?.tickspeedBuyMultScale ?? 1
       const baseMult = activeMods?.tickspeedBaseMult ?? 1
       let mult = Decimal.pow(1 / galaxyBonus, state.tickspeedBought * buyScale).times(baseMult)
-      if (state.algorithmUpgrades.includes('play_speed')) {
-        mult = mult.times(1.15)
-      }
       const espresso = state.activeBuffs.find((b) => b.type === 'espresso')
       if (espresso) {
         mult = mult.times(espresso.multiplier)
@@ -1272,20 +1494,16 @@ export const useGameStore = defineStore('game', {
       return mult
     },
 
-    // Algoritma Frekansı Satın Alma Maliyeti (Düşük Parlaklık modunda %15, OLED ile %25, 100+ Kolektif ile %10 indirimli)
+    // Algoritma Frekansı Satın Alma Maliyeti (Düşük Parlaklık modunda %15 indirimli)
     // C5 koşu-içi şişmesi buraya da işler; C5 (-%10) ve C6 (-%15) ödülleri kalıcı indirimdir.
     tickspeedCost(state): Decimal {
-      let cost = new Decimal(1000).times(Decimal.pow(13, state.tickspeedBought))
+      let cost = new Decimal(1000).times(Decimal.pow(16, state.tickspeedBought))
       cost = cost.times(challengeCostInflationMult(state))
       if (state.currentStance === 'private_mode') {
-        const discountRatio = state.algorithmUpgrades.includes('amoled_black') ? 0.75 : 0.85
-        cost = cost.times(discountRatio).floor()
+        cost = cost.times(0.85).floor()
       }
       if (hasAchievementReward(state.achievements, 'tickspeed_discount')) {
         cost = cost.times(0.95).floor()
-      }
-      if (this.collectiveMinBought >= 100) {
-        cost = cost.times(0.9).floor()
       }
       const challengeEff = memoChallengeEffects(state.completedChallenges)
       if (challengeEff.tickspeedCostMult !== 1) {
@@ -1315,104 +1533,6 @@ export const useGameStore = defineStore('game', {
         partnerBought: bought,
         mult
       }
-    },
-
-    // Açık tüm formatlar içindeki en düşük satın alma sayısı (Kolektif Eşik)
-    // C7'de kilitli tier'lar sayılmaz (kilitli D7-D8 bought=0 eşiği kilitlerdi).
-    collectiveMinBought(state): number {
-      const cap = challengeDimensionCap(state)
-      const count = cap === undefined ? Math.min(8, 4 + state.dimensionShifts) : Math.min(8, 4 + state.dimensionShifts, cap)
-      if (count === 0) return 0
-      let min = Infinity
-      for (let i = 0; i < count; i++) {
-        const b = state.dimensions[i].bought
-        if (b < min) min = b
-      }
-      return min === Infinity ? 0 : min
-    },
-
-    // Kolektif ilerlemede darboğaz olan (en gerideki) format
-    // C7'de kilitli tier'lar aday değildir.
-    collectiveBottleneck(state): { tier: number; name: string; bought: number } {
-      const cap = challengeDimensionCap(state)
-      const count = cap === undefined ? Math.min(8, 4 + state.dimensionShifts) : Math.min(8, 4 + state.dimensionShifts, cap)
-      let min = Infinity
-      let bottleneckTier = 1
-      for (let i = 0; i < count; i++) {
-        const b = state.dimensions[i].bought
-        if (b < min) {
-          min = b
-          bottleneckTier = i + 1
-        }
-      }
-      const names: Record<number, string> = {
-        1: 'Kedi Videoları (D1)',
-        2: 'Sokak Lezzeti (D2)',
-        3: 'ASMR Sabun (D3)',
-        4: 'Subway Surfers (D4)',
-        5: 'Sigma Tavsiyesi (D5)',
-        6: 'Hint Dizisi (D6)',
-        7: 'Varoluşsal Kriz (D7)',
-        8: 'Beyin Çürümesi (D8)'
-      }
-      return {
-        tier: bottleneckTier,
-        name: names[bottleneckTier] || `D${bottleneckTier}`,
-        bought: min === Infinity ? 0 : min
-      }
-    },
-
-    // Kolektif seviye bilgisi (mevcut, sonraki hedef, ilerleme ve darboğaz)
-    collectiveMilestoneInfo(): {
-      current: CollectiveMilestone | null
-      next: CollectiveMilestone | null
-      progress: number
-      minBought: number
-      bottleneck: { tier: number; name: string; bought: number }
-    } {
-      const min = this.collectiveMinBought
-      let current: CollectiveMilestone | null = null
-      let next: CollectiveMilestone | null = null
-
-      for (let i = 0; i < COLLECTIVE_MILESTONES.length; i++) {
-        const m = COLLECTIVE_MILESTONES[i]
-        if (min >= m.minBought) {
-          current = m
-        } else {
-          next = m
-          break
-        }
-      }
-
-      let progress = 100
-      if (next) {
-        const prevCount = current ? current.minBought : 0
-        const needed = next.minBought - prevCount
-        const currentCount = min - prevCount
-        progress = Math.min(100, Math.max(0, (currentCount / needed) * 100))
-      }
-
-      return {
-        current,
-        next,
-        progress,
-        minBought: min,
-        bottleneck: this.collectiveBottleneck
-      }
-    },
-
-    // Kolektif Eşik Global Çarpanı: UI'daki değer, ulaşılan en yüksek eşiği temsil eder.
-    collectiveMultiplier(): Decimal {
-      const min = this.collectiveMinBought
-      let mult = D_1
-      for (const m of COLLECTIVE_MILESTONES) {
-        if (min >= m.minBought) {
-          mult = new Decimal(m.mult)
-        } else {
-          break
-        }
-      }
-      return mult
     },
 
     // Boyutun ulaştığı en yüksek çözünürlük seviyesi ve sonraki hedef
@@ -1464,10 +1584,10 @@ export const useGameStore = defineStore('game', {
       return mult
     },
 
-    // Önbellek temizleme açık mı ve değer kazancı yeterli mi? (5. Sıçrama veya D8 açıkken)
+    // Önbellek temizleme açık mı ve değer kazancı yeterli mi? (ADR-0035: açılış
+    // kalıcı; koşu içi `dimensionShifts` yerine `lifetimePeakShifts`)
     canSacrifice(state): boolean {
-      const isUnlocked = state.dimensionShifts >= 5 || (state.dimensions[7] && state.dimensions[7].amount.gt(0))
-      if (!isUnlocked) return false
+      if (!this.sacrificeUnlocked) return false
       const dim1 = state.dimensions[0]
       if (!dim1 || dim1.amount.lt(10)) return false
       return this.currentSacrificeReward.gt(state.sacrificeMultiplier.times(1.15))
@@ -1483,47 +1603,55 @@ export const useGameStore = defineStore('game', {
       return Decimal.pow(base, 2.5)
     },
 
-    // Akışı Yenile (Pull to Refresh) hazır mı? (1.000 Dopamin ile açılır)
-    canRefresh(state): boolean {
-      return state.refreshCooldown <= 0 && this.isFeatureUnlocked('refresh_feed')
-    },
-
-    isRefreshActive(state): boolean {
-      return state.refreshActiveTime > 0
-    },
-
-    // Akış Sıçraması (Shift / Boost) Gereksinimi
-    shiftPowerMultiplier(state): Decimal {
-      return Decimal.pow(memoChallengeEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
-    },
-
+    // Akış Sıçraması (Shift / Boost) Gücü ve Çarpanı (C7 ve 'shift_power_boost' başarımı güçlendirir)
     singleShiftPower(state): number {
-      return memoChallengeEffects(state.completedChallenges).shiftPower
+      const eff = memoChallengeEffects(state.completedChallenges)
+      const achBase = hasAchievementReward(state.achievements, 'shift_power_boost') ? 1.9 : 1.66
+      return Math.max(eff.shiftPower, achBase)
     },
 
-    // C7 (Hesap Kısıtlaması): kilitli tier yerine D6 istenir; lineer artış
+    shiftPowerMultiplier(state): Decimal {
+      return Decimal.pow(this.singleShiftPower, state.dimensionShifts)
+    },
+
+    // C7 (Hesap Kısıtlaması): kilitli tier yerine D6 istenir; ADR-0025 erken tier hedefi
     shiftRequirement(state): { tier: number; amount: Decimal } {
       const cap = challengeDimensionCap(state)
-      if (state.dimensionShifts < 4) {
-        const targetTier = 4 + state.dimensionShifts + 1
-        const tier = targetTier - 1
-        if (cap === undefined || tier <= cap) {
-          return { tier, amount: new Decimal(25) }
+      const unlocked = resolvedUnlockedDimensionCount(state)
+      const shiftMult = tierShiftReqMult(state.dimensions, unlocked)
+      if (state.dimensionShifts < 6) {
+        let tier = Math.min(8, BASE_UNLOCKED_DIMENSIONS + state.dimensionShifts)
+        if (state.dimensionCapFloor > tier) {
+          tier = Math.min(unlocked, state.dimensionCapFloor)
         }
+        tier = Math.min(tier, unlocked)
+        // Erken sıçramalarda yeni açılan boyuttan tek paket (10 adet) yeterlidir; akışı pürüzsüzleştirir
+        const baseReq = state.dimensionShifts <= 1 ? 10 : (state.dimensionShifts <= 2 ? 15 : 25)
+        let amount = new Decimal(baseReq).times(shiftMult).floor()
+        if (amount.lt(1)) amount = D_1
+        if (cap === undefined || tier <= cap) {
+          return { tier, amount }
+        }
+        let capAmount = new Decimal(25 + CHALLENGE_C7_TIER_COST_STEP * (tier - cap)).times(shiftMult).floor()
+        if (capAmount.lt(1)) capAmount = D_1
         return {
           tier: cap,
-          amount: new Decimal(25 + CHALLENGE_C7_TIER_COST_STEP * (tier - cap))
+          amount: capAmount
         }
       }
       if (cap === undefined || 8 <= cap) {
+        let amount = new Decimal(22 + 16 * (state.dimensionShifts - 6)).times(shiftMult).floor()
+        if (amount.lt(1)) amount = D_1
         return {
           tier: 8,
-          amount: new Decimal(20 + 15 * (state.dimensionShifts - 4))
+          amount
         }
       }
+      let capAmount = new Decimal(30 + 15 * (state.dimensionShifts - 3)).times(shiftMult).floor()
+      if (capAmount.lt(1)) capAmount = D_1
       return {
         tier: cap,
-        amount: new Decimal(30 + 15 * (state.dimensionShifts - 3))
+        amount: capAmount
       }
     },
 
@@ -1534,8 +1662,13 @@ export const useGameStore = defineStore('game', {
     },
 
     // Sonsuz Akış Kümesi Gereksinimi (8. İstasyon miktarı, C7'de D6)
+    // 60 galaksiden sonra Distant Galaxies kuadratik freni devreye girer.
     galaxyRequirement(state): number {
-      const base = 40 + state.galaxies * 20
+      let base = 40 + state.galaxies * 20
+      if (state.galaxies > 60) {
+        const over = state.galaxies - 60
+        base += Math.floor(over * over * 2.5)
+      }
       return challengeDimensionCap(state) === undefined ? base : Math.floor(base * CHALLENGE_C7_GALAXY_COST_MULT)
     },
 
@@ -1553,6 +1686,14 @@ export const useGameStore = defineStore('game', {
     // Sabah 06:00 Çöküşü Hazır mı? (1.79e308 Dopamin)
     canSingularity(state): boolean {
       return state.matter.gte(D_INFINITY)
+    },
+
+    // Aktif Gece Krizi hedefi tamamlandı mı? (Her krizin kendi goalMatter eşiği kontrol edilir)
+    challengeGoalReached(state): boolean {
+      if (!state.activeChallenge) return false
+      const def = getChallengeById(state.activeChallenge)
+      if (!def) return false
+      return state.matter.gte(new Decimal(def.goalMatter))
     },
 
     // Tekillik bekleme modu: Break Singularity alınmadıysa e308 üstünde
@@ -1603,12 +1744,23 @@ export const useGameStore = defineStore('game', {
       }
 
       push('Başarımlar', this.achievementMultiplier, 'Plaket ödülü global kalıcı çarpan')
-      push('Kolektif Trend', this.collectiveMultiplier, 'Tüm açık formatların ortak satın alma eşiği')
       push('Nöral Koloni', this.colonyMultiplier, 'Nöral bot sayısından gelen logaritmik çarpan')
       push('Toplu Uyku', state.napMultiplier, 'Power Nap fedakarlıklarının kalıcı kök çarpanı')
       push('Gece Duruşu', this.stanceMultipliers.production, 'Aktif duruşun pasif üretim etkisi')
       push('Aktif Buff', this.productionBuffMultiplier, 'Gece Krizi / Espresso / Viral Zirve çarpanı')
       push('Lab Rezonansı', this.labPassiveMultiplier, 'Algoritma Stüdyosu olgun hücre pasif bonusu')
+      const unlocked = resolvedUnlockedDimensionCount(state)
+      if (state.formatUnlockBuffUntil > Date.now() && state.formatUnlockBuffTier > 0) {
+        push(
+          `Format Keşfi (D${state.formatUnlockBuffTier})`,
+          FORMAT_UNLOCK_BUFF_MULT,
+          `${FORMAT_UNLOCK_BUFF_SECONDS}s ×1.25 yalnız o tier üretimi`
+        )
+      }
+      const tierProd = tierProductionMult(2, state.dimensions[1]?.bought ?? 0, unlocked >= 2)
+      if (Math.abs(tierProd - 1) > 0.0001) {
+        push('Format D2 Pasifi', tierProd, getTierIdentity(2)?.passive.desc ?? '')
+      }
       push('Önbellek Silme (D8)', state.sacrificeMultiplier.gt(1) ? state.sacrificeMultiplier : 1, 'Sacrifice çarpanı yalnızca D8 üretimine uygulanır')
       return rows
     },
@@ -1687,13 +1839,6 @@ export const useGameStore = defineStore('game', {
           desc: 'Yetenek ağacı tıklama düğümleri çarpanı'
         })
       }
-      if (state.algorithmUpgrades.includes('double_tap')) {
-        rows.push({
-          name: 'Çift Dokunarak Beğen',
-          value: '×2.00',
-          desc: 'Algoritma yaması çift tıklama çarpanı'
-        })
-      }
       return rows
     },
 
@@ -1718,13 +1863,6 @@ export const useGameStore = defineStore('game', {
           name: 'GaN Şarj Adaptörü',
           value: `-%${chargerLvl * 2}`,
           desc: 'Uykusuzluk dükkanından gelen kademe başına frekans hızlandırması'
-        })
-      }
-      if (state.algorithmUpgrades.includes('play_speed')) {
-        rows.push({
-          name: 'Oynatma Hızı 1.25×',
-          value: '×1.15',
-          desc: 'Algoritma yaması frekans çarpanı'
         })
       }
       const espresso = state.activeBuffs.find((b) => b.type === 'espresso')
@@ -1817,9 +1955,11 @@ export const useGameStore = defineStore('game', {
       const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
       const spMult = memoChallengeEffects(state.completedChallenges).spMult
       const totalMult = dawnSpeedMult * spMult
-      const rawGain = Decimal.pow(10, Math.max(0, (logMatter - 308) / 308)).times(totalMult)
+      // Denge: İlk çöküşün taban ödülü 3 SP garanti edilir (oyuncu kök + 2 başlangıç yükseltmesiyle 2. koşuya güçlü başlar).
+      // Üstü her +45 dekadda x10 ölçeklenir.
+      const rawGain = Decimal.pow(10, Math.max(0, (logMatter - 308) / 45)).times(3).times(totalMult)
       const floored = Decimal.floor(rawGain)
-      return floored.gte(1) ? floored : D_1
+      return floored.gte(3) ? floored : new Decimal(3)
     },
 
     // İstasyon Çarpanı Hesabı (Göz Damlası, Milestone, Sacrifice ve Bass Boost ile güçlenir)
@@ -1834,17 +1974,23 @@ export const useGameStore = defineStore('game', {
       const completedJoin = state.completedChallenges.join(',')
       const sacStr = tier === 8 ? state.sacrificeMultiplier.toString() : '1'
       const dim1GrowthStr = tier === 1 ? state.challengeDim1Growth.toString() : '1'
-      const bass = (tier === 3 || tier === 4) && state.algorithmUpgrades.includes('bass_boost')
+      const unlocked = resolvedUnlockedDimensionCount(state)
+      // Türev bağımlılıklar: ikisi de aşağıda çarpana olarak giriyor, dolayısıyla
+      // cache anahtarına da girmeli (yoksa süresi dolan bonus bayat kalır).
+      const formatBuffActive = state.formatUnlockBuffUntil > Date.now() && state.formatUnlockBuffTier > 0
+      const challengeTimeMult = state.activeChallenge ? challengeTimeTierMult(state.challengeBestTimes) : 1
       const cacheKey = dimMultCacheKey(
         tier, dim.bought, state.dimensionShifts, eyeDropsLvl, sacStr,
-        partnerBought, neuralProd, state.offlineSimBoost, bass,
-        state.activeChallenge, dim1GrowthStr, completedJoin
+        partnerBought, neuralProd, 1,
+        state.activeChallenge, dim1GrowthStr, completedJoin,
+        state.dimensionCapFloor, state.lifetimePeakShifts, state.formatUnlockBuffTier,
+        state.formatUnlockBuffUntil, challengeTimeMult, formatBuffActive
       )
       const cached = _dimMultCache.get(tier)
       if (cached && cached.key === cacheKey) return cached.val
 
-      // Satın alınan her 10 adet için 2x
-      let mult = Decimal.pow(2, Math.floor(dim.bought / 10))
+      // Satın alınan her 10 adet için DIM_PER_TEN_MULT katı
+      let mult = Decimal.pow(DIM_PER_TEN_MULT, Math.floor(dim.bought / 10))
 
       // Video Çözünürlük Kademesi (Resolution Milestones: 360p, 720p, 1080p, 4K...)
       let resolutionMult = D_1
@@ -1857,11 +2003,12 @@ export const useGameStore = defineStore('game', {
       }
       mult = mult.times(resolutionMult)
 
-      // Akış Sıçraması (Shift/Boost) bonusu (C7 ödülü tabanı 1.07 → 1.09 yükseltir)
+      // Akış Sıçraması (Shift/Boost) bonusu (C7 ve başarım güçlendirir)
       if (state.dimensionShifts > 0) {
-        mult = mult.times(
-          Decimal.pow(memoChallengeEffects(state.completedChallenges).shiftPower, state.dimensionShifts)
-        )
+        const eff = memoChallengeEffects(state.completedChallenges)
+        const achBase = hasAchievementReward(state.achievements, 'shift_power_boost') ? 1.9 : 1.66
+        const shiftBase = Math.max(eff.shiftPower, achBase)
+        mult = mult.times(Decimal.pow(shiftBase, state.dimensionShifts))
       }
 
       // Göz Damlası Yükseltmesi
@@ -1881,13 +2028,8 @@ export const useGameStore = defineStore('game', {
 
       // Nöral Ağaç pasif dalı: kalıcı üretim çarpanı (tüm istasyonlar)
       mult = mult.times(neuralProd)
-      // Çevrimdışı simülasyonda 1'den büyük olur; normal tick'te etkisiz
-      mult = mult.times(state.offlineSimBoost)
-
-      // Algoritma Yaması: Bass Boost (D3 ASMR ve D4 Subway Surfers 3×)
-      if (bass) {
-        mult = mult.times(3)
-      }
+      // NOT: offlineSimBoost burada her boyuta çarparak 1800x katlanmaması için
+      // doğrudan update() içindeki son dopamin adımında tekil olarak uygulanır.
 
       // — Gece Krizi kuralları + kalıcı ödülleri (id hardcode yok; registry üzerinden) —
       const activeChallengeMods = state.activeChallenge
@@ -1915,11 +2057,23 @@ export const useGameStore = defineStore('game', {
         mult = mult.times(ALL_CHALLENGES_COMPLETE_MULT)
       }
       // Kademeli süre-metas: YALNIZCA challenge koşularında üretim bonusu (replay döngüsü)
-      if (state.activeChallenge) {
-        const timeMult = challengeTimeTierMult(state.challengeBestTimes)
-        if (timeMult !== 1) {
-          mult = mult.times(timeMult)
-        }
+      // (challengeTimeMult yukarıda hesaplandı ve cache anahtarına girdi — tekrar hesaplama)
+      if (challengeTimeMult !== 1) {
+        mult = mult.times(challengeTimeMult)
+      }
+
+      const tierProd = tierProductionMult(tier, dim.bought, tier <= unlocked)
+      if (tierProd !== 1) {
+        mult = mult.times(tierProd)
+      }
+      const discoverMult = formatUnlockBuffMult(
+        tier,
+        state.formatUnlockBuffTier,
+        state.formatUnlockBuffUntil,
+        Date.now()
+      )
+      if (discoverMult !== 1) {
+        mult = mult.times(discoverMult)
       }
 
       _dimMultCache.set(tier, { key: cacheKey, val: mult })
@@ -1937,27 +2091,75 @@ export const useGameStore = defineStore('game', {
       const cacheKey = bucket + '|' + infl + '|' + eff.dimCostMult
       const cached = _dimCostCache.get(tier)
       if (cached && cached.key === cacheKey) return cached.val
-      let cost = dim.baseCost.times(Decimal.pow(dim.costMult, bucket))
+      let cost = dimensionCostForBucket(tier, bucket, dim.baseCost, dim.costMult)
       cost = cost.times(challengeCostInflationMult(state))
       if (eff.dimCostMult !== 1) {
         cost = cost.times(eff.dimCostMult)
+      }
+      if (hasAchievementReward(state.achievements, 'dim_cost_x085')) {
+        cost = cost.times(0.85)
       }
       _dimCostCache.set(tier, { key: cacheKey, val: cost })
       return cost
     },
 
-    // QoL: N adet 10'luk paketin toplam maliyeti (geometrik seri — maliyet her pakette katlanır)
-    getDimensionPackCost: (state) => (tier: number, packs: number): Decimal => {
-      const dim = state.dimensions[tier - 1]
-      if (!dim) return D_INFINITY
-      const startBucket = Math.floor(dim.bought / 10)
-      let total = calcGeometricTotal(dim.baseCost, dim.costMult, startBucket, packs)
-      total = total.times(challengeCostInflationMult(state))
-      const challengeEff = memoChallengeEffects(state.completedChallenges)
-      if (challengeEff.dimCostMult !== 1) {
-        total = total.times(challengeEff.dimCostMult)
+    // Manuel alım önizlemesi (kuru koşu): tıklanınca kaç adet alınacak ve toplam maliyeti.
+    // buyDimensionUnits ile birebir aynı semantiği yansıtır (paket atlarken maliyet adımı da değişir).
+    previewDimensionBuy(state) {
+      return (tier: number): { units: number; cost: Decimal } | null => {
+        const dim = state.dimensions[tier - 1]
+        if (!dim || tier > this.unlockedDimensionsCount) return null
+
+        const infl = challengeCostInflationMult(state)
+        const eff = memoChallengeEffects(state.completedChallenges)
+        const flat = eff.dimCostMult !== 1 ? infl.times(eff.dimCostMult) : infl
+
+        let units = 0
+        let spent = D_0
+        let bucket = Math.floor(dim.bought / 10)
+        let remainingInBucket = 10 - (dim.bought % 10)
+
+        // Üst sınır güvenlik: maliyet geometrik büyüdüğü için pratikte tur sayısı küçük kalır
+        for (let guard = 0; guard < 300; guard++) {
+          const packPrice = dimensionCostForBucket(tier, bucket, dim.baseCost, dim.costMult).times(flat)
+          const unitCost = packPrice.div(10)
+          const remaining = state.matter.minus(spent)
+          if (remaining.lt(unitCost)) break
+
+          if (remaining.gte(packPrice)) {
+            spent = spent.plus(packPrice)
+            units += 10
+            bucket += 1
+            remainingInBucket = 10
+            continue
+          }
+
+          const affordable = Math.min(remainingInBucket, remaining.div(unitCost).floor().toNumber())
+          if (affordable <= 0) break
+          spent = spent.plus(unitCost.times(affordable))
+          units += affordable
+          if (affordable === remainingInBucket) {
+            bucket += 1
+            remainingInBucket = 10
+            continue
+          }
+          break
+        }
+
+        if (units <= 0) return null
+        return { units, cost: spent }
       }
-      return total
+    },
+
+    // Bağlamsal pasif rozetleri — dimension_identity fonksiyonlarıyla aynı koşullar (etki = aktif)
+    passiveBadges(state): { d1Sync: boolean; d3Leech: boolean; d4Anomaly: boolean; d5Shift: boolean; d6Offline: boolean } {
+      return {
+        d1Sync: tierClickSyncCapBonus(state.dimensions) > 0,
+        d3Leech: tierSlackerLeechMult(state.dimensions, this.unlockedDimensionsCount) !== 1,
+        d4Anomaly: tierAnomalyRateMult(state.dimensions, this.unlockedDimensionsCount) !== 1,
+        d5Shift: tierShiftReqMult(state.dimensions, this.unlockedDimensionsCount) !== 1,
+        d6Offline: tierOfflineSimMult(state.dimensions, this.unlockedDimensionsCount) !== 1
+      }
     },
 
     // Gece Duruşu (Stance) Çarpanları
@@ -1994,7 +2196,7 @@ export const useGameStore = defineStore('game', {
       return mult
     },
 
-    // Süper Rezonans Komboları Aktif mi? (Gece 3 7x VE Başparmak Histerisi 777x aynı anda)
+    // Süper Rezonans Komboları Aktif mi? (Gece 3 7x VE Başparmak Histerisi 300x aynı anda)
     isComboActive(state): boolean {
       const hasFyp = state.activeBuffs.some((b) => b.type === 'fyp')
       const hasFrenzy = state.activeBuffs.some((b) => b.type === 'heart_frenzy')
@@ -2009,12 +2211,20 @@ export const useGameStore = defineStore('game', {
       const achFactor = hasAchievementReward(state.achievements, 'leech_reduction') ? 0.85 : 1
       const hasCatBurger = state.labCells.some((c) => c.isMature && c.seedType === 'cat_burger')
       const burgerFactor = hasCatBurger ? 0.75 : 1.0
-      return baseLeech * factor * achFactor * burgerFactor
+      const d3Leech = tierSlackerLeechMult(state.dimensions, this.unlockedDimensionsCount)
+      return baseLeech * factor * achFactor * burgerFactor * d3Leech
     },
 
     // ---- Özellik Merdiveni (v0.11.0) ----
     unlockContext(state): UnlockContext {
       return buildUnlockContext(state)
+    },
+
+    // ADR-0035: bir dopamin eşiği hiçbir koşuda "yeniden kilitlenmez".
+    // Ham dopamin kapıları buradan okur; hiçbir bileşen `matter.gte(...)` yazmaz.
+    dopamineGateReached(state): (amount: string) => boolean {
+      return (amount: string) =>
+        meetsDopamineGate(state.matter, state.lifetimePeakMatter, amount)
     },
 
     isFeatureUnlocked: (state) => (id: string): boolean => {
@@ -2121,12 +2331,24 @@ export const useGameStore = defineStore('game', {
     },
 
     singularityUnlocked(state): boolean {
-      return state.singularities > 0 || state.matter.gte(1e30)
+      // ADR-0035: 1e30 eşiği koşu içi dopaminden değil, hayat boyu tepe noktadan
+      // okunur. Sıçrama sonrası Şafak sekmesi kaybolmaz.
+      return state.singularities > 0 || meetsDopamineGate(state.matter, state.lifetimePeakMatter, '1e30')
+    },
+
+    // Önbellek Temizleme açık mı? ADR-0035: Akış Kümesi `dimensionShifts`'i 0'a
+    // indirdiği için koşu içi sayaç yerine hayat boyu en yüksek sıçrama sayısı
+    // okunur. Saf okuyucudur; tepe noktayı yalnızca syncUnlocks() yükseltir.
+    sacrificeUnlocked(state): boolean {
+      return (
+        state.lifetimePeakShifts >= SACRIFICE_SHIFT_REQ ||
+        (!!state.dimensions[7] && state.dimensions[7].amount.gt(0))
+      )
     },
 
     // ---- Nöral İzleme Kolonisi & Toplu Uyku ----
     colonyUnlocked(state): boolean {
-      return state.neuralBots.gt(0) || state.napCount > 0 || state.matter.gte(COLONY_CORE_COST)
+      return state.neuralBots.gt(0) || state.napCount > 0 || this.isFeatureUnlocked('colony')
     },
     botBreedRate(): number {
       // Nöral Ağaç: Nöral Yuva seviyeleri (eski bağlantı) + Sinaptik Köprü çarpanı
@@ -2136,12 +2358,22 @@ export const useGameStore = defineStore('game', {
       if (state.neuralBots.lte(0)) return D_1
       return D_1.plus(state.neuralBots.plus(1).log10().times(COLONY_PASSIVE_LOG_FACTOR))
     },
+    minNapBots(state): Decimal {
+      // Dinamik Nap Eşiği: Her Toplu Uyku ile asgari bot ihtiyacı artar; 4 dakikalık spam'i engeller
+      const count = Math.min(60, state.napCount || 0)
+      return new Decimal(100).times(Decimal.pow(1.8, count))
+    },
     canPowerNap(): boolean {
-      return this.neuralBots.gte(COLONY_MIN_NAP_BOTS)
+      return this.neuralBots.gte(this.minNapBots)
     },
     powerNapGain(): Decimal {
       if (!this.canPowerNap) return D_1
-      return this.neuralBots.log10().plus(1).pow(0.75)
+      const logBots = this.neuralBots.log10().toNumber()
+      const logMin = this.minNapBots.log10().toNumber()
+      const ratio = Math.max(1, logBots / Math.max(1, logMin))
+      // Beklemeyi ve derin koloniyi ödüllendirir
+      const gain = 1 + Math.pow(ratio, 1.2) * 0.85
+      return new Decimal(gain)
     },
 
     // Algoritma Stüdyosu: Viral Matris Pasif Çarpanı (Sinerjiler, Merkez Çip, Satır/Sütun ve Zeminler)
@@ -2154,11 +2386,11 @@ export const useGameStore = defineStore('game', {
         if (!c.isMature || !c.seedType) return
 
         let cellBoost = 1.0
-        if (c.seedType === 'cat_audio') cellBoost = 1.20
-        else if (c.seedType === 'cheese_sizzle') cellBoost = 1.35
-        else if (c.seedType === 'mukbang_drama') cellBoost = 1.50
-        else if (c.seedType === 'cat_burger') cellBoost = 1.40
-        else if (c.seedType === 'brainrot_remix') cellBoost = 3.00
+        if (c.seedType === 'cat_audio') cellBoost = 1.1
+        else if (c.seedType === 'cheese_sizzle') cellBoost = 1.18
+        else if (c.seedType === 'mukbang_drama') cellBoost = 1.25
+        else if (c.seedType === 'cat_burger') cellBoost = 1.18
+        else if (c.seedType === 'brainrot_remix') cellBoost = 2.0
 
         // Komşuları bul (3x3 grid)
         const row = Math.floor(idx / 3)
@@ -2200,10 +2432,10 @@ export const useGameStore = defineStore('game', {
       for (let r = 0; r < 3; r++) {
         const rowCells = [state.labCells[r * 3], state.labCells[r * 3 + 1], state.labCells[r * 3 + 2]]
         if (rowCells.every((c) => c.isMature && c.seedType !== null)) {
-          mult = mult.times(1.25)
+          mult = mult.times(1.12)
           // Mono-format uyumu (3'ü de aynı)
           if (rowCells[0].seedType === rowCells[1].seedType && rowCells[1].seedType === rowCells[2].seedType) {
-            mult = mult.times(1.40)
+            mult = mult.times(1.2)
           }
         }
       }
@@ -2212,13 +2444,13 @@ export const useGameStore = defineStore('game', {
       for (let cl = 0; cl < 3; cl++) {
         const colCells = [state.labCells[cl], state.labCells[cl + 3], state.labCells[cl + 6]]
         if (colCells.every((c) => c.isMature && c.seedType !== null)) {
-          mult = mult.times(1.25)
+          mult = mult.times(1.12)
         }
       }
 
       // Algoritma Zemin Modu (Evergreen: Pasife odaklanma)
       if (state.labMode === 'evergreen') {
-        mult = mult.times(2.50)
+        mult = mult.times(1.8)
       }
 
       // Viral Kodeks Keşif Bonusu (Her keşfedilen formül kalıcı +%3)
@@ -2229,7 +2461,7 @@ export const useGameStore = defineStore('game', {
       // Canlı Viral Akış Dalgası (Reaktör patlaması aktifken)
       if (state.isViralActive) {
         const matureCount = state.labCells.filter((c) => c.isMature && !!c.seedType).length
-        const viralSurge = (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.5 : 1.0)
+        const viralSurge = (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.2 : 1.0)
         mult = mult.times(viralSurge)
       }
 
@@ -2280,7 +2512,7 @@ export const useGameStore = defineStore('game', {
     // Reaktörün Viral Drop Çarpanı
     labViralMultiplier(state): number {
       const matureCount = state.labCells.filter((c) => c.isMature && !!c.seedType).length
-      return (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.5 : 1.0)
+      return (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.2 : 1.0)
     },
 
     // Viral Kodeks Keşif Yüzdesi / Global Çarpanı
@@ -2324,31 +2556,28 @@ export const useGameStore = defineStore('game', {
         .times(this.achievementMultiplier)
         .times(this.challengeRewardEffects.clickMult)
 
-      // Algoritma Yaması: Çift Dokunarak Beğen (2× Tıklama)
-      if (state.algorithmUpgrades.includes('double_tap')) {
-        baseClick = baseClick.times(2)
-      }
-
       // 2. Temel Senkronizasyon (%CPS to click):
-      const syncRate = Math.min(CPS_SYNC_CAP, CPS_SYNC_BASE + CPS_SYNC_PER_LEVEL * this.neuralEffects.cpsSyncLevel)
+      const syncCap =
+        CPS_SYNC_CAP + tierClickSyncCapBonus(state.dimensions)
+      const syncRate = Math.min(syncCap, CPS_SYNC_BASE + CPS_SYNC_PER_LEVEL * this.neuralEffects.cpsSyncLevel)
       let power = baseClick.plus(this.matterPerSecond.times(syncRate))
 
-      // 3. 1080p 60fps Milestone Bonusu: 100+ adet satın alınan her açık formatın üretiminin %1'i tıklamaya eklenir
+      // 3. 1080p 60fps Milestone Bonusu: 200+ adet satın alınan her açık formatın üretiminin %1'i tıklamaya eklenir
       state.dimensions.forEach((d, idx) => {
-        if (d.bought >= 100 && d.amount.gt(0)) {
+        if (d.bought >= 200 && d.amount.gt(0)) {
           const dimPerSec = d.amount.times(this.getDimensionMultiplier(idx + 1)).times(this.tickspeedMultiplier).times(0.01)
           power = power.plus(dimPerSec)
         }
       })
 
-      // 4. Damardan Kafein Serumu: Saniyelik üretimin her seviye %5'ini ekler
+      // 4. Damardan Kafein Serumu: Saniyelik üretimin her seviye %3'ünü ekler
       const caffeineLvl = state.singularityUpgrades?.caffeine_drip || 0
       if (caffeineLvl > 0) {
-        const passiveAdd = this.matterPerSecond.times(caffeineLvl * 0.05 * this.achievementCaffeineBoost)
+        const passiveAdd = this.matterPerSecond.times(caffeineLvl * 0.03 * this.achievementCaffeineBoost)
         power = power.plus(passiveAdd)
       }
 
-      // 5. Global Tıklama Çarpanları: 777× Frenzy, 4× Spam duruşu, Nöral Ağaç ve Kombolar toplam tıklamaya uygulanır
+      // 5. Global Tıklama Çarpanları: 300× Frenzy, 4× Spam duruşu, Nöral Ağaç ve Kombolar toplam tıklamaya uygulanır
       power = power
         .times(this.stanceMultipliers.click)
         .times(this.clickBuffMultiplier)
@@ -2357,6 +2586,112 @@ export const useGameStore = defineStore('game', {
         .times(this.comboMultiplier)
 
       return power
+    },
+
+    // Balatro Sütun 2: "Reels Vuruşu" Sıralı Nedensellik Basamak Kırılımı (Sequential Triggering)
+    swipeBreakdown(state): StrikeStage[] {
+      const stages: StrikeStage[] = []
+
+      // 1. Taban Akış: 1 + istasyon katkısı + %CPS senkronu + milestone + kafein
+      let totalBought = 0
+      state.dimensions.forEach((d) => {
+        totalBought += d.bought
+      })
+
+      const syncCap = CPS_SYNC_CAP + tierClickSyncCapBonus(state.dimensions)
+      const syncRate = Math.min(syncCap, CPS_SYNC_BASE + CPS_SYNC_PER_LEVEL * this.neuralEffects.cpsSyncLevel)
+      let rawBase = D_1.plus(new Decimal(totalBought).times(0.25))
+      const cpsPart = this.matterPerSecond.times(syncRate)
+      rawBase = rawBase.plus(cpsPart)
+
+      state.dimensions.forEach((d, idx) => {
+        if (d.bought >= 200 && d.amount.gt(0)) {
+          const dimPerSec = d.amount.times(this.getDimensionMultiplier(idx + 1)).times(this.tickspeedMultiplier).times(0.01)
+          rawBase = rawBase.plus(dimPerSec)
+        }
+      })
+      const caffeineLvl = state.singularityUpgrades?.caffeine_drip || 0
+      if (caffeineLvl > 0) {
+        rawBase = rawBase.plus(this.matterPerSecond.times(caffeineLvl * 0.03 * this.achievementCaffeineBoost))
+      }
+
+      stages.push({
+        id: 'base',
+        label: 'TABAN AKIŞ',
+        text: `+${format(rawBase, 2, state.settings.notation)}`,
+        color: '#00d2ff',
+        bgClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40',
+        borderClass: 'border-cyan-400',
+        icon: '⚡'
+      })
+
+      // 2. Format Sinerjisi (Akış Sıçraması x Lab x Başarımlar x Meydan Okuma Ödülleri)
+      const synergyMult = this.shiftPowerMultiplier
+        .times(this.labClickMultiplier)
+        .times(this.achievementMultiplier)
+        .times(this.challengeRewardEffects.clickMult)
+
+      if (synergyMult.gt(1.05)) {
+        stages.push({
+          id: 'synergy',
+          label: 'SİNERJİ',
+          text: `×${format(synergyMult, 2, state.settings.notation)}`,
+          color: '#10b981',
+          bgClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
+          borderClass: 'border-emerald-400',
+          icon: '✨',
+          multiplier: synergyMult.toNumber()
+        })
+      }
+
+      // 3. Gece Duruşu & Seri Kombo (Trimps Stance & Cookie Clicker Combo)
+      const stanceMult = this.stanceMultipliers.click
+      const comboMult = this.comboMultiplier
+      const combinedStanceCombo = stanceMult * comboMult
+
+      if (combinedStanceCombo > 1.05) {
+        const stanceLabel = stanceMult > 1.05 ? 'ÇILGIN KAYDIRMA' : 'HIZLI SERİ'
+        stages.push({
+          id: 'stance_combo',
+          label: stanceLabel,
+          text: `×${combinedStanceCombo.toFixed(1)}`,
+          color: '#fe5f55',
+          bgClass: 'bg-rose-500/20 text-rose-300 border-rose-400/40',
+          borderClass: 'border-rose-400',
+          icon: '🔥',
+          multiplier: combinedStanceCombo
+        })
+      }
+
+      // 4. Gece Histerisi / Anomali CRIT (Başparmak Histerisi 777x veya Espresso)
+      const buffMult = this.clickBuffMultiplier
+      if (buffMult.gt(1.05)) {
+        const isSuperCrit = buffMult.gte(500)
+        stages.push({
+          id: 'crit',
+          label: isSuperCrit ? '777× HİSTERİ CRIT!' : 'KRİZ ANOMALİSİ',
+          text: `×${format(buffMult, 1, state.settings.notation)}`,
+          color: '#fbbf24',
+          bgClass: 'bg-amber-500/25 text-amber-200 border-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.4)]',
+          borderClass: 'border-amber-400',
+          icon: '💥',
+          multiplier: buffMult.toNumber()
+        })
+      }
+
+      // 5. Final Toplam Skor (Nihai Slam Down)
+      const finalGain = this.manualClickPower
+      stages.push({
+        id: 'final',
+        label: 'SLAM!',
+        text: `+${format(finalGain, 2, state.settings.notation)}`,
+        color: '#c084fc',
+        bgClass: 'bg-purple-500/25 text-purple-200 border-purple-400/60 shadow-[0_0_20px_rgba(192,132,252,0.5)]',
+        borderClass: 'border-purple-400',
+        icon: '🌌'
+      })
+
+      return stages
     },
 
     // Saniyedeki Efektif Dopamin Üretimi
@@ -2369,18 +2704,6 @@ export const useGameStore = defineStore('game', {
         .times(this.getDimensionMultiplier(1))
         .times(this.tickspeedMultiplier)
 
-      // Algoritma Yaması: Arka Planda Dinle (+%25 Pasif Akış)
-      if (state.algorithmUpgrades.includes('bg_listen')) {
-        baseProd = baseProd.times(1.25)
-      }
-
-      // Akışı Yenile (Pull to Refresh) 3× Trend Dalgası
-      if (state.refreshActiveTime > 0) {
-        baseProd = baseProd.times(3.0)
-      }
-
-      // Kolektif Trend Eşiği Çarpanı (Tüm açık formatlar 25, 50, 100...)
-      baseProd = baseProd.times(this.collectiveMultiplier)
       baseProd = baseProd.times(this.colonyMultiplier)
       baseProd = baseProd.times(state.napMultiplier)
 
@@ -2395,6 +2718,7 @@ export const useGameStore = defineStore('game', {
         .times(buffMult)
         .times(labMult)
         .times(this.achievementMultiplier)
+        .times(this.achievementProductionMult)
         .times(debuffMult)
         .times(netRatio)
         .times(this.challengeProdMult)
@@ -2402,6 +2726,28 @@ export const useGameStore = defineStore('game', {
 
     dopaminePerSecond(): Decimal {
       return this.matterPerSecond
+    },
+
+    /** Açık tier'lardan D1 CPS büyüme hızının üst sınırı (besleme ipucu). */
+    matterPerSecondGrowth(state): Decimal {
+      const d1 = state.dimensions[0]
+      if (!d1 || d1.amount.lte(0) || this.matterPerSecond.lte(0)) return D_0
+      const unlocked = resolvedUnlockedDimensionCount(state)
+      let best = D_0
+      for (let t = 2; t <= unlocked; t++) {
+        const higher = state.dimensions[t - 1]
+        const lower = state.dimensions[t - 2]
+        if (!higher || !lower || higher.amount.lte(0)) continue
+        const feedToLower = higher.amount
+          .times(this.getDimensionMultiplier(t))
+          .times(this.tickspeedMultiplier)
+          .times(this.achievementMultiplier)
+          .times(DIMENSION_CHAIN_RATE)
+        if (feedToLower.lte(0)) continue
+        const growth = feedToLower.times(this.matterPerSecond.div(d1.amount))
+        if (growth.gt(best)) best = growth
+      }
+      return best
     },
 
     // ---- Başarım Çarpanları & Kalıcı Ödüller (prestij dahil kalıcı) ----
@@ -2416,8 +2762,18 @@ export const useGameStore = defineStore('game', {
     },
 
     // Global kalıcı çarpan. Bilinçli olarak singularityGain'e uygulanmaz.
+    //
+    // ADR-0029: bu getter tick başına birden çok kez çağrılıyordu ve
+    // calcAchievementMultiplier her çağrıda 7 kategori × 66 tanım tarıyordu.
+    // Başarım listesi yalnızca EKLENEREK büyür (prestij/hard reset'te düşmez),
+    // dolayısıyla uzunluk geçerli bir cache anahtarıdır. Yüklemede ve hard
+    // reset'te cache düşürülür.
     achievementMultiplier(state): Decimal {
-      return calcAchievementMultiplier(state.achievements)
+      const len = state.achievements.length
+      if (_achMultCache && _achMultCache.len === len) return _achMultCache.val
+      const val = calcAchievementMultiplier(state.achievements)
+      _achMultCache = { len, val }
+      return val
     },
 
     hasUnseenAchievements(state): boolean {
@@ -2425,7 +2781,10 @@ export const useGameStore = defineStore('game', {
     },
 
     achievementClickMult(state): number {
-      return hasAchievementReward(state.achievements, 'click_x2') ? 2 : 1
+      let m = 1
+      if (hasAchievementReward(state.achievements, 'click_x2')) m *= 2
+      if (hasAchievementReward(state.achievements, 'click_x3')) m *= 3
+      return m
     },
 
     achievementTickspeedDiscount(state): number {
@@ -2464,6 +2823,21 @@ export const useGameStore = defineStore('game', {
       return hasAchievementReward(state.achievements, 'starting_matter')
         ? new Decimal(1000)
         : new Decimal(10)
+    },
+
+    achievementProductionMult(state): number {
+      let m = 1
+      if (hasAchievementReward(state.achievements, 'prod_x125')) m *= 1.25
+      if (hasAchievementReward(state.achievements, 'prod_x2')) m *= 2.0
+      return m
+    },
+
+    achievementDimCostMult(state): number {
+      return hasAchievementReward(state.achievements, 'dim_cost_x085') ? 0.85 : 1
+    },
+
+    achievementShiftPowerBase(state): number {
+      return hasAchievementReward(state.achievements, 'shift_power_boost') ? 1.9 : 1.66
     }
   },
 
@@ -2507,6 +2881,68 @@ export const useGameStore = defineStore('game', {
       sounds.playStance()
     },
 
+    /** D2+ satırında: alt formata saniyelik besleme (miktar arttığında anında yükselir). */
+    getDimensionChainFeedPerSecond(tier: number): Decimal {
+      if (tier <= 1) return D_0
+      const dim = this.dimensions[tier - 1]
+      if (!dim || dim.amount.lte(0)) return D_0
+      return dim.amount
+        .times(this.getDimensionMultiplier(tier))
+        .times(this.tickspeedMultiplier)
+        .times(this.achievementMultiplier)
+        .times(DIMENSION_CHAIN_RATE)
+    },
+
+    emitProductionSurge(beforeMatterPerSec: Decimal, playSound = true): void {
+      if (this.offlineSimActive) return
+      const after = this.matterPerSecond
+      if (!after.gt(beforeMatterPerSec.times(1.001))) return
+      const delta = after.minus(beforeMatterPerSec)
+      if (delta.lte(0)) return
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:production-bump', {
+            detail: { delta: delta.toString() }
+          })
+        )
+      }
+      if (playSound) {
+        sounds.playProductionSurge()
+      }
+    },
+
+    /** Satın alım sonrası zinciri birkaç saniye “hemen” akıtır; D2→D1 Dopamin/s’yi ve sayacı yükseltir. */
+    applyPurchaseChainPulse(tier: number): void {
+      if (tier < 2 || this.challengeHalted) return
+      let hopTier = tier
+      let seconds = PURCHASE_CHAIN_BONUS_SECONDS
+      while (hopTier >= 2 && seconds >= 0.05) {
+        const higher = this.dimensions[hopTier - 1]
+        const lower = this.dimensions[hopTier - 2]
+        if (!higher || !lower || higher.amount.lte(0)) break
+        const produced = higher.amount
+          .times(this.getDimensionMultiplier(hopTier))
+          .times(this.tickspeedMultiplier)
+          .times(this.achievementMultiplier)
+          .times(DIMENSION_CHAIN_RATE)
+          .times(seconds)
+        lower.amount = lower.amount.plus(produced)
+        hopTier -= 1
+        seconds *= 0.42
+      }
+      const d1 = this.dimensions[0]
+      if (d1 && d1.amount.gt(0) && this.matterPerSecond.gt(0)) {
+        this.matter = this.matter.plus(this.matterPerSecond.times(PURCHASE_MATTER_TICK_SECONDS))
+      }
+    },
+
+    finalizeDimensionPurchase(tier: number, mpsBefore: Decimal, playSound = false): void {
+      if (tier >= 2) {
+        this.applyPurchaseChainPulse(tier)
+      }
+      this.emitProductionSurge(mpsBefore, playSound)
+    },
+
     // 10'luk İstasyon Satın Alımı
     buyDimension(tier: number, playSound = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
@@ -2514,6 +2950,7 @@ export const useGameStore = defineStore('game', {
       const cost = this.getDimensionCost(tier)
 
       if (this.matter.gte(cost)) {
+        const mpsBefore = this.matterPerSecond
         this.matter = this.matter.minus(cost)
         dim.amount = dim.amount.plus(10)
         dim.bought += 10
@@ -2522,13 +2959,14 @@ export const useGameStore = defineStore('game', {
         if (playSound) {
           sounds.playBuy(tier)
         }
+        this.finalizeDimensionPurchase(tier, mpsBefore, playSound)
         return true
       }
       return false
     },
 
     // Bir İstasyondan Alınabildiği Kadar Satın Al (matematiksel: döngüsüz geometrik seri)
-    buyMaxDimension(tier: number, playSound = true): boolean {
+    buyMaxDimension(tier: number, playSound = true, feedbackSurge = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
       const dim = this.dimensions[tier - 1]
       if (!dim) return false
@@ -2540,10 +2978,18 @@ export const useGameStore = defineStore('game', {
       const eff = memoChallengeEffects(this.completedChallenges)
       const flat = infl.times(eff.dimCostMult)
       const budget = this.matter.div(flat)
-      const packs = calcMaxPacks(dim.baseCost, dim.costMult, startBucket, budget)
+      const packs = calcMaxDimensionPacks(
+        tier,
+        dim.baseCost,
+        dim.costMult,
+        startBucket,
+        budget,
+        maxBuyPacksCap(this.singularities)
+      )
       if (packs <= 0) return false
-      const total = calcGeometricTotal(dim.baseCost, dim.costMult, startBucket, packs).times(flat)
+      const total = calcDimensionPackTotal(tier, dim.baseCost, dim.costMult, startBucket, packs).times(flat)
       if (this.matter.lt(total)) return false
+      const mpsBefore = this.matterPerSecond
       this.matter = this.matter.minus(total)
       dim.amount = dim.amount.plus(10 * packs)
       dim.bought += 10 * packs
@@ -2552,6 +2998,11 @@ export const useGameStore = defineStore('game', {
       if (playSound) {
         sounds.playBuy(tier)
       }
+      if (feedbackSurge) {
+        this.finalizeDimensionPurchase(tier, mpsBefore, playSound)
+      } else if (tier >= 2) {
+        this.applyPurchaseChainPulse(tier)
+      }
       return true
     },
 
@@ -2559,74 +3010,79 @@ export const useGameStore = defineStore('game', {
     buyTickspeed(playSound = true): boolean {
       const cost = this.tickspeedCost
       if (this.matter.gte(cost)) {
+        const mpsBefore = this.matterPerSecond
         this.matter = this.matter.minus(cost)
         this.tickspeedBought++
         this.registerChallengeBuy(1)
         if (playSound) {
           sounds.playBuy(0)
         }
+        this.emitProductionSurge(mpsBefore, playSound)
         return true
       }
       return false
     },
 
-    // Frekanstan alınabildiği kadar al (matematiksel: 1000×13^n geometrik seri)
-    buyMaxTickspeed(playSound = true): boolean {
+    // Frekanstan alınabildiği kadar al (matematiksel: 1000×16^n geometrik seri)
+    buyMaxTickspeed(playSound = true, feedbackSurge = true): boolean {
       const start = this.tickspeedBought
       const base = new Decimal(1000)
-      const ratio = new Decimal(13)
+      const ratio = new Decimal(16)
       const infl = challengeCostInflationMult({
         activeChallenge: this.activeChallenge,
         challengeCostInflation: this.challengeCostInflation
       })
       let flat = infl
       if (this.currentStance === 'private_mode') {
-        flat = flat.times(this.algorithmUpgrades.includes('amoled_black') ? 0.75 : 0.85)
+        flat = flat.times(0.85)
       }
       if (hasAchievementReward(this.achievements, 'tickspeed_discount')) {
         flat = flat.times(0.95)
-      }
-      if (this.collectiveMinBought >= 100) {
-        flat = flat.times(0.9)
       }
       const eff = memoChallengeEffects(this.completedChallenges)
       if (eff.tickspeedCostMult !== 1) {
         flat = flat.times(eff.tickspeedCostMult)
       }
       const budget = this.matter.div(flat)
-      const n = calcMaxPacks(base, ratio, start, budget)
+      const n = calcMaxPacks(base, ratio, start, budget, maxBuyPacksCap(this.singularities))
       if (n <= 0) return false
       const total = calcGeometricTotal(base, ratio, start, n).times(flat)
       if (this.matter.lt(total)) return false
+      const mpsBefore = this.matterPerSecond
       this.matter = this.matter.minus(total)
       this.tickspeedBought += n
       this.registerChallengeBuy(n)
       if (playSound) {
         sounds.playBuy(0)
       }
+      if (feedbackSurge) {
+        this.emitProductionSurge(mpsBefore, playSound)
+      }
       return true
     },
 
     // Tüm İstasyonları ve Frekansı Optimize Al (Max All)
     maxAll(): void {
+      const mpsBefore = this.matterPerSecond
       let boughtAny = false
-      if (this.buyMaxTickspeed(false)) {
+      if (this.buyMaxTickspeed(false, false)) {
         boughtAny = true
       }
 
       for (let t = this.unlockedDimensionsCount; t >= 1; t--) {
-        if (this.buyMaxDimension(t, false)) {
+        if (this.buyMaxDimension(t, false, false)) {
           boughtAny = true
         }
       }
 
       if (boughtAny) {
         sounds.playBuy(1)
+        this.emitProductionSurge(mpsBefore)
       }
     },
 
     // Yukarı Kaydır (Manuel Tıklama)
-    manualClick(): void {
+    manualClick(coords?: { x: number; y: number }): void {
       // Combo serisi: 1.5 sn içinde gelen tıklamalar seriyi uzatır, aksi halde seri 1'den başlar
       const now = Date.now()
       if (now - this.clickCombo.lastClickAt <= COMBO_DECAY_MS) {
@@ -2647,7 +3103,37 @@ export const useGameStore = defineStore('game', {
         this.labHype = Math.min(100, this.labHype + 0.4)
       }
 
-      sounds.playClick()
+      // Balatro Sütun 2: Sıralı Nedensellik (Sequential Triggering)
+      const shouldReduce = this.settings.reduceAnimations || this.settings.batterySaver
+      const isSequentialEnabled = this.settings.sequentialStrike !== false && !shouldReduce
+
+      if (!isSequentialEnabled) {
+        sounds.playClick()
+        return
+      }
+
+      const stages = this.swipeBreakdown
+      const isCrit = this.clickBuffMultiplier.gte(500)
+      sounds.playSequentialStrike(stages.length, isCrit)
+
+      if (typeof window !== 'undefined') {
+        const x = coords?.x ?? window.innerWidth / 2
+        const y = coords?.y ?? window.innerHeight / 2
+
+        // Balatro Sıralı Reels Vuruşu Olayı
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:sequential-strike', {
+            detail: {
+              x,
+              y,
+              stages,
+              finalAmount: gain,
+              isCrit,
+              comboCount: this.clickCombo.count
+            }
+          })
+        )
+      }
     },
 
     // Önbelleği Temizleme / Geçmişi Sıfırla (Dimension Sacrifice - Antimatter Dimensions)
@@ -2672,49 +3158,50 @@ export const useGameStore = defineStore('game', {
       return true
     },
 
-    // Algoritma Yaması Satın Alma (Tek Seferlik Dopamin Dükkanı)
-    buyAlgorithmUpgrade(id: AlgorithmUpgradeId): boolean {
-      if (this.algorithmUpgrades.includes(id)) return false
-      const def = ALGORITHM_UPGRADES.find((u) => u.id === id)
-      if (!def) return false
-      if (this.matter.lt(def.cost)) return false
-
-      this.matter = this.matter.minus(def.cost)
-      this.algorithmUpgrades.push(id)
+    /** ADR-0025: yeni format tier açıldığında kısa üretim buff + juice. */
+    celebrateFormatUnlock(tier: number): void {
+      if (tier <= this.formatDiscoverSeenCap) return
+      this.formatDiscoverSeenCap = tier
+      this.formatUnlockBuffTier = tier
+      this.formatUnlockBuffUntil = Date.now() + FORMAT_UNLOCK_BUFF_SECONDS * 1000
+      _dimMultCache.clear()
       sounds.playUpgrade()
-      confetti({
-        particleCount: 45,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#06b6d4', '#a855f7']
-      })
-      return true
-    },
-
-    // Akışı Yenile (Pull to Refresh) Taktil Butonu
-    pullToRefresh(): boolean {
-      if (!this.canRefresh) return false
-      this.refreshActiveTime = 12
-      this.refreshCooldown = 60
-      sounds.playRefresh()
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.3 },
-        colors: ['#06b6d4', '#22c55e', '#ffffff']
-      })
-      return true
+      const identity = getTierIdentity(tier)
+      const label = identity?.label ?? `D${tier}`
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:tap', {
+            detail: {
+              x: window.innerWidth / 2,
+              y: window.innerHeight * 0.35,
+              text: `📺 ${label}`,
+              color: '#22d3ee',
+              big: true
+            }
+          })
+        )
+        window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
+      }
     },
 
     // Akış Sıçraması (Dimension Shift / Boost)
     dimensionShift(playSound = true): boolean {
       if (!this.canShift) return false
 
+      const capBefore = resolvedUnlockedDimensionCount(this)
       this.dimensionShifts++
+      // ADR-0035: açılışları ve yüksek su seviyelerini dopamin sıfırlanmadan hemen
+      // önce kaydet. `syncUnlocks()` sayacı da okuduğu için 5. sıçrama eşiği de
+      // burada kalıcılaşır; son 0.5 sn'de aşılan basamaklar yeniden kilitlenmez.
+      this.syncUnlocks()
+      const capAfter = resolvedUnlockedDimensionCount(this)
+      if (capAfter > capBefore) {
+        this.celebrateFormatUnlock(capAfter)
+      }
+
       this.matter = this.achievementStartingMatter
-      const startingAmount = this.hasAlgorithmUpgrade('bookmark_pack') ? new Decimal(10) : new Decimal(0)
       this.dimensions.forEach((d) => {
-        d.amount = startingAmount
+        d.amount = new Decimal(0)
         d.bought = 0
       })
       this.tickspeedBought = 0
@@ -2736,6 +3223,19 @@ export const useGameStore = defineStore('game', {
           colors: ['#a855f7', '#ec4899', '#06b6d4']
         })
       }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:macro-surge', {
+            detail: {
+              type: 'shift',
+              title: `AKIŞ SIÇRAMASI #${this.dimensionShifts}`,
+              unlockedDims: capAfter,
+              multiplierText: `×${format(this.shiftPowerMultiplier, 1, this.settings.notation)} GÜÇ`
+            }
+          })
+        )
+      }
       return true
     },
 
@@ -2743,12 +3243,14 @@ export const useGameStore = defineStore('game', {
     buyGalaxy(playSound = true): boolean {
       if (!this.canBuyGalaxy) return false
 
+      // ADR-0035: küme dopamini ve sıçrama sayacını sıfırlar — önce açılışları kaydet.
+      this.syncUnlocks()
+
       this.galaxies++
       this.dimensionShifts = 0
       this.matter = this.achievementStartingMatter
-      const startingAmount = this.hasAlgorithmUpgrade('bookmark_pack') ? new Decimal(10) : new Decimal(0)
       this.dimensions.forEach((d) => {
-        d.amount = startingAmount
+        d.amount = new Decimal(0)
         d.bought = 0
       })
       this.tickspeedBought = 0
@@ -2765,9 +3267,22 @@ export const useGameStore = defineStore('game', {
         confetti({
           particleCount: 90,
           spread: 100,
-          origin: { y: 0.7 },
-          colors: ['#a855f7', '#06b6d4', '#ffffff']
+          origin: { y: 0.8 },
+          colors: ['#38bdf8', '#818cf8', '#c084fc']
         })
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:macro-surge', {
+            detail: {
+              type: 'galaxy',
+              title: `SONSUZ AKIŞ KÜMESİ #${this.galaxies}`,
+              unlockedDims: resolvedUnlockedDimensionCount(this),
+              multiplierText: `-%${this.galaxies * 2} FREKANS MALİYETİ`
+            }
+          })
+        )
       }
       return true
     },
@@ -2776,6 +3291,11 @@ export const useGameStore = defineStore('game', {
     // SP bloğu hariç her şey — challenge giriş/çıkış/tamamlama SP vermeden
     // yalnızca bunu çağırır. dimensionShift()/buyGalaxy() gövdelerine dokunulmaz.
     resetRunState(): void {
+      // ADR-0035: şafak çöküşü / meydan okuma girişi de dopamini sıfırlar.
+      // Tek burada çağrıldığı için dört yol (singularityReset, enterChallenge,
+      // exitChallenge, completeChallenge) tek kancayla korunur.
+      this.syncUnlocks()
+
       this.matter = this.achievementStartingMatter
       this.dimensions.forEach((d) => {
         d.amount = new Decimal(0)
@@ -2788,9 +3308,6 @@ export const useGameStore = defineStore('game', {
       this.sacrificeCount = 0
       this.sacrificeMultiplier = new Decimal(1)
       // Not: neuralBots / napCount / napMultiplier KALICI — Toplu Uyku çarpanı prestijden sağ kalır.
-      this.algorithmUpgrades = []
-      this.refreshCooldown = 0
-      this.refreshActiveTime = 0
 
       // Geçici koşu buff'ları, anomaliler ve kriz debuff'ları temizlenir (Challenge'lara sızıntı önlenir)
       this.activeBuffs = []
@@ -2802,21 +3319,32 @@ export const useGameStore = defineStore('game', {
       this.viralViews = 0
 
       // Nöral Ağaç: hariç seçim (choiceGroup) düğümleri her Şafak'ta yeniden seçilebilir;
-      // diğer düğümler kalıcıdır. Eski dükkân id'leri seçim düğümü olmadığından etkilenmez.
-      const choiceNodeIds = NEURAL_TREE.filter((n) => n.choiceGroup).map((n) => n.id)
+      // Harcanmış olan SP oyuncunun havuzuna eksiksiz iade edilir (SP yanması/kaybı engellenir).
+      const choiceNodes = NEURAL_TREE.filter((n) => n.choiceGroup)
+      const choiceNodeIds = choiceNodes.map((n) => n.id)
       const remainingNodes: Record<string, number> = {}
+      let refundedSp = 0
       Object.entries(this.neuralNodesBought || {}).forEach(([nodeId, lvl]) => {
-        if (!choiceNodeIds.includes(nodeId)) {
+        if (choiceNodeIds.includes(nodeId) && lvl > 0) {
+          const node = choiceNodes.find((n) => n.id === nodeId)
+          if (node) refundedSp += node.cost * lvl
+        } else {
           remainingNodes[nodeId] = lvl
         }
       })
       this.neuralNodesBought = remainingNodes
+      if (refundedSp > 0) {
+        this.singularityPoints = this.singularityPoints.plus(refundedSp)
+      }
 
       // Optimizatör rampası sıfırlanır: yeni koşu örnekleme temiz başlar
       this.singularityBotSamples = []
       this.singularityDecelStreak = 0
       this.singularityRunSeconds = 0
       this.singularitySampleAcc = 0
+
+      // ADR-0034: Dekad Yükselişi koşuya özeldir — şafakta (ve challenge girişinde) düşer.
+      this.decadeSurgeMult = 1
     },
 
     // Sabah 06:00 Çöküşü (Tekillik Prestiji)
@@ -2903,10 +3431,10 @@ export const useGameStore = defineStore('game', {
       return true
     },
 
-    // Hedefe ulaşınca (canSingularity) çağrılır: süre kaydı + ödül + temiz fresh koşu.
+    // Hedefe ulaşınca (challengeGoalReached) çağrılır: süre kaydı + ödül + temiz fresh koşu.
     completeChallenge(): boolean {
       if (!this.activeChallenge) return false
-      if (!this.canSingularity) return false
+      if (!this.challengeGoalReached) return false
       const id = this.activeChallenge
       const elapsed = this.challengeElapsed
       if (!this.completedChallenges.includes(id)) {
@@ -3138,7 +3666,7 @@ export const useGameStore = defineStore('game', {
         }
       } else if (spellId === 'noise_cancelling') {
         const immunityLvl = this.singularityUpgrades?.guilt_immunity || 0
-        const refundRatio = Math.max(1.5, (1.2 + immunityLvl * 0.15) * this.neuralEffects.crisisRewardMult)
+        const refundRatio = Math.max(1.2, (1.05 + immunityLvl * 0.15) * this.neuralEffects.crisisRewardMult)
         this.slackers.forEach((s) => {
           const refund = s.leechedDopamine.times(refundRatio)
           this.matter = this.matter.plus(refund)
@@ -3296,7 +3824,7 @@ export const useGameStore = defineStore('game', {
       return true
     },
 
-    // Gece Krizi Doğur (Spawn Anomaly)
+    // Gece Krizi Doğur (Spawn Anomaly) — ağırlıklı RNG + pity + mobil güvenli konum
     spawnAnomaly(): boolean {
       if (this.floatingAnomalies.length >= 2) {
         // Ekran doygunken timer'ı sıfırla; slot açılınca anlık pop-up yağmuru başlamasın
@@ -3304,45 +3832,74 @@ export const useGameStore = defineStore('game', {
         return false
       }
 
-      const types: AnomalyType[] = ['fyp', 'heart_frenzy', 'sponsor']
-      const chosenType = types[Math.floor(Math.random() * types.length)]
+      // Ağırlıklı tablo: fyp %42 / heart %32 / sponsor %21 / void %5
+      // Pity: 25 void'suz spawn sonrası void garanti (koleksiyon hissi korunur)
+      let chosenType: AnomalyType
+      if ((this.mythicPity || 0) >= 25) {
+        chosenType = 'void'
+      } else {
+        const roll = Math.random() * 100
+        if (roll < 42) chosenType = 'fyp'
+        else if (roll < 74) chosenType = 'heart_frenzy'
+        else if (roll < 95) chosenType = 'sponsor'
+        else chosenType = 'void'
+      }
+      if (chosenType === 'void') {
+        this.mythicPity = 0
+      } else {
+        this.mythicPity = (this.mythicPity || 0) + 1
+      }
 
       let title = ''
       let desc = ''
+      let lifetime = 14
       if (chosenType === 'fyp') {
-        title = '🔥 Gece 3 Çılgınlığı!'
+        title = 'Gece 3 Çılgınlığı!'
         desc = '60 saniyeliğine tüm dopamin akışını 7× katlar!'
       } else if (chosenType === 'heart_frenzy') {
-        title = '👆 Başparmak Histerisi!'
-        desc = '15 saniyeliğine Yukarı Kaydırma gücünü 777× fırlatır!'
+        title = 'Başparmak Histerisi!'
+        desc = '15 saniyeliğine Yukarı Kaydırma gücünü 300× fırlatır!'
+      } else if (chosenType === 'void') {
+        title = 'Void Reel Tekilliği!'
+        desc = 'Garanti kombo: 30sn 7× + 15sn 300× aynı anda!'
+        lifetime = 9
       } else {
-        title = '💎 50 Milyonluk Viral Video!'
+        title = '50 Milyonluk Viral Video!'
         desc = 'Anında 2 dakikalık saf dopamin doğrudan beyne akar!'
       }
 
-      // QoL: kapsül (min 260px) mobilde ekran dışına taşmasın; spawn aralığı içeride tutulur
-      const x = Math.floor(Math.random() * 48) + 26
-      const y = Math.floor(Math.random() * 55) + 22
+      // Mobil güvenli spawn: dar ekranda kart (max 86vw) taşmasın
+      const isNarrow = typeof window !== 'undefined' && window.innerWidth < 640
+      const x = isNarrow
+        ? Math.floor(Math.random() * 32) + 30
+        : Math.floor(Math.random() * 48) + 26
+      const y = Math.floor(Math.random() * 50) + 24
 
       this.floatingAnomalies.push({
         id: `anomaly-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         type: chosenType,
         x,
         y,
-        remainingTime: 14,
+        remainingTime: lifetime,
+        totalTime: lifetime,
         title,
         desc
       })
 
-      sounds.playAnomalySpawn()
+      sounds.playAnomalySpawn(chosenType)
 
-      const baseInterval = 45 + Math.random() * 30
+      const baseInterval = 65 + Math.random() * 30
       const mutedLvl = this.singularityUpgrades?.muted_alerts || 0
       const alertDiscount = Math.max(0.4, 1 - mutedLvl * 0.12)
       // Lab/stance çarpanları birikerek saniyeler aralığı kaydırmıştı; rate çarpanını
       // 2.5× ile sınırla ve minimum aralık koy ki pop-up yağmuru oluşmasın
-      const rateMult = Math.min(2.5, this.stanceMultipliers.anomalyRate * this.labAnomalyMultiplier)
-      this.nextAnomalyInterval = Math.max(30, (baseInterval * alertDiscount * this.achievementAnomalyFactor) / rateMult)
+      const rateMult = Math.min(
+        2.5,
+        this.stanceMultipliers.anomalyRate *
+          this.labAnomalyMultiplier *
+          tierAnomalyRateMult(this.dimensions, this.unlockedDimensionsCount)
+      )
+      this.nextAnomalyInterval = Math.max(40, (baseInterval * alertDiscount * this.achievementAnomalyFactor) / rateMult)
       this.anomalyTimer = 0
       return true
     },
@@ -3355,6 +3912,9 @@ export const useGameStore = defineStore('game', {
       const anomaly = this.floatingAnomalies[index]
       this.floatingAnomalies.splice(index, 1)
       this.stats.anomaliesClicked++
+      if (anomaly.type === 'void') {
+        this.stats.mythicsClicked = (this.stats.mythicsClicked || 0) + 1
+      }
       const durMult = this.achievementBuffDuration
 
       if (anomaly.type === 'fyp') {
@@ -3379,10 +3939,38 @@ export const useGameStore = defineStore('game', {
           this.activeBuffs.push({
             id: `buff-frenzy-${Date.now()}`,
             type: 'heart_frenzy',
-            name: '👆 Başparmak Histerisi (777× Kaydır)',
+            name: '👆 Başparmak Histerisi (300× Kaydır)',
             duration: Math.floor(15 * durMult),
             remaining: Math.floor(15 * durMult),
-            multiplier: 777
+            multiplier: 300
+          })
+        }
+      } else if (anomaly.type === 'void') {
+        // Void Reel: garanti kombo — 30sn 7× üretim + 15sn 300× kaydırma
+        const fyp = this.activeBuffs.find((b) => b.type === 'fyp')
+        if (fyp) {
+          fyp.remaining += 30 * durMult
+        } else {
+          this.activeBuffs.push({
+            id: `buff-fyp-void-${Date.now()}`,
+            type: 'fyp',
+            name: '🔥 Gece 3 Çılgınlığı (7× Dopamin)',
+            duration: Math.floor(30 * durMult),
+            remaining: Math.floor(30 * durMult),
+            multiplier: 7
+          })
+        }
+        const frenzy = this.activeBuffs.find((b) => b.type === 'heart_frenzy')
+        if (frenzy) {
+          frenzy.remaining += 15 * durMult
+        } else {
+          this.activeBuffs.push({
+            id: `buff-frenzy-void-${Date.now()}`,
+            type: 'heart_frenzy',
+            name: '👆 Başparmak Histerisi (300× Kaydır)',
+            duration: Math.floor(15 * durMult),
+            remaining: Math.floor(15 * durMult),
+            multiplier: 300
           })
         }
       } else if (anomaly.type === 'sponsor') {
@@ -3399,10 +3987,20 @@ export const useGameStore = defineStore('game', {
         this.stats.combosTriggered++
         sounds.playCombo()
         confetti({
-          particleCount: 130,
+          particleCount: anomaly.type === 'void' ? 160 : 130,
           spread: 100,
           origin: { y: 0.4 },
-          colors: ['#a855f7', '#ec4899', '#06b6d4', '#f59e0b']
+          colors: anomaly.type === 'void'
+            ? ['#c084fc', '#22d3ee', '#f0abfc', '#ffffff']
+            : ['#a855f7', '#ec4899', '#06b6d4', '#f59e0b']
+        })
+      } else if (anomaly.type === 'void') {
+        sounds.playMythicCollect()
+        confetti({
+          particleCount: 90,
+          spread: 85,
+          origin: { x: anomaly.x / 100, y: anomaly.y / 100 },
+          colors: ['#c084fc', '#22d3ee', '#ffffff']
         })
       } else {
         sounds.playCrisisCollect(anomaly.type)
@@ -3439,7 +4037,7 @@ export const useGameStore = defineStore('game', {
       if (slacker.clicksRemaining <= 0) {
         const immunityLvl = this.singularityUpgrades?.guilt_immunity || 0
         // Nöral Ağaç: Kriz Ganimeti / Demir Sabır düğümleri prim çarpanını büyütür
-        const refundRatio = (1.2 + immunityLvl * 0.15) * this.neuralEffects.crisisRewardMult
+        const refundRatio = (1.05 + immunityLvl * 0.15) * this.neuralEffects.crisisRewardMult
         const refund = slacker.leechedDopamine.times(refundRatio)
 
         this.matter = this.matter.plus(refund)
@@ -3472,6 +4070,7 @@ export const useGameStore = defineStore('game', {
         playtime: this.stats.totalPlaytime,
         singularityCount: this.stats.singularityCount,
         anomaliesClicked: this.stats.anomaliesClicked,
+        mythicsClicked: this.stats.mythicsClicked || 0,
         combosTriggered: this.stats.combosTriggered,
         slackersFired: this.stats.slackersFired,
         labHarvests: this.stats.labHarvests || 0,
@@ -3527,7 +4126,10 @@ export const useGameStore = defineStore('game', {
           this.achievementToastQueue.shift()
         }
         if (def.reward) unlockedAnyReward = true
-        const catDefs = ACHIEVEMENTS.filter((a) => a.category === def.category)
+        // ADR-0029: kategori indeksi modül yükünde bir kez kurulur. Önceden
+        // ACHIEVEMENTS.filter() her adayın İÇİNDE çalışıyordu (O(n²) ≈ 4.4k
+        // karşılaştırma, 0.5 sn'de bir).
+        const catDefs = ACHIEVEMENTS_BY_CATEGORY.get(def.category) ?? [def]
         if (catDefs.every((a) => a.id === def.id || unlocked.has(a.id))) {
           completedRow = true
         }
@@ -3566,9 +4168,22 @@ export const useGameStore = defineStore('game', {
       if (i !== -1) this.achievementToastQueue.splice(i, 1)
     },
 
-    // Özellik Merdiveni: sağlanan kilitlere yapışkan (sticky) olarak kaydet.
-    // Bir kez açılan özellik Sıçrama / Küme sıfırlamalarına rağmen açık kalır.
+    // Özellik Merdiveni: hayat boyu yüksek su seviyelerini yükselt ve
+    // sağlanan kilitleri yapışkan (sticky) olarak kaydet.
+    //
+    // ADR-0035 — bu action TEK YAZIM YOLUDUR. Üç yerden çağrılır:
+    //   1) update() döngüsünde UNLOCK_CHECK_INTERVAL seyreltisiyle,
+    //   2) dimensionShift() / buyGalaxy() — dopamin sıfırlanmadan hemen önce,
+    //   3) resetRunState() — şafak çöküşü, meydan okuma giriş/çıkış/tamamlama.
+    // (2) ve (3) olmazsa Şafak Nöbeti Botu'nun otomatik sıçraması ya da 0.5 sn'lik
+    // senkron penceresi, kapı eşiği aşıldığı anda listeyi yazmadan reseti
+    // tetikleyebilir ve açılım kaybolurdu.
     syncUnlocks(): void {
+      // Su seviyeleri yükselir (monotonik, asla inmez).
+      this.lifetimePeakMatter = raisedLifetimePeak(this.lifetimePeakMatter, this.matter)
+      if (this.dimensionShifts > this.lifetimePeakShifts) {
+        this.lifetimePeakShifts = this.dimensionShifts
+      }
       if (this.unlockedFeatures.length >= FEATURE_UNLOCKS.length) return
       for (const feature of FEATURE_UNLOCKS) {
         if (this.unlockedFeatures.includes(feature.id)) continue
@@ -3582,17 +4197,17 @@ export const useGameStore = defineStore('game', {
     update(deltaSeconds: number): void {
       if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return
 
-      // 0. Özellik Merdiveni senkronizasyonu (yapışkan kilitlemeler — 0.5 sn seyreltilir)
+      // 0. Özellik Merdiveni senkronizasyonu (yapışkan kilitlemeler — 0.5 sn seyreltilir).
+      // ADR-0035: tepe noktalar merdiven tamamlandıktan sonra da yükselmeye devam eder,
+      // bu yüzden "hepsi açıldı" durumunda erken çıkma YOK.
       this.unlockCheckAcc += deltaSeconds
-      if (this.unlockedFeatures.length < FEATURE_UNLOCKS.length && this.unlockCheckAcc >= UNLOCK_CHECK_INTERVAL) {
+      if (this.unlockCheckAcc >= UNLOCK_CHECK_INTERVAL) {
         this.unlockCheckAcc = 0
         this.syncUnlocks()
-      } else if (this.unlockedFeatures.length >= FEATURE_UNLOCKS.length) {
-        this.unlockCheckAcc = 0
       }
 
-      // G2: Challenge hedefi = Şafak eşiği; koşul sağlanınca otomatik tamamla.
-      if (this.activeChallenge && this.canSingularity) {
+      // G2: Challenge hedefi sağlandığında otomatik tamamla.
+      if (this.activeChallenge && this.challengeGoalReached) {
         this.completeChallenge()
         return
       }
@@ -3628,14 +4243,6 @@ export const useGameStore = defineStore('game', {
       // 0.5 Combo sönümü: 1.5 sn hareketsizlikte tıklama serisi sıfırlanır
       if (this.clickCombo.count > 0 && Date.now() - this.clickCombo.lastClickAt > COMBO_DECAY_MS) {
         this.clickCombo.count = 0
-      }
-
-      // 1. Akışı Yenile Sayaçları (Cooldown & Aktif Buff)
-      if (this.refreshActiveTime > 0) {
-        this.refreshActiveTime = Math.max(0, this.refreshActiveTime - deltaSeconds)
-      }
-      if (this.refreshCooldown > 0) {
-        this.refreshCooldown = Math.max(0, this.refreshCooldown - deltaSeconds)
       }
 
       // 2. Aktif Buff Sürelerini Azalt
@@ -3732,15 +4339,17 @@ export const useGameStore = defineStore('game', {
 
                   if (!this.discoveredFormulas.includes(recipe.result)) {
                     this.discoveredFormulas.push(recipe.result)
-                    sounds.playCombo()
-                    confetti({
-                      particleCount: 75,
-                      spread: 70,
-                      origin: { y: 0.6 },
-                      colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899']
-                    })
+                    if (!this.offlineSimActive) {
+                      sounds.playCombo()
+                      confetti({
+                        particleCount: 75,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899']
+                      })
+                    }
                   } else {
-                    sounds.playPlant()
+                    if (!this.offlineSimActive) sounds.playPlant()
                   }
                   break
                 }
@@ -3769,13 +4378,15 @@ export const useGameStore = defineStore('game', {
                               (c1.seedType === recipe.parent2 && c2.seedType === recipe.parent1)
                 if (match && Math.random() < synthChance * 0.75) {
                   this.discoveredFormulas.push(recipe.result)
-                  sounds.playCombo()
-                  confetti({
-                    particleCount: 90,
-                    spread: 80,
-                    origin: { y: 0.55 },
-                    colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899']
-                  })
+                  if (!this.offlineSimActive) {
+                    sounds.playCombo()
+                    confetti({
+                      particleCount: 90,
+                      spread: 80,
+                      origin: { y: 0.55 },
+                      colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899']
+                    })
+                  }
                 }
               }
             }
@@ -3798,26 +4409,28 @@ export const useGameStore = defineStore('game', {
         if (bot && bot.unlocked && bot.enabled) {
           // C1 (Uçak Modu): Şafak botu hariç tüm botlar atlanır
           if (challengeBotsDisabled && key !== 'singularity') return
+          // C2 (Şarj Aleti Temassızlığı): Üretim durma süresi aktifken botlar bekler; kalıcı sıfır üretim kilidini (softlock) önler
+          if (this.challengeHaltUntil > 0 && key !== 'singularity') return
           bot.timer += deltaSeconds * botSpeedMult
           if (bot.timer >= bot.interval) {
             bot.timer = bot.interval > 0 ? bot.timer % bot.interval : 0
-            const effectiveMode: AutobuyerMode = bot.mode || 'single'
-            if (key.startsWith('dim')) {
-              const tier = parseInt(key.replace('dim', ''), 10)
-              if (effectiveMode === 'max' && this.autobuyerMaxUnlocked) {
-                this.buyMaxDimension(tier, false)
-              } else if (effectiveMode === 'bulk' && this.autobuyerBulkUnlocked) {
-                for (let i = 0; i < AUTOBUYER_BULK_BATCH; i++) {
-                  if (!this.buyDimension(tier, false)) break
+const effectiveMode: AutobuyerMode = bot.mode || 'single'
+              if (key.startsWith('dim')) {
+                const tier = parseInt(key.replace('dim', ''), 10)
+                // Bot modları ×1 / ×10 / Maks: tek basışta 1 adet, 1 paket (10 adet), ya da alabildiği kadar
+                if (effectiveMode === 'max' && this.autobuyerMaxUnlocked) {
+                  this.buyMaxDimension(tier, false, false)
+                } else if (effectiveMode === 'bulk' && this.autobuyerBulkUnlocked) {
+                  this.buyDimension(tier, false)
+                } else {
+                  this.buyOneUnit(tier, false)
                 }
-              } else {
-                this.buyDimension(tier, false)
-              }
-            } else if (key === 'tickspeed') {
+              } else if (key === 'tickspeed') {
               if (effectiveMode === 'max' && this.autobuyerMaxUnlocked) {
-                this.buyMaxTickspeed(false)
+                this.buyMaxTickspeed(false, false)
               } else if (effectiveMode === 'bulk' && this.autobuyerBulkUnlocked) {
-                for (let i = 0; i < AUTOBUYER_BULK_BATCH; i++) {
+                // ×10 tutarlılığı: Hz botu da her basışta 10 adet alır
+                for (let i = 0; i < 10; i++) {
                   if (!this.buyTickspeed(false)) break
                 }
               } else {
@@ -3863,10 +4476,12 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // 8.5 Nöral İzleme Kolonisi Üremesi (kendi kendini üreyen alt-botlar)
+      // 8.5 Nöral İzleme Kolonisi Üremesi (kendi kendini üreyen alt-botlar, 1e308 yaklaşımında lojistik fren)
       if (this.neuralBots.gt(0)) {
         const breedRate = this.botBreedRate
-        this.neuralBots = this.neuralBots.plus(this.neuralBots.times(breedRate * deltaSeconds))
+        const logBots = log10Safe(this.neuralBots)
+        const capacityFactor = Math.max(0.01, 1 - logBots / 308)
+        this.neuralBots = this.neuralBots.plus(this.neuralBots.times(breedRate * capacityFactor * deltaSeconds))
       }
 
       // 9. Boyut Zinciri Simülasyonu (tick başına çarpanlar bir kez hesaplanır)
@@ -3926,19 +4541,13 @@ export const useGameStore = defineStore('game', {
           .times(this.productionBuffMultiplier)
           .times(this.labPassiveMultiplier)
           .times(achMultForChain)
-          .times(this.collectiveMultiplier)
+          .times(this.achievementProductionMult)
           .times(this.colonyMultiplier)
           .times(this.napMultiplier)
+          .times(this.offlineSimBoost > 1 ? this.offlineSimBoost : 1)
           .times(this.crisisBackfireDebuff > 0 ? 0.5 : 1.0)
           .times(this.challengeProdMult)
           .times(deltaSeconds)
-
-        if (this.hasAlgorithmUpgrade('bg_listen')) {
-          rawProduced = rawProduced.times(1.25)
-        }
-        if (this.refreshActiveTime > 0) {
-          rawProduced = rawProduced.times(3.0)
-        }
 
         const totalLeechRatio = this.slackerLeechPercent
         const leechedAmount = rawProduced.times(totalLeechRatio)
@@ -3956,10 +4565,6 @@ export const useGameStore = defineStore('game', {
 
         if (this.matter.gt(this.stats.highestMatter)) {
           this.stats.highestMatter = this.matter
-        }
-        const curMpsForHigh = this.matterPerSecond
-        if (curMpsForHigh.gt(this.stats.highestDps)) {
-          this.stats.highestDps = curMpsForHigh
         }
       }
 
@@ -3984,6 +4589,13 @@ export const useGameStore = defineStore('game', {
         if (this.dpsSampleAcc >= 1) {
           this.dpsSampleAcc %= 1
           const curDps = this.matterPerSecond
+          // Rekor üretim hızı buradan güncellenir (ADR-0029): getter her tick çağrılırsa
+          // zincir boyunca ~40 Decimal tahsisi yapılıp sonuç atılıyordu. Zirve
+          // değişkeni 1 Hz çözünürlükte ve salt görüntüleme amaçlı olduğu için
+          // bu, yalnızca anlık tepe noktalarını kaçırır; ekonomiye dokunmaz.
+          if (curDps.gt(this.stats.highestDps)) {
+            this.stats.highestDps = curDps
+          }
           const numDps = curDps.lt(0) ? 0 : (curDps.gte(Number.MAX_VALUE) ? Number.MAX_VALUE : curDps.toNumber())
           this.dpsHistory.push(numDps)
           if (this.dpsHistory.length > 600) this.dpsHistory.shift()
@@ -4040,44 +4652,50 @@ export const useGameStore = defineStore('game', {
     simulateOfflineProgress(offlineSeconds: number): OfflineReport | null {
       if (offlineSeconds <= 1) return null
 
+      sounds.suppressed = true
       const cappedSeconds = Math.min(offlineSeconds, OFFLINE_CAP_SECONDS)
       const startProduced = this.stats.totalMatterProduced
 
       // Nöral Ağaç çevrimdışı kazanç düğümleri yalnızca bu simülasyon boyunca etkindir
       const previousBoost = this.offlineSimBoost
-      this.offlineSimBoost = 1 + this.neuralEffects.offlineGainBonus
+      this.offlineSimBoost =
+        (1 + this.neuralEffects.offlineGainBonus) *
+        tierOfflineSimMult(this.dimensions, this.unlockedDimensionsCount)
       this.offlineSimActive = true
       this.offlineAchTick = 0
 
-      // İlk 5 dakika: 0.1 sn hassasiyetli simülasyon (botlar, buff süreleri, lab doğru işler)
-      const detailedSeconds = Math.min(300, cappedSeconds)
-      const steps = Math.floor(detailedSeconds / 0.1)
-      for (let s = 0; s < steps; s++) {
-        this.update(0.1)
-      }
+      try {
+        // İlk 5 dakika: 0.1 sn hassasiyetli simülasyon (botlar, buff süreleri, lab doğru işler)
+        const detailedSeconds = Math.min(300, cappedSeconds)
+        const steps = Math.floor(detailedSeconds / 0.1)
+        for (let s = 0; s < steps; s++) {
+          this.update(0.1)
+        }
 
-      // Kalan süre: 1 sn adımları (1 saate kadar), sonrasında 10 sn (2 saate kadar), ardından 60 sn
-      let remainingSeconds = cappedSeconds - detailedSeconds
-      const fineSteps = Math.min(remainingSeconds, 3600)
-      for (let s = 0; s < fineSteps; s++) {
-        this.update(1)
+        // Kalan süre: 1 sn adımları (1 saate kadar), sonrasında 10 sn (2 saate kadar), ardından 60 sn
+        let remainingSeconds = cappedSeconds - detailedSeconds
+        const fineSteps = Math.min(remainingSeconds, 3600)
+        for (let s = 0; s < fineSteps; s++) {
+          this.update(1)
+        }
+        remainingSeconds -= fineSteps
+        const mediumBudget = Math.min(remainingSeconds, 3600)
+        const mediumSteps = Math.floor(mediumBudget / 10)
+        for (let s = 0; s < mediumSteps; s++) {
+          this.update(10)
+        }
+        remainingSeconds -= mediumSteps * 10
+        const coarseSteps = Math.floor(remainingSeconds / 60)
+        for (let s = 0; s < coarseSteps; s++) {
+          this.update(60)
+        }
+        const leftover = remainingSeconds - coarseSteps * 60
+        if (leftover > 0) this.update(leftover)
+      } finally {
+        this.offlineSimBoost = previousBoost
+        this.offlineSimActive = false
+        sounds.suppressFor(300)
       }
-      remainingSeconds -= fineSteps
-      const mediumBudget = Math.min(remainingSeconds, 3600)
-      const mediumSteps = Math.floor(mediumBudget / 10)
-      for (let s = 0; s < mediumSteps; s++) {
-        this.update(10)
-      }
-      remainingSeconds -= mediumSteps * 10
-      const coarseSteps = Math.floor(remainingSeconds / 60)
-      for (let s = 0; s < coarseSteps; s++) {
-        this.update(60)
-      }
-      const leftover = remainingSeconds - coarseSteps * 60
-      if (leftover > 0) this.update(leftover)
-
-      this.offlineSimBoost = previousBoost
-      this.offlineSimActive = false
 
       const gained = this.stats.totalMatterProduced.minus(startProduced)
       if (gained.lte(0)) return null
@@ -4094,31 +4712,66 @@ export const useGameStore = defineStore('game', {
       this.offlineReport = null
     },
 
-    // QoL: Reels satın alma modunu ayarla (x10 paket / x100 / Maks)
-    setBuyAmount(mode: 10 | 100 | 'max'): void {
-      this.buyAmount = mode
-    },
+    // Manuel satın alma: ad bazlı maks — param 1 adete yetiyorsa buton aktiftir,
+    // tek tıkla alabildiği kadar adet alır (botların interval'i basış sıklığını belirler).
 
-    // Seçili modda istasyon satın al (10'luk paketler üzerinden)
-    buyDimensionByMode(tier: number, playSound = true): boolean {
-      if (this.buyAmount === 'max') return this.buyMaxDimension(tier, playSound)
-      return this.buyDimensionPacks(tier, this.buyAmount / 10, playSound)
-    },
-
-    // N adet 10'luk paket satın al (geometrik toplam maliyetle tek seferde)
-    buyDimensionPacks(tier: number, packs: number, playSound = true): boolean {
+    // x1 modu: tek tıkla alabildiği kadar adet alır. Paket fiyatını karşılayabiliyorsa
+    // 10'luk paketi paket fiyatına alır (aynı sonuç), karşılayamıyorsa kalan para ile
+    // ad-adet devam eder. Maliyet geometrik büyüdüğü için tur sayısı küçük kalır.
+    buyDimensionUnits(tier: number, playSound = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
       const dim = this.dimensions[tier - 1]
       if (!dim) return false
 
-      const totalCost = this.getDimensionPackCost(tier, packs)
-      if (this.matter.lt(totalCost)) return false
+      let unitsBought = 0
+      const mpsBefore = this.matterPerSecond
 
-      this.matter = this.matter.minus(totalCost)
-      dim.amount = dim.amount.plus(10 * packs)
-      dim.bought += 10 * packs
-      this.registerChallengeBuy(packs)
+      for (let guard = 0; guard < 1000; guard++) {
+        const packPrice = this.getDimensionCost(tier)
+        const unitCost = packPrice.div(10)
+        if (this.matter.lt(unitCost)) break
+
+        if (this.matter.gte(packPrice)) {
+          this.matter = this.matter.minus(packPrice)
+          dim.amount = dim.amount.plus(10)
+          dim.bought += 10
+          unitsBought += 10
+          continue
+        }
+
+        // Paket yetmiyor: mevcut kovada kalan adet sınırı ile ad-adet al
+        const remainingInBucket = 10 - (dim.bought % 10)
+        const affordable = Math.min(remainingInBucket, this.matter.div(unitCost).floor().toNumber())
+        if (affordable <= 0) break
+        this.matter = this.matter.minus(unitCost.times(affordable))
+        dim.amount = dim.amount.plus(affordable)
+        dim.bought += affordable
+        unitsBought += affordable
+      }
+
+      if (unitsBought <= 0) return false
+      this.registerChallengeBuy(unitsBought / 10)
       if (playSound) sounds.playBuy(tier)
+      this.finalizeDimensionPurchase(tier, mpsBefore, playSound)
+      return true
+    },
+
+    // Bot ×1 modu: tek basışta 1 adet alır (maliyet güncel paket fiyatının 1/10'u)
+    buyOneUnit(tier: number, playSound = false): boolean {
+      if (tier > this.unlockedDimensionsCount) return false
+      const dim = this.dimensions[tier - 1]
+      if (!dim) return false
+
+      const unitCost = this.getDimensionCost(tier).div(10)
+      if (this.matter.lt(unitCost)) return false
+
+      const mpsBefore = this.matterPerSecond
+      this.matter = this.matter.minus(unitCost)
+      dim.amount = dim.amount.plus(1)
+      dim.bought += 1
+      this.registerChallengeBuy(0.1)
+      if (playSound) sounds.playBuy(tier)
+      this.finalizeDimensionPurchase(tier, mpsBefore, playSound)
       return true
     },
 
@@ -4175,6 +4828,51 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    // QoL Çoklu Kayıt Slotları (v22)
+    switchSaveSlot(targetSlot: number): void {
+      if (![1, 2, 3].includes(targetSlot)) return
+      // 1. Önce aktif slotu diske yaz
+      SaveSystem.save(this.serialize(), this.settings.activeSlot)
+      // 2. Yeni aktif slotu ayarla
+      this.settings.activeSlot = targetSlot
+      SaveSystem.setActiveSlot(targetSlot)
+      // 3. Yeni slotu yükle
+      const loaded = SaveSystem.loadDetailed(targetSlot)
+      if (loaded.state) {
+        this.deserialize(loaded.state)
+        this.settings.activeSlot = targetSlot
+      } else {
+        // Hedef slotta henüz kayıt yoksa yeni oyun durumuna resetle ve kaydet
+        SaveSystem.save(this.serialize(), targetSlot)
+        window.location.reload()
+      }
+    },
+
+    copySaveSlot(fromSlot: number, toSlot: number): boolean {
+      if (fromSlot === toSlot) return false
+      // Önce kaynak slot aktifse hafızadaki son durumu diske yaz
+      if (this.settings.activeSlot === fromSlot) {
+        SaveSystem.save(this.serialize(), fromSlot)
+      }
+      return SaveSystem.copySlot(fromSlot, toSlot)
+    },
+
+    deleteSaveSlot(slot: number): void {
+      SaveSystem.deleteSlot(slot)
+      if (this.settings.activeSlot === slot) {
+        window.location.reload()
+      }
+    },
+
+    restoreFromBackup(): boolean {
+      const restored = SaveSystem.restoreFromBackup()
+      if (restored) {
+        this.deserialize(restored)
+        return true
+      }
+      return false
+    },
+
     // State Serialization (Kayıt)
     serialize(): SerializedPlayerState {
       const serializedAutobuyers: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number }> = {}
@@ -4188,7 +4886,7 @@ export const useGameStore = defineStore('game', {
       })
 
       return {
-        version: 10,
+        version: SAVE_VERSION,
         matter: this.matter.toString(),
         dimensions: this.dimensions.map((d) => ({
           amount: d.amount.toString(),
@@ -4196,6 +4894,10 @@ export const useGameStore = defineStore('game', {
         })),
         tickspeedBought: this.tickspeedBought,
         dimensionShifts: this.dimensionShifts,
+        dimensionCapFloor: this.dimensionCapFloor,
+        formatDiscoverSeenCap: this.formatDiscoverSeenCap,
+        formatUnlockBuffTier: this.formatUnlockBuffTier,
+        formatUnlockBuffUntil: this.formatUnlockBuffUntil,
         galaxies: this.galaxies,
         singularityPoints: this.singularityPoints.toString(),
         singularities: this.singularities,
@@ -4211,6 +4913,13 @@ export const useGameStore = defineStore('game', {
           leechedKpi: s.leechedDopamine.toString()
         })),
         caffeineEnergy: this.caffeineEnergy,
+        // ADR-0029: bu dört alan v12'de kaydedilmiyordu. maxCaffeineEnergy yükleme
+        // sırasında clamp tavanı olarak kullanıldığı için (clampSavedNumber) kayıp
+        // her zaman 100'e düşüyordu; viral üçlüsü ise canlı koşu ilerlemesiydi.
+        maxCaffeineEnergy: this.maxCaffeineEnergy,
+        isViralActive: this.isViralActive,
+        viralTimeRemaining: this.viralTimeRemaining,
+        viralViews: this.viralViews,
         labCells: this.labCells.map((c) => ({
           id: c.id,
           seedType: c.seedType,
@@ -4227,20 +4936,23 @@ export const useGameStore = defineStore('game', {
         singularityUpgrades: { ...this.singularityUpgrades },
         neuralNodesBought: { ...this.neuralNodesBought },
         clickCombo: { ...this.clickCombo },
-        buyAmount: this.buyAmount,
         activeChallenge: this.activeChallenge,
         completedChallenges: [...this.completedChallenges],
         challengeBestTimes: { ...this.challengeBestTimes },
+        claimedBounties: [...(this.claimedBounties || [])],
+        decadeSurgeMult: this.decadeSurgeMult,
         sacrificeCount: this.sacrificeCount,
         sacrificeMultiplier: this.sacrificeMultiplier.toString(),
-        algorithmUpgrades: [...this.algorithmUpgrades],
-        refreshCooldown: this.refreshCooldown,
         neuralBots: this.neuralBots.toString(),
         napCount: this.napCount,
         napMultiplier: this.napMultiplier.toString(),
+        mythicPity: this.mythicPity || 0,
         achievements: [...this.achievements],
         achievementsSeenCount: this.achievementsSeenCount,
         unlockedFeatures: [...this.unlockedFeatures],
+        // ADR-0035 (v15): açılış kalıcılığının asıl kaydı.
+        lifetimePeakMatter: this.lifetimePeakMatter.toString(),
+        lifetimePeakShifts: this.lifetimePeakShifts,
         lastUpdate: this.lastUpdate,
         settings: { ...this.settings },
         pastSingularities: this.pastSingularities.map((p) => ({
@@ -4262,6 +4974,7 @@ export const useGameStore = defineStore('game', {
           highestDps: this.stats.highestDps.toString(),
           totalManualDopamine: this.stats.totalManualDopamine.toString(),
           anomaliesClicked: this.stats.anomaliesClicked || 0,
+          mythicsClicked: this.stats.mythicsClicked || 0,
           combosTriggered: this.stats.combosTriggered || 0,
           slackersFired: this.stats.slackersFired || 0,
           labHarvests: this.stats.labHarvests || 0,
@@ -4274,10 +4987,23 @@ export const useGameStore = defineStore('game', {
 
     // State Deserialization (Yükleme)
     deserialize(data: SerializedPlayerState): void {
+      // Gelecek sürüm koruması: try bloğunun DIŞINDA ve ilk adımda. Daha yeni bir
+      // build'in kaydı burada açılırsa, o build'in eklediği alanlar sessizce düşer
+      // ve kayıt yeniden v12 olarak damgalanır (geriye dönük veri kaybı). Bu yüzden
+      // reddediyoruz; çağıranlar SaveVersionError'ı yakalayıp oyuncuyu bilgilendirir.
+      const declaredVersion = typeof data.version === 'number' ? data.version : 1
+      if (declaredVersion > SAVE_VERSION) {
+        throw new SaveVersionError(declaredVersion, SAVE_VERSION)
+      }
+      if (declaredVersion < MIN_SUPPORTED_SAVE_VERSION) {
+        throw new Error(
+          `Kayıt sürümü v${declaredVersion} desteklenmiyor (asgari v${MIN_SUPPORTED_SAVE_VERSION}). İlerleme sıfırlandı.`
+        )
+      }
       try {
         // Save versiyonu: sıralı migration kancası. Kırıcı değişikliklerde
         // "if (saveVersion < N) { ... }" blokları buraya eklenir.
-        const saveVersion = typeof data.version === 'number' ? data.version : 1
+        const saveVersion = declaredVersion
 
         this.neuralBots = D_0
         this.napCount = 0
@@ -4291,29 +5017,84 @@ export const useGameStore = defineStore('game', {
         this.matter = parseSavedDecimal(data.matter, new Decimal(10))
         if (Array.isArray(data.dimensions)) {
           data.dimensions.forEach((savedDim, i) => {
-            if (this.dimensions[i]) {
+            // ADR-0029: bozuk kayıtta null eleman deserialize'un tamamını
+            // yarı uygulanmış bırakıyordu (tek throw, stats + offline kaybı).
+            if (this.dimensions[i] && savedDim && typeof savedDim === 'object') {
               this.dimensions[i].amount = parseSavedDecimal(savedDim.amount, D_0)
-              this.dimensions[i].bought = savedDim.bought || 0
+              this.dimensions[i].bought = clampSavedNumber(savedDim.bought, 0, 0, 1e12)
             }
           })
         }
         this.tickspeedBought = data.tickspeedBought || 0
         this.dimensionShifts = data.dimensionShifts || 0
         this.galaxies = data.galaxies || 0
+
+        this.dimensionCapFloor = BASE_UNLOCKED_DIMENSIONS
+        this.formatDiscoverSeenCap = BASE_UNLOCKED_DIMENSIONS
+        this.formatUnlockBuffTier = 0
+        this.formatUnlockBuffUntil = 0
+        if (saveVersion < 12) {
+          let progressCap = 2
+          this.dimensions.forEach((d, i) => {
+            if (d.bought > 0 || d.amount.gt(0)) {
+              progressCap = Math.max(progressCap, i + 1)
+            }
+          })
+          const legacyFloor = Math.max(4, Math.min(8, progressCap))
+          this.dimensionCapFloor = legacyFloor
+          this.formatDiscoverSeenCap = Math.max(
+            this.formatDiscoverSeenCap,
+            resolvedUnlockedDimensionCount({
+              dimensionShifts: this.dimensionShifts,
+              dimensionCapFloor: legacyFloor,
+              activeChallenge: null
+            })
+          )
+        } else {
+          if (typeof data.dimensionCapFloor === 'number') {
+            this.dimensionCapFloor = clampSavedNumber(
+              data.dimensionCapFloor,
+              BASE_UNLOCKED_DIMENSIONS,
+              2,
+              8
+            )
+          }
+          if (typeof data.formatDiscoverSeenCap === 'number') {
+            this.formatDiscoverSeenCap = clampSavedNumber(
+              data.formatDiscoverSeenCap,
+              BASE_UNLOCKED_DIMENSIONS,
+              2,
+              8
+            )
+          }
+          if (typeof data.formatUnlockBuffTier === 'number') {
+            this.formatUnlockBuffTier = clampSavedNumber(data.formatUnlockBuffTier, 0, 0, 8)
+          }
+          if (typeof data.formatUnlockBuffUntil === 'number') {
+            this.formatUnlockBuffUntil = Math.max(0, data.formatUnlockBuffUntil)
+          }
+        }
+
         if (typeof data.singularities === 'number') {
           this.singularities = Math.floor(data.singularities)
         }
         if (typeof data.nightWatchUnlocked === 'boolean') {
           this.nightWatchUnlocked = data.nightWatchUnlocked
         }
+        this.mythicPity = typeof data.mythicPity === 'number' && Number.isFinite(data.mythicPity)
+          ? Math.max(0, Math.min(25, Math.floor(data.mythicPity)))
+          : 0
 
-        if (data.currentStance) {
+        // Geçersiz duruş değeri kayıttan sızmasın: default 'trend' duruşunda kal
+        if (isValidStanceType(data.currentStance)) {
           this.currentStance = data.currentStance
+        } else {
+          this.currentStance = 'trend'
         }
 
         if (Array.isArray(data.activeBuffs)) {
           this.activeBuffs = data.activeBuffs
-            .filter((b) => isValidBuffType(b.type))
+            .filter((b) => isValidBuffType(b.type) && b.type !== 'void' && b.type !== 'sponsor')
             .map((b) => {
               const remaining = clampSavedNumber(b.remaining, 0, 0, 86400)
               return {
@@ -4323,10 +5104,10 @@ export const useGameStore = defineStore('game', {
                   ? '🔥 Gece 3 Çılgınlığı (7× Dopamin)'
                   : b.type === 'espresso'
                     ? '☕ Çift Espresso (3× Frekans)'
-                    : '👆 Başparmak Histerisi (777× Kaydır)',
+                    : '👆 Başparmak Histerisi (300× Kaydır)',
                 duration: b.type === 'fyp' ? 60 : b.type === 'espresso' ? 30 : 15,
                 remaining,
-                multiplier: b.type === 'fyp' ? 7 : b.type === 'espresso' ? 3 : 777
+                multiplier: b.type === 'fyp' ? 7 : b.type === 'espresso' ? 3 : 300
               }
             })
             .filter((b) => b.remaining > 0)
@@ -4342,7 +5123,17 @@ export const useGameStore = defineStore('game', {
         }
 
         if (typeof data.caffeineEnergy === 'number') {
-          this.caffeineEnergy = clampSavedNumber(data.caffeineEnergy, 50, 0, this.maxCaffeineEnergy)
+          // ADR-0029: tavan ÖNCE yüklenmeli — aşağıdaki clamp bunun tavanını kullanıyor.
+        // v12 ve öncesi kayıtlarda alan yok, o durumda varsayılan 100 korunur.
+        if (typeof data.maxCaffeineEnergy === 'number') {
+          this.maxCaffeineEnergy = clampSavedNumber(data.maxCaffeineEnergy, 100, 1, 100000)
+        }
+        this.caffeineEnergy = clampSavedNumber(data.caffeineEnergy, 50, 0, this.maxCaffeineEnergy)
+
+        // Viral Zirve koşu ilerlemesi (daha önce kaydedilmiyordu)
+        this.isViralActive = data.isViralActive === true
+        this.viralTimeRemaining = clampSavedNumber(data.viralTimeRemaining, 0, 0, 3600)
+        this.viralViews = clampSavedNumber(data.viralViews, 0, 0, 1e15)
         }
 
         if (Array.isArray(data.labCells)) {
@@ -4413,8 +5204,15 @@ export const useGameStore = defineStore('game', {
           })
         }
 
-        if (data.singularityUpgrades) {
-          this.singularityUpgrades = { ...this.singularityUpgrades, ...data.singularityUpgrades }
+        // ADR-0029: singularityUpgrades da beyaz listeye alındı — nöral ağaç
+        // (aşağıdaki blok) zaten böyle yapıyordu; dükkân kaydı ham merge ediliyordu.
+        if (data.singularityUpgrades && typeof data.singularityUpgrades === 'object') {
+          for (const [upgId, rawLvl] of Object.entries(data.singularityUpgrades)) {
+            const def = SINGULARITY_UPGRADES.find((u) => u.id === upgId)
+            if (!def) continue
+            if (typeof rawLvl !== 'number' || !Number.isFinite(rawLvl) || rawLvl <= 0) continue
+            this.singularityUpgrades[upgId] = Math.min(Math.floor(rawLvl), def.maxLevel)
+          }
         }
 
         // Nöral Ağaç (v9): eksik alanlarda güvenli varsayılan; yalnızca tanımlı düğüm id'leri kabul edilir
@@ -4479,17 +5277,24 @@ export const useGameStore = defineStore('game', {
           this.clickCombo = { count: 0, lastClickAt: 0 }
         }
 
+        if (Array.isArray(data.claimedBounties)) {
+          this.claimedBounties = data.claimedBounties.filter(
+            (e): e is number => typeof e === 'number' && Number.isFinite(e)
+          )
+        } else {
+          this.claimedBounties = []
+        }
+        // ADR-0034: Koşu içi Dekad Yükselişi çarpanı. v14- kayıtlarda bu alan yok;
+        // o kayıtlar SP olarak ödedikleri primleri korur, yükseliş 1'den başlar.
+        this.decadeSurgeMult =
+          typeof data.decadeSurgeMult === 'number' && Number.isFinite(data.decadeSurgeMult)
+            ? clampSavedNumber(data.decadeSurgeMult, 1, 1, 1000)
+            : 1
         if (typeof data.sacrificeCount === 'number') {
           this.sacrificeCount = data.sacrificeCount
         }
         if (data.sacrificeMultiplier) {
           this.sacrificeMultiplier = parseSavedDecimal(data.sacrificeMultiplier, D_1)
-        }
-        if (Array.isArray(data.algorithmUpgrades)) {
-          this.algorithmUpgrades = data.algorithmUpgrades as AlgorithmUpgradeId[]
-        }
-        if (typeof data.refreshCooldown === 'number') {
-          this.refreshCooldown = clampSavedNumber(data.refreshCooldown, 0, 0, 86400)
         }
 
         if (data.neuralBots) {
@@ -4503,7 +5308,11 @@ export const useGameStore = defineStore('game', {
         }
 
         if (Array.isArray(data.achievements)) {
-          this.achievements = data.achievements.filter((id) => typeof id === 'string')
+          this.achievements = data.achievements.filter(
+          (id) => typeof id === 'string' && ACHIEVEMENT_IDS.has(id)
+        )
+        // Başarım listesi değiştiğinde çarpan memo'su düşmeli.
+        resetAchievementCache()
         }
         if (typeof data.achievementsSeenCount === 'number') {
           this.achievementsSeenCount = data.achievementsSeenCount
@@ -4525,14 +5334,17 @@ export const useGameStore = defineStore('game', {
           if (this.settings.juiceMode === undefined) this.settings.juiceMode = 'balanced'
           if (this.settings.screenOverlayEffects === undefined) this.settings.screenOverlayEffects = true
           if (this.settings.holoCardsEnabled === undefined) this.settings.holoCardsEnabled = true
+          if (this.settings.swirlShaderQuality === undefined) this.settings.swirlShaderQuality = 'balanced'
+          if (this.settings.decimalPlaces === undefined) this.settings.decimalPlaces = 2
+          if (this.settings.batterySaver === undefined) this.settings.batterySaver = false
+          if (this.settings.floatingTexts === undefined) this.settings.floatingTexts = true
+          if (this.settings.newsTickerEnabled === undefined) this.settings.newsTickerEnabled = true
+          if (this.settings.offlineProgressModal === undefined) this.settings.offlineProgressModal = true
+          if (this.settings.hotkeysEnabled === undefined) this.settings.hotkeysEnabled = true
+          if (this.settings.activeSlot === undefined) this.settings.activeSlot = SaveSystem.getActiveSlot()
           if (this.settings.customAudioUrl) {
             musicEngine.customUrl = this.settings.customAudioUrl
           }
-        }
-
-        // QoL: satın alma modunu geri yükle (bozuk/eski değerlerde varsayılan 10'da kal)
-        if (data.buyAmount === 10 || data.buyAmount === 100 || data.buyAmount === 'max') {
-          this.buyAmount = data.buyAmount
         }
 
         if (Array.isArray(data.pastSingularities)) {
@@ -4560,6 +5372,7 @@ export const useGameStore = defineStore('game', {
             highestDps: parseSavedDecimal(data.stats.highestDps, D_0),
             totalManualDopamine: parseSavedDecimal(data.stats.totalManualDopamine, D_0),
             anomaliesClicked: data.stats.anomaliesClicked || 0,
+            mythicsClicked: data.stats.mythicsClicked || 0,
             combosTriggered: data.stats.combosTriggered || 0,
             slackersFired: data.stats.slackersFired || 0,
             labHarvests: data.stats.labHarvests || 0,
@@ -4577,6 +5390,26 @@ export const useGameStore = defineStore('game', {
         if (Array.isArray(data.unlockedFeatures)) {
           this.unlockedFeatures = data.unlockedFeatures.filter((id) => typeof id === 'string')
         }
+
+        // ADR-0035 (v15) — geriye dönük uyumlu yükleme, veri KAYBI YOK.
+        // Alan yoksa (v14 ve öncesi kayıtlar) tepe noktalar mevcut veriden türetilir:
+        //   • lifetimePeakMatter ← max(kayıtlı tepe, stats.highestMatter, mevcut dopamin).
+        //     `stats.highestMatter` zaten hayat boyu zirvedir; dopamin kapısını geçmiş
+        //     her oyuncu böylece açılışlarını aynı oturumda geri kazanır — hiçbir
+        //     özellik "kayıtta yoktu" diye yeniden kilitlenmez.
+        //   • lifetimePeakShifts ← max(kayıtlı tepe, dimensionShifts, eski D8 satın alımı).
+        // syncUnlocks() ve simulateOfflineProgress() bundan SONRA çağrılır; sıralama önemli.
+        const restoredPeak = parseSavedDecimal(data.lifetimePeakMatter, new Decimal(10))
+        this.lifetimePeakMatter = lifetimeUnlockDopamine(
+          this.stats.highestMatter,
+          raisedLifetimePeak(this.matter, restoredPeak)
+        )
+        let restoredShifts = clampSavedNumber(data.lifetimePeakShifts, 0, 0, 1e9)
+        if (this.dimensionShifts > restoredShifts) restoredShifts = this.dimensionShifts
+        if (this.dimensions[7] && this.dimensions[7].bought > 0) {
+          restoredShifts = Math.max(restoredShifts, SACRIFICE_SHIFT_REQ)
+        }
+        this.lifetimePeakShifts = Math.floor(restoredShifts)
         this.syncUnlocks()
 
         const now = Date.now()

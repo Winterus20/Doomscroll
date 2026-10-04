@@ -34,6 +34,7 @@ const primaryAnomalyType = computed(() => {
 
 const crisisAuraClass = computed(() => {
   if (primaryAnomalyType.value === 'combo') return 'crisis-aura-combo'
+  if (primaryAnomalyType.value === 'void') return 'crisis-aura-void'
   if (primaryAnomalyType.value === 'heart_frenzy') return 'crisis-aura-rose'
   if (primaryAnomalyType.value === 'sponsor') return 'crisis-aura-amber'
   return 'crisis-aura-purple'

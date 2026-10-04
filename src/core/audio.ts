@@ -2,14 +2,47 @@ class SoundManager {
   private ctx: AudioContext | null = null
   public enabled = true
   public volume = 0.2
+  public suppressed = false
+  private suppressTimer: ReturnType<typeof setTimeout> | null = null
 
   // Hızlı tıklama / kombo frekans takibi (Pitch ramp — P0 Balatro: pentatonik C-D-E-G-A)
   private lastClickTime = 0
   private clickCombo = 0
+  // Tally tick spam koruması: sayaç her kare tetikleyebilir, ses en sık 45ms'de bir
+  private lastTallyTime = 0
   private readonly PITCH_SCALES = [1.0, 1.125, 1.25, 1.5, 1.667]
 
+  constructor() {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Sekme arka plana geçtiğinde anında sustur
+          this.suppressed = true
+        } else {
+          // Sekmeye geri dönüldüğünde catch-up/offline simülasyonu süresince
+          // birikmiş ses patlamasını önlemek için geçici olarak sustur
+          this.suppressFor(500)
+        }
+      })
+    }
+  }
+
+  suppressFor(ms: number) {
+    this.suppressed = true
+    if (this.suppressTimer !== null) {
+      clearTimeout(this.suppressTimer)
+    }
+    if (typeof window !== 'undefined') {
+      this.suppressTimer = setTimeout(() => {
+        this.suppressed = false
+        this.suppressTimer = null
+      }, ms)
+    }
+  }
+
   private getContext(): AudioContext | null {
-    if (!this.enabled) return null
+    if (!this.enabled || this.suppressed) return null
+    if (typeof document !== 'undefined' && document.hidden) return null
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       if (AudioCtx) {
@@ -138,6 +171,124 @@ class SoundManager {
     popOsc.stop(ctx.currentTime + 0.035)
   }
 
+  /**
+   * Balatro Sütun 2: "Reels Vuruşu" Sıralı Nedensellik (Sequential Triggering) Arpeji
+   * Her çarpan basamağında Lydian modunda yükselen kristal synth notası ve finalde sub-punch çalar.
+   * @param stageCount Toplam görsel basamak sayısı (2 - 5)
+   * @param isCrit 777x Başparmak Histerisi veya büyük anomali kritik vuruşu mu
+   */
+  playSequentialStrike(stageCount = 3, isCrit = false) {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    // Hızlı ardışık vuruşlarda oktav/gam tırmanışı
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    if (now - this.lastClickTime < 350) {
+      this.clickCombo = Math.min(this.clickCombo + 1, this.PITCH_SCALES.length - 1)
+    } else {
+      this.clickCombo = 0
+    }
+    this.lastClickTime = now
+    const pitchMultiplier = this.PITCH_SCALES[this.clickCombo]
+
+    // Lydian / Pentatonik nota frekansları (C4, E4, G4, B4, C5)
+    const baseFreqs = [261.63, 329.63, 392.0, 493.88, 523.25]
+    const stepDelay = 0.038 // 38ms aralıkla yükselen cascade
+
+    const actualStages = Math.min(Math.max(stageCount, 1), baseFreqs.length)
+
+    for (let i = 0; i < actualStages; i++) {
+      const startTime = ctx.currentTime + i * stepDelay
+      const noteFreq = baseFreqs[i] * pitchMultiplier
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      // Alt basamaklar yumuşak sinüs, üst çarpanlar zengin üçgen dalga
+      osc.type = i >= 2 ? 'triangle' : 'sine'
+      osc.frequency.setValueAtTime(noteFreq, startTime)
+      osc.frequency.exponentialRampToValueAtTime(noteFreq * 1.04, startTime + 0.045)
+
+      // Üst basamaklara doğru artan rezonans
+      const stageVol = this.volume * (0.28 + i * 0.06)
+      gain.gain.setValueAtTime(stageVol, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.05)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      this.registerCleanup(osc, gain)
+
+      osc.start(startTime)
+      osc.stop(startTime + 0.05)
+    }
+
+    // Final Slam: Çarpanlar birleşip havuza döküldüğünde tok mekanik bas tokmağı
+    const finalTime = ctx.currentTime + (actualStages - 1) * stepDelay + 0.015
+    const slamOsc = ctx.createOscillator()
+    const slamGain = ctx.createGain()
+    slamOsc.type = 'sine'
+    slamOsc.frequency.setValueAtTime(isCrit ? 90 : 65, finalTime)
+    slamOsc.frequency.exponentialRampToValueAtTime(isCrit ? 25 : 32, finalTime + 0.06)
+
+    const slamVol = this.volume * (isCrit ? 0.65 : 0.38)
+    slamGain.gain.setValueAtTime(slamVol, finalTime)
+    slamGain.gain.exponentialRampToValueAtTime(0.001, finalTime + 0.06)
+
+    slamOsc.connect(slamGain)
+    slamGain.connect(ctx.destination)
+    this.registerCleanup(slamOsc, slamGain)
+
+    slamOsc.start(finalTime)
+    slamOsc.stop(finalTime + 0.06)
+
+    // Kritik Gece Histerisi (CRIT): Ek kristal parlama armonisi
+    if (isCrit) {
+      const critOsc = ctx.createOscillator()
+      const critGain = ctx.createGain()
+      critOsc.type = 'triangle'
+      critOsc.frequency.setValueAtTime(1046.5, finalTime) // C6
+      critOsc.frequency.exponentialRampToValueAtTime(1567.98, finalTime + 0.12) // G6
+
+      critGain.gain.setValueAtTime(this.volume * 0.35, finalTime)
+      critGain.gain.exponentialRampToValueAtTime(0.001, finalTime + 0.14)
+
+      critOsc.connect(critGain)
+      critGain.connect(ctx.destination)
+      this.registerCleanup(critOsc, critGain)
+
+      critOsc.start(finalTime)
+      critOsc.stop(finalTime + 0.14)
+    }
+  }
+
+  /**
+   * Balatro Makro Sıçrama / Kriz Hesaplama Adımı
+   * Akış Sıçraması (Shift) veya Galaksi sırasında açık formatlar (D1-D8) sırayla parladıkça çalar.
+   */
+  playMacroSurge(stepIndex: number, totalSteps = 8) {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const normalized = Math.min(stepIndex / Math.max(totalSteps - 1, 1), 1.0)
+    const baseFreq = 220 + normalized * 440 // A3 -> A4 (220 Hz -> 660 Hz)
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = normalized >= 0.8 ? 'triangle' : 'sine'
+
+    osc.frequency.setValueAtTime(baseFreq, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.15, ctx.currentTime + 0.065)
+
+    gain.gain.setValueAtTime(this.volume * (0.3 + normalized * 0.2), ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+
+    osc.start()
+    osc.stop(ctx.currentTime + 0.07)
+  }
+
   // İstasyon Yükseltme / Yeni Reels Formatı Satın Alımı (Melodik + Sub-punch)
   playBuy(tier = 1) {
     const ctx = this.getContext()
@@ -176,6 +327,77 @@ class SoundManager {
     this.registerCleanup(bassOsc, bassGain)
     bassOsc.start()
     bassOsc.stop(ctx.currentTime + 0.05)
+  }
+
+  // Dopamin/s yükseldiğinde kısa ivme hissi (satın alma / Hz)
+  playProductionSurge() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(420, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12)
+
+    gain.gain.setValueAtTime(this.volume * 0.28, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.14)
+  }
+
+  // Sayaç tally tick: basamak/üretim sıçramasında hıza göre tizleşen kısa blip.
+  // level01 0→pes (620Hz), 1→tiz (1380Hz). 45ms throttle ile spam yapmaz.
+  playTallyTick(level01 = 0.5) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    if (now - this.lastTallyTime < 45) return
+    this.lastTallyTime = now
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const l = Math.min(1, Math.max(0, level01))
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(620 + l * 760, ctx.currentTime)
+
+    gain.gain.setValueAtTime(this.volume * (0.12 + l * 0.14), ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.035)
+  }
+
+  // Payoff chime: 10'arlı dekad / büyük kutlamada iki notalı açılış (E6→B6).
+  playPayoff() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const notes = [1318.51, 1975.53]
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      const startTime = ctx.currentTime + idx * 0.07
+      osc.frequency.setValueAtTime(freq, startTime)
+
+      gain.gain.setValueAtTime(0.001, startTime)
+      gain.gain.exponentialRampToValueAtTime(this.volume * 0.4, startTime + 0.012)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      this.registerCleanup(osc, gain)
+      osc.start(startTime)
+      osc.stop(startTime + 0.4)
+    })
   }
 
   // Akış Sıçraması (Kamera Deklanşörü + Sub-drop + Ekran Işıltısı)
@@ -358,28 +580,79 @@ class SoundManager {
   }
 
   // Gece Krizi Doğuşu (Ekranda Kriz Belirdiğinde Gizemli Uzaysal Synth Uyarısı)
-  playAnomalySpawn() {
+  playAnomalySpawn(type = 'fyp') {
     const ctx = this.getContext()
     if (!ctx) return
 
-    // İnce kozmik arpej (G#5 -> C#6 -> E6 -> B6)
-    const notes = [830.61, 1108.73, 1318.51, 1975.53]
+    // Void Reel: daha tiz + uzun gizemli giriş (nadirlik hissi)
+    const notes = type === 'void'
+      ? [659.25, 987.77, 1318.51, 1975.53, 2637.02]
+      : [830.61, 1108.73, 1318.51, 1975.53]
     notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = 'sine'
-      const startTime = ctx.currentTime + idx * 0.05
+      const startTime = ctx.currentTime + idx * (type === 'void' ? 0.06 : 0.05)
       osc.frequency.setValueAtTime(freq, startTime)
 
       gain.gain.setValueAtTime(0.001, startTime)
-      gain.gain.exponentialRampToValueAtTime(this.volume * 0.28, startTime + 0.015)
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.38)
+      gain.gain.exponentialRampToValueAtTime(this.volume * (type === 'void' ? 0.34 : 0.28), startTime + 0.015)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + (type === 'void' ? 0.5 : 0.38))
 
       osc.connect(gain)
       gain.connect(ctx.destination)
       this.registerCleanup(osc, gain)
       osc.start(startTime)
-      osc.stop(startTime + 0.4)
+      osc.stop(startTime + (type === 'void' ? 0.52 : 0.4))
+    })
+  }
+
+  // Void Reel Tekilliği: Derin void riser + prizmatik çan yağmuru
+  playMythicCollect() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const riser = ctx.createOscillator()
+    const riserGain = ctx.createGain()
+    riser.type = 'sawtooth'
+    riser.frequency.setValueAtTime(110, ctx.currentTime)
+    riser.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3)
+    riserGain.gain.setValueAtTime(this.volume * 0.3, ctx.currentTime)
+    riserGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32)
+    riser.connect(riserGain)
+    riserGain.connect(ctx.destination)
+    this.registerCleanup(riser, riserGain)
+    riser.start()
+    riser.stop(ctx.currentTime + 0.32)
+
+    const sub = ctx.createOscillator()
+    const subGain = ctx.createGain()
+    sub.type = 'sine'
+    sub.frequency.setValueAtTime(90, ctx.currentTime + 0.26)
+    sub.frequency.exponentialRampToValueAtTime(34, ctx.currentTime + 0.7)
+    subGain.gain.setValueAtTime(this.volume * 0.7, ctx.currentTime + 0.26)
+    subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7)
+    sub.connect(subGain)
+    subGain.connect(ctx.destination)
+    this.registerCleanup(sub, subGain)
+    sub.start(ctx.currentTime + 0.26)
+    sub.stop(ctx.currentTime + 0.7)
+
+    const chimes = [1046.5, 1318.51, 1567.98, 2093.0, 2637.02, 3135.96]
+    chimes.forEach((f, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = 'sine'
+      const t = ctx.currentTime + 0.28 + i * 0.045
+      osc.frequency.setValueAtTime(f, t)
+      g.gain.setValueAtTime(0.001, t)
+      g.gain.exponentialRampToValueAtTime(this.volume * 0.4, t + 0.012)
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
+      osc.connect(g)
+      g.connect(ctx.destination)
+      this.registerCleanup(osc, g)
+      osc.start(t)
+      osc.stop(t + 0.5)
     })
   }
 
@@ -388,7 +661,10 @@ class SoundManager {
     const ctx = this.getContext()
     if (!ctx) return
 
-    if (type === 'heart_frenzy') {
+    if (type === 'void') {
+      this.playMythicCollect()
+      return
+    }    if (type === 'heart_frenzy') {
       // 1. Kalp histerisi: Sub kick nabzı + yüksek voltajlı arpej
       const kick = ctx.createOscillator()
       const kickGain = ctx.createGain()

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref, useId } from 'vue'
 import { AlertTriangle } from 'lucide-vue-next'
+import { useFocusTrap } from '../core/focus-trap'
 
 defineProps<{
   title: string
@@ -12,6 +14,18 @@ const emit = defineEmits<{
   (e: 'confirm'): void
   (e: 'cancel'): void
 }>()
+
+// Başlık id'si benzersiz olmalı: ConfirmModal aynı anda birden fazla yerde açılabiliyor.
+const titleId = useId()
+
+// Tehlikeli onaylarda güvenli varsayılan: odak "Vazgeç" butonunda başlar.
+const cancelButtonRef = ref<HTMLButtonElement | null>(null)
+
+// Bileşen yalnızca açıkken mount edildiği için tuzak her zaman etkin.
+const { dialogRef } = useFocusTrap(true, {
+  initialFocus: cancelButtonRef,
+  onEscape: () => emit('cancel')
+})
 </script>
 
 <template>
@@ -19,9 +33,15 @@ const emit = defineEmits<{
   <div
     class="layer-modal fixed inset-0 flex items-center justify-center p-4 bg-black/70"
     @click.self="emit('cancel')"
-    @keydown.esc="emit('cancel')"
   >
-    <div class="modal-glass w-full max-w-xs rounded-2xl border border-white/10 bg-[#0b0d14]/95 p-5 shadow-2xl">
+    <div
+      ref="dialogRef"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="titleId"
+      tabindex="-1"
+      class="modal-glass w-full max-w-xs rounded-2xl border border-white/10 bg-[#0b0d14]/95 p-5 shadow-2xl outline-none"
+    >
       <div class="flex items-start gap-3 mb-4">
         <div
           class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -30,12 +50,13 @@ const emit = defineEmits<{
           <AlertTriangle class="w-4.5 h-4.5" :class="danger ? 'text-red-300' : 'text-amber-300'" />
         </div>
         <div class="min-w-0">
-          <h3 class="text-sm font-bold text-white leading-tight">{{ title }}</h3>
+          <h3 :id="titleId" class="text-sm font-bold text-white leading-tight">{{ title }}</h3>
           <p class="text-xs text-slate-400 mt-1 leading-snug">{{ message }}</p>
         </div>
       </div>
       <div class="flex gap-2">
         <button
+          ref="cancelButtonRef"
           class="btn-tactile flex-1 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 text-xs font-semibold cursor-pointer"
           @click="emit('cancel')"
         >

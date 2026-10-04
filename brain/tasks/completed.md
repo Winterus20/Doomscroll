@@ -1,6 +1,631 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
-## [2026-10-02] — Tick / Satın Alma / UI Performans Optimizasyonu (v0.21.1)
+## [2026-10-04] — Reset Tuşu Kök Neden Düzeltmesi
+
+### Kullanıcı talebi:
+- *"reset tuşu çalışmıyor"*
+
+### Kök neden (iki yük taşıyıcı hata):
+1. `App.vue:320-321` `beforeunload/pagehide → persistLocalSave` — Sıfırla localStorage'ı temizleyip `reload()` diyordu; unload sırasında persist ESKİ bellek durumunu diske geri yazıyordu. Misafir için bile %100 tutmuyordu.
+2. Girişli kullanıcıda `saveToCloud(true)` ESKİ serialize'ı buluta itiyordu (yorum "taze durum" diyordu ama store sıfırlanmamıştı) + promise reject olursa `.then(reload)` hiç çalışmıyordu (catch yok).
+
+### Düzeltme (`SettingsModal.vue:executeHardReset`):
+önce `store.$reset()` (bellek) → `SaveSystem.hardReset()` (disk) → `suppressSaves()` (reload'a kadar yarış koruması) → buluta TAZE durum + her halükarda reload.
+Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
+## [2026-10-04] — Alev Okunabilirlik 5.5 (gradyan sökümü + çekirdek renk)
+
+### Kullanıcı talebi:
+- Ekran görüntüsü: alevli sayı okunmuyordu.
+- Neden: `background-clip:text + transparent fill` piksel fontu çamurlaştırıyor, `-webkit-text-fill-color` soneklere miras kalıp çekirdeği yok ediyordu.
+- Düzeltme: alev = soluk sıcak çekirdek + turuncu hale + hafif titreme; sonek aralığı açıldı.
+- Doğrulama: `npm run build` 0 hata, `npm test` 162/162 yeşil.
+
+## [2026-10-04] — Çerçevesiz Sayaç 5.3 + Alev Efekti 5.4
+
+### Kullanıcı talebi:
+- *"o sayıyının çerçevesini sil"*
+- *"sayı aşırı hızlı artmaya başladığında yanmaya başlasın alev alsın sonra yavaşladığında normale dönsün"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. **5.3 Çerçeve silindi:** [`Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue) plaka sarmalayıcısı sade `dopa-wrap` oldu; `style.css` plaka/sheeen/ramp CSS'i silindi. Isı hissi yazı glow + nabız + /s okunda sürüyor.
+2. **5.4 Alev:** ısı skoru 0.75'te tutuşur, 0.6'nın altına inmeden sönmez (histerezis — titreme yok); tutuşma anında tek kor patlaması + tiz tick; alevde sonek rozetleri ve `/s` turuncuya döner; yavaşlayınca beyaz normale döner.
+3. Güvenlik: pil tasarrufu / azaltılmış hareket / OS terciğinde alev beyaza düşer (görünmez metin riski kapatıldı).
+4. Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
+## [2026-10-04] — Sayaç Okunabilirliği 5.2 (sonek rozeti + keskin gölge + hover netleşme)
+
+### Kullanıcı talebi:
+- *"daha okunabilir olsun sayılar"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. [`src/core/format.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/format.ts): `formatParts()` — sonek gövdeden ayrıldı (`1.23 M`, `1.23e45`, `e12.34` regex korumalı).
+2. [`src/components/Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): sonek ruloya girmiyor, küçük renkli rozet (üs amber, harf mor); `/s` 13→15px ve daha parlak.
+3. [`src/style.css`](file:///c:/Users/Yigit/Documents/Incremental/src/style.css): glow bulanıklığı ~yarıya indi, supernova kroması 1px'e çekildi (elektrik plaka çerçevesinde kaldı), harf aralığı açıldı, üzerine gelince rulo 0.12 sn'ye iniyor.
+4. Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
+## [2026-10-04] — Dopamin Nabzı 2.0 (Sütun 5.1: log-hız ısısı + büyüklük pop + tally tick)
+
+### Kullanıcı talebi:
+- *"en iyi ve en güzel görünecek şekilde yapmaya başlat"*
+- *"assetler de kullanabilirsin mcplerden yapıp veya internetten araştırıp"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. [`src/components/Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): ısı artık `mps/matter` oranı yerine `log10(mps)` tabanı + anlık burst (geç oyunda `calm` ölümü bitti); büyüklük kademeli pop (tık / sıçrama / büyük sıçrama); `/s` yanında ▲/▼ delta oku (~1.5 sn örnek); sheen hızı ısıya kenetli (4.5→1.4 sn); tek dekadda soft shake + tick, 10'arlı dekadda konfeti + medium shake + shockwave + payoff.
+2. [`src/style.css`](file:///c:/Users/Yigit/Documents/Incremental/src/style.css): dosyasız ısı rampası (`dopa-plate::before`, `--glow-i`), `count-pop-md/lg` kademesi, dekad flaşına scale zıplaması, `dps-delta` ok stilleri, `m6x11plus` Türkçe fallback, yeni animasyonlar reduce-motion listesinde.
+3. [`src/core/audio.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/audio.ts): `playTallyTick` (hıza göre tizleşen blip, 45ms throttle) + `playPayoff` (E6→B6 chime). Harici ses dosyası yok — synth kuralı korundu.
+4. Not: `texture-mcp` export kökü `Elementum`'a bakıyor (`Incremental` değil), bu yüzden dokular dosya yerine CSS gradient olarak üretildi — kök düzelince PNG'ye çevrilebilir.
+5. Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
+---
+
+## [2026-10-04] — Balatro Sütun 5: Hız-Reaktif Dopamin Sayacı (Odometre + Isı + Dekad Flaşı)
+
+### Kullanıcı talebi:
+- *"dopamin sayısı balatrodaki gibi artış hızına göre sürekli dopamin verecek şekilde gözüksün"*
+- *"en iyi şekilde yap"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. [`src/components/Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): rAF üstel yumuşatmalı `displayedMatter` (kesikli pencere yerine sürekli akış, log fark > 2'de anında yapış), logaritmik `rateTier` (sakin/ılık/sıcak/süpernova), konuma sabit slot şeritleri (`reel-strip` translateY, remount yok), dekad flaşı + 10'arlı dekadda konfeti, `aria-live` + `sr-only` erişilebilirlik, tıklama pop'u dış tablada (nabızla çakışmaz).
+2. [`src/style.css`](file:///c:/Users/Yigit/Documents/Incremental/src/style.css): kullanılmayan `public/fonts/m6x11.woff2` piksel font asset'i `@font-face` ile bağlandı, `dopa-plate` premium plaka (ısıya göre renk + sheen), `rate-warm/hot/supernova` nabız, `prefers-reduced-motion` + `reduce-anim` + `battery-saver` uyumu.
+3. Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
+---
+
+## [2026-10-04] — Balatro Sütun 2: "Reels Vuruşu" Sıralı Nedensellik (Sequential Triggering) (v0.28.0)
+
+### Kullanıcı talebi:
+- *"@[brain/research/balatro-uiux-synthesis-roadmap.md] buradaki sütun 2 için detaylı araştırma yap ve en iyi planı oluştur"*
+- *"en iyi şekilde yap"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. **Derin Araştırma & Mimari Analiz:**
+   - [`brain/research/balatro-column-2-sequential-triggering-deep-dive.md`](file:///c:/Users/Yigit/Documents/Incremental/brain/research/balatro-column-2-sequential-triggering-deep-dive.md): Tek kare sayı boşalması sorununun teşhisi, Incremental spam-click paradoksu ve Çift Hızlı Sıralı Nedensellik mimarisinin formüle edilmesi.
+   - [ADR-0038](file:///c:/Users/Yigit/Documents/Incremental/brain/decisions/0038-balatro-sequential-triggering-reels-strike.md): Mimari karar kaydı.
+2. **Veri ve Tip Katmanı:**
+   - [`src/models/types.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/models/types.ts): `StrikeStageId`, `StrikeStage`, `SequentialStrikePayload` tipleri ve `GameSettings.sequentialStrike` (varsayılan: `true`).
+   - [`src/stores/game.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts): `swipeBreakdown` getter'ı (Taban, Sinerji, Duruş/Kombo, Histeri CRIT, Final Slam) ve non-blocking `manualClick(coords)` aksiyonu; `dimensionShift` ve `buyGalaxy` fonksiyonlarına `doomscroll:macro-surge` olay yayımı.
+3. **Web Audio Polifonik Lydian Arpej Sentezleyici:**
+   - [`src/core/audio.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/audio.ts): `playSequentialStrike(stageCount, isCrit)` ile C4 $\to$ E4 $\to$ G4 $\to$ C5 Lydian arpeji, hızlı vuruşlarda pitch-ramping oktav tırmanışı, 65 Hz $\to$ 35 Hz tok mekanik sub-bass tokmağı ve `playMacroSurge` format basamak tonları.
+4. **Taktil Mikro ve Makro UI Katmanı:**
+   - [`src/components/SequentialStrikeLayer.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/SequentialStrikeLayer.vue): Balatro tarzı soldan sağa fırlayan yaylanan rozet patlamaları (`spring pop`), anti-lag coalescing (maks 3-4 grup) ve sinematik makro sıçrama barı.
+   - [`src/components/Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue) & [`src/components/DimensionsTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue): Koordinat senkronizasyonu.
+   - [`src/components/SettingsModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/SettingsModal.vue): Görsel sekmesine "Sıralı Reels Vuruşu (Balatro Pop-Chain)" toggle anahtarı.
+   - [`src/App.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/App.vue): Katman montajı.
+5. **Kalite Kapısı Doğrulaması:**
+   - `npm run build`: 0 hata, 1692 modül başarıyla paketlendi.
+   - `npx vitest run`: 7 dosya, **162/162 test yeşil** ([`src/stores/sequential-strike.test.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/sequential-strike.test.ts) dahil).
+   - Playwright canlı tarayıcı testi: Kaydır butonu, Space klavye kısayolu ve Ayarlar modalındaki anahtar canlı olarak doğrulandı.
+
+---
+
+## [2026-10-04] — Balatro Canlı GLSL Arka Plan Girdabı (AlgorithmicSwirl.vue) (v0.27.0)
+
+### Kullanıcı talebi:
+- *"@[brain/research/balatro-visual-math-uiux-breakdown.md] bununla beraber bizim ui kısmında neler yapabiliriz"*
+- *"bu dediklerini bir yere kaydet ve 1. için en iyi planı hazırla"*
+- *"en iyi şekilde yap"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. **Canlı WebGL Balatro Procedural Paint Swirl Shader'ı:**
+   - [`AlgorithmicSwirl.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/AlgorithmicSwirl.vue):
+     - Aspect-correct quantized UV basamaklandırması ve CRT retro piksel filtresi (480).
+     - Kutupsal UV açısı ve merkezkaç girdap deformasyonu (`atan2(uv.y, uv.x)` + açısal hız).
+     - 5 kademeli iteratif sinüs-kosinüs kaos dalgası döngüsü.
+     - 3-renkli boya ayrışması ve dinamik aydınlatma formülü.
+2. **Oyun Durumu Reaksiyon Matrisi & Pürüzsüz Lerp Motoru:**
+   - *Dingin Gece (02:47):* Koyu Gece Mavisi (`#0a0c16`) + Koyu Mor (`#4c1d95`).
+   - *Algoritma Frekansı (Hz):* $0.8 + 0.28 \times \log_{10}(\text{tickspeedMultiplier})$ ile logaritmik ivmelenme.
+   - *Kombo Hipnozu:* Elektrik İndigo + Neon Camgöbeği (`#06b6d4`), yüksek kontrast.
+   - *Gece Krizleri / Meydan Okumalar:* Kan Kırmızısı (`#e11d48`) + Abis.
+   - *Şafak 06:00 / Tekillik Eşiği:* Güneş Altını (`#f59e0b`) genişleyen süpernova.
+   - Ani renk sıçramalarını önleyen 60 FPS `lerp(current, target, dt * 2.8)` interpolasyonu.
+3. **Sıfır Performans Kaybı & Pil/Erişilebilirlik Kalkanı:**
+   - 0.5x dahili render tamponu ile %75 GPU fill-rate tasarrufu ve gerçek 90'lar piksel estetiği.
+   - `visibilitychange` ile sekme arka plana geçtiğinde rAF döngüsünün durdurulması (0% CPU/GPU).
+   - `batterySaver` veya `reduceAnimations` açıkken WebGL döngüsünün kapatılıp statik CSS gradyanına çekilmesi.
+4. **Ayarlar ve Store Entegrasyonu:**
+   - [`types.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/models/types.ts) ve [`game.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts): `swirlShaderQuality: 'off' | 'balanced' | 'high'`.
+   - [`SettingsModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/SettingsModal.vue): "Algoritma Arka Plan Girdabı (Balatro Swirl)" ayar kartı (`Yüksek (0.75x)`, `Dengeli (0.5x Retro)`, `Kapalı (Statik)`).
+   - [`App.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/App.vue): En alt z-katmanına montaj.
+
+### Doğrulama:
+- `npm run build`: 0 hata, 1689 modül derlendi.
+- `npx vitest run`: 157/157 test geçti.
+- Playwright ile canlı tarayıcı testi: WebGL canvas doğrulaması (768x337 dahili tampon, 1531x674 görünüm), Ayarlar modalı etkileşimi ve ekran görüntüsü kanıtı alındı.
+
+---
+
+## [2026-10-04] — Boyut Satın Alma Butonuna Çift Katmanlı Önizleme Barı (Preview Fill)
+
+### Kullanıcı talebi:
+- *"mesela dimlerde tekli alacağımız zaman paramızın kaç taneye yeteceğini gösteriyor ama mesela 5 tane alacaksam o barın ne kadarını dolduracağını göstermiyor onu düzelt"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. **Çift Katmanlı Zemin Barı (Current vs Preview Fill):**
+   - [DimensionRow.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionRow.vue):
+     - **1. Katman (Önizleme Dolgusu):** Oyuncunun parası yettiği adet miktarında (`preview.units`), 10'luk paket içinde barın nereye kadar dolacağını (`previewProgress = Math.min(10, packProgress + affordableUnits)`) şeffaf açık mor ve parıltılı bir zeminle gösterir (`previewFillPct`).
+     - **2. Katman (Mevcut Doluluk):** Şu ana kadar alınmış olan adedi koyu ve sabit mor dolguyla gösterir (`currentFillPct = (packProgress / 10) * 100`).
+2. **Kompakt Adet Artışı Rozeti:**
+   - Adet göstergesine yeşil renkte `(+X)` birim artış önizlemesi eklendi: örn. `2/10 (+5)` veya `0/10 (+3)`.
+3. **10'luk Paket Tamamlama Nabzı:**
+   - Eğer bu alımla 10'luk kova dolup tamamlanıyorsa (`completesPack`), önizleme barı %100'e ulaşıp `animate-pulse` ile ışıldar.
+
+### Doğrulama:
+- `npm run build`: 0 hata, 1686 modül derlendi.
+- `npx vitest run`: 154/154 test geçti.
+
+---
+
+## [2026-10-04] — Kullanıcı İlerlemelerinin Küresel Sıfırlanması (ADR-0037: Global Save Wipe)
+
+### Kullanıcı talebi:
+- *"kullanıcıların bütün ilerlemelerini sıfırla"*
+
+### Gerçekleştirilen İşlemler:
+1. **Sürüm Yükseltme ve Asgari Sürüm Eşiği (v16):**
+   - [save-version.ts](file:///c:/Users/Yigit/Documents/Incremental/src/core/save-version.ts): `SAVE_VERSION = 16`, `MIN_SUPPORTED_SAVE_VERSION = 16` yapıldı.
+2. **Otomatik Tasfiye ve Temizleme Kancası (`loadDetailed`):**
+   - [save.ts](file:///c:/Users/Yigit/Documents/Incremental/src/core/save.ts): Oyunu açan her kullanıcının yerel tarayıcısındaki v16 öncesi eski kayıtları veya yedekleri algılandığında otomatik olarak `SaveSystem.hardReset()` tetiklenerek tüm slotlar, yedekler (`_BAK`), legacy kayıtlar ve mock bulut verileri temizlendi.
+   - Oyun motorunun temiz 10 dopaminlik taze state ile başlaması sağlandı.
+3. **İçe Aktarma Kalkanı:**
+   - [save.ts](file:///c:/Users/Yigit/Documents/Incremental/src/core/save.ts) ve [game.ts](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts): Eski metin kayıtlarının geri yüklenmesi engellendi.
+
+### Doğrulama:
+- `npm run build`: 0 hata, 1686 modül derlendi.
+- `npx vitest run`: 154/154 test geçti.
+
+---
+
+## [2026-10-04] — Reels UI/UX, Taktil Ergonomi ve Tematik İyileştirme Mimarisi (ADR-0036)
+
+### Kullanıcı talebi:
+- *"reels kısmının ui ux kısmını iyice inceleyecek subagentlar oluştur ve neler yapabiliriz neyi geliştirebiliriz minimalist şekilde bunları araştırsınlar"*
+- *"düzelt"*
+
+### Gerçekleştirilen İyileştirmeler:
+1. **Space Tuşu Odak Tuzağı (Keyboard Focus Trap) Düzeltildi:**
+   - [Header.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): Kullanıcı herhangi bir butona bastıktan sonra Space tuşuna bastığında son tıklanan butonu tekrar tetikleme hatası giderildi; `target.blur()` ile odak temizlendi ve `e.preventDefault()` uygulandı.
+2. **Web Vibration API Taktil Dokunsal Titreşim:**
+   - [Header.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue) & [DimensionsTab.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue): Manuel kaydırmalarda `navigator.vibrate(8)` haptik mikrotık entegre edildi.
+3. **Dokunmatik Yukarı Kaydırma (Touch Swipe-Up Gesture):**
+   - [DimensionsTab.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue): Mobilde parmakla dikey yukarı fiskeleme (`touchstart`/`touchend` $\Delta y \le -36px$) jesti doğrudan kaydırma eylemini tetikler hale getirildi.
+4. **9:16 Dikey Mikro Video Posteri ve Yüzeye Çıkarılan Altyazılar:**
+   - [DimensionRow.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionRow.vue): Sol kenara formata özel renkte minik `Play` (▶) ikonu ve alt oynatma çizgisi içeren 9:16 dikey video çerçevesi eklendi.
+   - Başlığın altına gece saatini ve ironik alıntıyı içeren tek satır akıcı altyazı (`tierConfig.subtitle`) yüzeye çıkarıldı.
+5. **Linear Zemin Dolgusu & Bilişsel Yük Temizliği:**
+   - [DimensionRow.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionRow.vue): 10 ayrı `span` çubuğu yerine; butonun arka planında `%0 → %100` dolan gradyan zemin dolgusu ve kompakt `(X/10)` göstergesine geçildi. 80 gereksiz DOM span elemanı tasfiye edildi.
+   - Anlamsız gri `144p` etiketleri ve açılmamış partner formatların `🔗 Ayna Sinerjisi` rozetleri gizlendi.
+6. **Kademeli Açılma & Bento Sadeleştirmesi:**
+   - [Header.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): Duruş (Stance) butonları acemi oyuncudan (`bought < 25`) gizlendi.
+   - [DimensionsTab.vue](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue): Boş "Akış Kümesi D8 çağında açılır" gri kutusu kaldırıldı; erken oyunda tek kalan Akış Sıçraması kartı bento ızgarasını tam kaplayacak şekilde dinamikleştirildi (`gridColsClass`).
+
+### Doğrulama:
+- `npm run build`: **0 hata**, 1686 modül başarıyla derlendi.
+- `npx vitest run`: **154 testin 154'ü (%100) geçti**.
+- Detaylar: `brain/decisions/0036-reels-ui-ux-ergonomics-and-thematic-polish.md` ve [walkthrough.md](file:///C:/Users/Yigit/.gemini/antigravity/brain/7702511a-7f25-457d-8a92-554ea72fb888/walkthrough.md).
+
+---
+
+### Kullanıcı talebi:
+- *"oyundaki şu an olan bütün güçlendirmeler, matematik vs. gibi şeyleri kontrol et her şeyi subagentlarla beraber didik didik arayın oyunu bozacak şeyleri ve dengeleme için neler yapılması gerektiklerini bir sürü subagent oluştur hepsi derin ve detaylı araştırsın"*
+- *"oyunun dengesini bozacak demek istedim"*
+- *"düzelt hepsini ve dekad bonuslarını kaldır"*
+
+### Kök Neden Analizi ve Gerçekleştirilen Düzeltmeler:
+1. **Dekat Bonuslarının (Decade Surges / ADR-0034) Tasfiyesi:**
+   - `DECADE_SURGES`, `DecadeSurge` ve yardımcı fonksiyonlar `src/game/pacing.ts`'den; ilgili UI göstergeleri `src/App.vue`'dan; çarpan döngüsü `src/stores/game.ts`'den arındırıldı.
+2. **Challenge Hedef Desync'i (Severity 1 Bug Düzeltmesi):**
+   - Kriz tamamlanması `canSingularity` ($1.79 \times 10^{308}$) koşulundan kurtarıldı. `challengeGoalReached` getter'ı eklenerek her kriz kendi `goalMatter` eşiğinde bitirilir hale getirildi.
+3. **Çevrimdışı İlerlemede $1.800\times$ Kaskad Açığı:**
+   - `offlineSimBoost` `getDimensionMultiplier`'dan çıkarıldı; `update()` içindeki son dopamin adımında tekil olarak uygulandı ($(2.55)^8 \to 2.55\times$).
+4. **Seçim Düğümlerinde (Choice Nodes) Sessiz SP Buharlaşması:**
+   - Şafak veya kriz geçişinde sıfırlanan seçim düğümlerinin SP bedeli oyuncunun havuzuna eksiksiz iade edildi.
+5. **Shift 2 / D5 Tuğla Duvarı (8 Dekadlık Uçurum):**
+   - $D_5$ ve $D_6$ için `EARLY_D5_COST_RATIO = 24`, `EARLY_D5_SOFT_BUCKETS = 2` eklendi; erken sıçrama gereksinimi ilk adımlarda 10 adede çekildi.
+6. **Kriz Kilitlenmeleri (Softlocks):**
+   - C2'de durma süresince autobuyer botları otomatik beklemeye alındı; C5 maliyet şişmesine $10^{12}$ tavanı (softcap) konuldu.
+7. **Tickspeed 12.5x Patlaması & Distant Galaxies:**
+   - `galaxyBonus` tabanı 0.35 yapıldı; 60 galaksiden sonra Distant Galaxies kuadratik freni eklendi.
+8. **Toplu Uyku (Power Nap) Sonsuz Spam İstismarı:**
+   - Asgari bot eşiği `minNapBots` ile her nap sonrası dinamik artırıldı (`100 * 1.8^napCount`). Bot üremesine lojistik kapasite freni eklendi.
+9. **Başarım Çarpan Senkronizasyonu & SP Tabanı:**
+   - `achievementProductionMult` (2.5x) `update()` dopamin hesabına eklendi; taban SP 3'e çıkarıldı, `break_singularity` maliyeti 4 SP'ye çekildi; zayıf hibritler güçlendirildi.
+
+### Doğrulama:
+- `npm test`: 6 test dosyası, **154 testin 154'ü (%100) geçti**.
+- `npm run build`: Sıfır tip hatasıyla başarıyla derlendi.
+- Canlı Playwright UI testi: Konsolda sıfır hata/uyarı ile doğrulandı.
+
+---
+
+### Kullanıcı talebi:
+- *"botların otomatik alım da o sesler gelmesin"*
+- *"birde alt tab attıktan sonra geri döndüğümde o zamana kadar olan bütün sesleri yığıyor açılışta"*
+
+### Kök Neden Analizi:
+1. **Bot Alım Sesleri:**
+   - Botlar `buyMaxDimension`, `buyDimension`, `buyOneUnit`, `buyTickspeed`, `buyMaxTickspeed` çağırırken `playSound = false` verilse dahi, boyut satın alımlarında çağrılan `finalizeDimensionPurchase()` içinde `emitProductionSurge()` tetikleniyor ve her artışta koşulsuz `sounds.playProductionSurge()` çalıyordu.
+   - `buyTickspeed()` ve `buyMaxTickspeed()` içinde `emitProductionSurge(mpsBefore)` çağrısı `playSound` parametresine bakmadan ses çalıyordu.
+   - Bot döngüsünde `buyOneUnit(tier)` varsayılan parametreyle çağrılıyordu ve `buyMaxDimension(tier, false)` / `buyMaxTickspeed(false)` çağrılarında `feedbackSurge` true kalıyordu.
+2. **Alt-Tab Ses Yığılması (Web Audio Queueing / Catch-Up Backlog):**
+   - Tarayıcı sekmesi arka plana geçtiğinde (`document.hidden`), Web Audio API AudioContext donuyor veya tarayıcı tarafından zamanlayıcıları askıya alınıyordu.
+   - Sekmeye geri dönüldüğünde `game-loop.ts` veya `simulateOfflineProgress` devreye girip binlerce döngü adımını işletirken, tetiklenen tüm ses düğümleri donmuş AudioContext kuyruğuna yazılıyor ve odaklanıldığı milisaniyede yüzlerce ses aynı anda patlıyordu.
+   - `simulateOfflineProgress` içinde ses susturma bayrağı yoktu; Lab mutasyonları ve dekad dönüm noktaları offline simülasyonda da ses tetikliyordu.
+
+### Uygulanan Çözüm:
+1. **`src/core/audio.ts` (SoundManager Donanımsal Ses Susturma Zırhı):**
+   - `suppressed` bayrağı ve `suppressFor(ms)` metodu eklendi.
+   - `getContext()` içine `if (this.suppressed || (typeof document !== 'undefined' && document.hidden)) return null` guard'ı eklendi. Sekme arka plandayken veya susturulmuşken tek bir osilatör veya ses düğümü dahi oluşturulamaz/kuyruğa eklenemez.
+   - `visibilitychange` dinleyicisi eklendi: Sekme gizlendiğinde anında sessize alınır; sekmeye geri dönüldüğünde (`visible`) ilk 500ms boyunca tüm catch-up süresince ses üretimi engellenir.
+2. **`src/stores/game.ts` (Bot Alımlarında Sıfır Ses):**
+   - `emitProductionSurge(beforeMatterPerSec, playSound = true)` fonksiyonuna `playSound` ve `if (this.offlineSimActive) return` kontrolü eklendi.
+   - `finalizeDimensionPurchase(tier, mpsBefore, playSound = false)` imzası güncellenip alım metodlarından `playSound` aktarıldı.
+   - `buyDimension`, `buyMaxDimension`, `buyTickspeed`, `buyMaxTickspeed`, `buyDimensionUnits`, `buyOneUnit` fonksiyonları `playSound` parametresini `finalizeDimensionPurchase` ve `emitProductionSurge`'a iletir hale getirildi.
+   - Autobuyer döngüsündeki tüm alımlar `playSound = false` ve `feedbackSurge = false` ile çağrıldı.
+   - `simulateOfflineProgress()` başlarken `sounds.suppressed = true` yapıldı ve `try...finally` ile işlem bitince `sounds.suppressFor(300)` çalıştırıldı.
+   - Lab mutasyon sesleri (`playPlant`, `playCombo`) ve Dekad Milestone sesi (`playMilestone`) `if (!this.offlineSimActive)` şartına bağlandı.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) çalıştırıldı → **0 hata**, sorunsuz derlendi.
+
+---
+
+## [2026-10-06] — Açılış Artık Kapı Değil, Olay (ADR-0035)
+
+### Kullanıcı talebi:
+- *"bir özellik açıldığında ben eğer akış sıçraması veya akış kümesi alırsam dopamin sıfırlandığından açılan şey görünmez oluyor"*
+
+### Sorunun kaynağı:
+ADR-0009 kilitlemeleri `state`'ten türetmiş, kalıcılığı da `unlockedFeatures`
+yapışkan listesine bırakmıştı. Ama **kapının kendisi koşu içi sayaca bakıyordu**:
+
+- `src/game/unlocks.ts` → `checkUnlock()`, `dopamine` dalı: `ctx.matter.gte(req.amount)`.
+- `buildUnlockContext()` `state.matter`'i doğrudan kopyalıyordu.
+- `matter` bir **ölçüm**: `dimensionShift()`, `buyGalaxy()` ve `resetRunState()`
+  (şafak + `enterChallenge`/`exitChallenge`/`completeChallenge`) hepsini 10'a
+  sıfırlıyor. Ölçüm hafıza değildir.
+
+Merdivenin 15/16 basamağı dopamin eşiğine bağlı (1e3 → 1e308), yani rapordaki
+Gece Krizleri, Otomatik Botlar, Çılgın Kaydırma, Koloni, Kriz Yönetimi, Lab,
+Vicdan Azapları dahil **tümü** bu hatadan etkileniyordu. Kalıcılığın tek dayanağı
+olan `unlockedFeatures` listesi ise yalnızca `update()` başındaki 0.5 sn'lik
+`unlockCheckAcc` penceresinde yazılıyordu — Şafak Nöbeti Botu, çevrimdışı
+ilerlemenin büyük adımları veya oyuncunun tıklaması eşik aşıldığı anda listeye
+yazılmadan reseti tetikleyebiliyordu.
+
+Ayrıca merdiven dışındaki iki görünürlük kararı da aynı hatayı taşıyordu:
+`singularityUnlocked` (`matter.gte(1e30)`) ve Önbellek Temizleme kartı
+(`dimensionShifts >= 5`; `buyGalaxy()` bu sayacı 0'a indirdiği için ilk kümeden
+sonra kayboluyordu).
+
+### Uygulanan:
+- **`src/game/unlocks.ts`** (tek doğru kaynak): saf ve NaN korumalı
+  `raisedLifetimePeak()` / `lifetimeUnlockDopamine()` / `meetsDopamineGate()`
+  eklendi. `UnlockContext.lifetimePeakMatter` (opsiyonel) eklendi;
+  `checkUnlock` / `unlockProgress` / `unlockProgressFraction` dopamin dalları
+  artık `max(matter, hayat boyu tepe)` üzerinden okuyor — ilerleme çubuğu da
+  reset sonrası geriye gitmiyor.
+- **`src/stores/game.ts`**: `lifetimePeakMatter` (Decimal) + `lifetimePeakShifts`
+  (number) state alanları; **tek yazıcı** `syncUnlocks()`. `update()` döngüsünde
+  0.5 sn seyreltisiyle (merdiven tamamlandı kısa devresi kaldırıldı),
+  `dimensionShift()`'te sayaç artırıldıktan sonra ve `resetRunState()`'in başında
+  (şafak + 3 challenge yolu tek kancadan) çağrılır. `singularityUnlocked` ve
+  yeni saf `sacrificeUnlocked` getter'ı aynı mekanizmaya bağlandı.
+- **`src/components/DimensionsTab.vue`**: Önbellek Temizleme kartı artık
+  `store.sacrificeUnlocked`'ı okuyor, kendi kopyasını hesaplamıyor.
+- **Kayıt**: `SAVE_VERSION` 14 → **15**; `SerializedPlayerState`'e opsiyonel
+  `lifetimePeakMatter?: string` ve `lifetimePeakShifts?: number`.
+- **Geriye dönük uyum (veri kaybı yok)**: göç kancası yerine türetme —
+  `lifetimePeakMatter ← max(stats.highestMatter, matter, kayıtlı tepe)`,
+  `lifetimePeakShifts ← max(dimensionShifts, eski D8 alımı, kayıtlı tepe)`.
+  `stats.highestMatter` zaten hayat boyu zirve olduğundan bir v14 oyuncusu ilk
+  yüklemede kaybettiği açılışların tamamını geri kazanır.
+- **`src/game/unlocks.test.ts`**: 46 → 62 test (+16 ADR-0035 bloğu).
+
+### Doğrulama:
+- `npx vitest run` → **151/151 test geçti** (5 dosya).
+- `npm run build` (`vue-tsc && vite build`) → **0 tip hatası**, 1686 modül.
+- Store seviyesinde ayrıca uçtan uca doğrulandı (geçici test, sonra silindi):
+  Sıçrama/Küme sonrası tüm merdiven + Şafak sekmesi + Önbellek Temizleme kartı
+  açık kalıyor; `syncUnlocks()` hiç çalışmadan `resetRunState()` çağrılan yarış
+  penceresi kapalı; çevrimdışı ilerleme açılışları kaydediyor; v14 kayıt eksiksiz
+  geri yükleniyor; sıfırdan başlayan oyuncu hiçbir şey açık görmüyor.
+
+### Kapsam kararı:
+Satın alma kapıları **koşuya bağlı kaldı** — "görünürlük" değil "şu an alınabilir mi"
+soruları. `decadeSurgeMult` (ADR-0034) de bilinçli olarak koşu içi buff olarak kaldı.
+
+**Kapsam genişletmesi (koordinatör ajan, aynı gün):** Ajan "D4–D8 boyut açılışı koşuya
+bağlı kalsın" diye teslim etti; ancak bu, kullanıcı şikâyetinin **boyut tarafında açıkta
+kalan aynı semptomdu** — `buyGalaxy()` koşu sayacını 0'a indirdiği için tavan 8'den 3'e
+düşüyor ve ilk kümeden sonra D4–D8 satırları kayboluyordu. Karar: boyut açılışı da
+kalıcıdır (AD davranışı). `resolvedUnlockedDimensionCount()` artık
+`max(dimensionShifts, lifetimePeakShifts)` okur; `dimMultCacheKey`'e `lifetimePeakShifts`
+eklendi (türev bağımlılığı — eklenmeseydi bayat çarpan cache'ten dönerdi).
+İlk kümeden önce davranış birebir aynıdır; ücretsiz çarpan kazanılmaz (`bought`/`amount`
+sıfırlanır, tier çarpanları sıfırdan başlar). Yan fayda: `celebrateFormatUnlock` her
+koşuda aynı tier'ları tekrar kutlamıyor.
+
+### Bulut kayıt riski kapandı:
+`src/core/auth/cloud-conflict.ts` alan-bazlı birleştirme **yapmaz** (`isSameSave` /
+`evaluateWriteGuard` / `decideSyncAction` tam-payload karşılaştırması + tek parça
+yükleme-indirme) — `lifetimePeakMatter` düşme riski yoktur.
+
+### Bilinçli trade-off:
+`lifetimePeakMatter` kalıcı bir sayı olarak **daha fazla açılış korur**; bu, şu
+anda ölçülebilir bir denge maliyeti doğurmuyor (hiçbir yeni içerik erken açılmıyor,
+yalnızca ulaşılmış olan artık kaybolmuyor). Kayıt boyutu +2 alan (~30 bayt).
+
+Kayıtlar: [ADR-0035](../decisions/0035-permanent-unlock-record-lifetime-dopamine.md)
+
+---
+
+## [2026-10-05] — SP Artık Yalnızca Şafakta Kazanılır (ADR-0034)
+
+### Kullanıcı talebi:
+- *"bir dakika neden şafak yapmadan sp kazanıyoruz biz? bunun kaldırılması gerekiyor sp sadece şafak yaptığımızda gelmeli"*
+
+### Sorunun kaynağı:
+ADR-0032'nin **Dekad Primi** tablosu (`pacing.ts`), 1e6 → 1e300 arası 13 basamakta hayat boyu bir kez olmak üzere **72 SP** doğrudan SP bankasına yazıyordu. Yani hiç şafak (Sabah 06:00 Çöküşü) yapmadan SP kazanılıyor, Nöral Ağaç'tan düğüm alınabiliyor ve `spPerMinute` telemetrisi çöküş dışı kazancı da kapsıyordu.
+
+### Kullanıcı seçimi (3 seçenekten):
+- ✅ **Koşu içi buff'a çevir** — ödül SP değil, şafa kadar süren geçici üretim/hız çarpanı.
+
+### Uygulanan:
+- **`src/game/pacing.ts`**: `DECADE_BOUNTIES` → **`DECADE_SURGES`** (`sp` → `mult`); `DecadeBounty` → `DecadeSurge`; `totalDecadeBounty` → `totalDecadeSurgeMult`; `bountyForLog10` → `surgeForLog10`; `nextBountyForLog10` → `nextSurgeForLog10`. 13 eşik korundu, toplam **+36× koşu içi çarpan**.
+- **`src/stores/game.ts`**: basamak döngüsü artık SP yazmıyor, `decadeSurgeMult` biriktiriyor; çarpan `tickspeedMultiplier` içine bağlandı (üretim + tıklama); `resetRunState()` şafakta ve challenge girişinde 1'e döndürüyor.
+- **Kayıt**: `SAVE_VERSION` 13 → **14**; `decadeSurgeMult` serialize/deserialize ediliyor (v13- kayıtlarda 1).
+- **`src/App.vue`**: rozet "Sıradaki Dekad Yükselişi — ×N hız" (cyan) + **"Aktif ×N"** göstergesi; ipucu metinleri güncellendi.
+- **`src/game/pacing.test.ts`**: 11 teste güncellendi (`surgeForLog10`, `nextSurgeForLog10`, pozitif çarpan invariantı).
+
+### Doğrulama:
+- `npx vitest run` → **135/135 test geçti** (5 dosya).
+- `npm run build` → **0 tip hatası**, 1686 modül, 16.43 sn.
+
+### Bilinçli trade-off:
+İlk koşu artık 1 SP verir (kök düğüm) — eskiden 73 SP ile ağacın ~%20'si alınabiliyordu. Bu, kullanıcının kuralının doğrudan maliyetidir. Detay: `brain/decisions/0034-sp-only-at-dawn-decade-surge-run-buff.md`.
+
+---
+
+## [2026-10-04] — 1e308'e Kadar İçerik Merdiveni + Erken Oyun Düzeltmesi (v0.27.0 → v0.27.1)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi 1: *"oyunda açılabilir ve zamanla elde edilen güçlendirmeler ve başarımları 1e308'e kadar sürecek şekilde dengelemek istiyorum, şu ankileri bunun için plan yap"* → ardından *"en iyi şekilde düzelt, hatta başlamadan önce benzer projelerde neler yapmışlar onlara da bak"*.
+- Kullanıcı talebi 2: *"milyardan trilyona geçmek çok uzun sürüyor dimleri alması falan"* ve *"d4 yok 1. akış sıçramasında"*.
+
+### Ölçüm (önce):
+Headless harness gerçek Pinia store'unu sürdü (`results-308-audit.json`): **13 özellik kilidinin tamamı 60. dakikada açılıyordu**; kalan 257 dakikada (koşunun %81'i) sıfır yeni içerik. Dopamin ölçeğiyle bağlı yalnızca 4 içerik vardı → **1e30 ile 1e308 arası 278 dekad boş**. SP formülü tüm ağaç için 1e1401 gerektiriyordu; 8 meydan okumanın 8'i de aynı hedefteydi; idle profili `log10=12.41`de ölü kilitliydi.
+
+### Araştırma:
+Antimatter Dimensions (IvarK master), Cookie Clicker v2.058, Synergism, Progress Knight ve idle-game matematiği literatürü (Pecorella / Guan) kaynak kod seviyesinde incelendi. Alınan ilkeler: onluk kadanslı bot merdiveni, log-uzayı prestij formülü, kademeli meydan okuma açılışı, "3-Decade Kuralı", karesel maliyet ivmelenmesi.
+
+### Uygulanan (ADR-0032, v0.27.0):
+- **`src/game/pacing.ts`** (yeni): 9 adlandırılmış dekad bandı (0→308), `log10Safe`, `arcProgress01`, 13 basamaklı Dekad Primi tablosu (toplam 72 SP) + 10 test.
+- **`unlocks.ts`**: 14 → **16 basamaklı** merdiven; `dimBought` kapıları yerine dekad kapıları (1e3 … 1e308). `unlockProgressFraction` ile dopamin kapılarında logaritmik ilerleme çubuğu (1e308'de `Infinity/Infinity` hatası giderildi).
+- **`App.vue`**: **"Sonraki Açılacak" bandı** — bant adı, Şafak Yolu % çubuğu, sıradaki açılış + % ve sıradaki Dekad Primi rozeti.
+- **`achievements.ts`**: dopamin kategorisi 3 → **11 ölçek basamağı** (1e50…1e308) + **5 yeni kalıcı ödül** (`prod_x125`, `dim_cost_x085`, `click_x3`, `shift_power_boost`, `prod_x2`). Toplam başarım 68 → 75.
+- **`challenges.ts`**: 8 meydan okuma `1.79e308` → artan eğri **1e40 … 1e1000**.
+- **`game.ts`**: SP periyodu 308 → **45**; Dekad Primi ödül döngüsü (`claimedBounties` + kayıt yükleme); `break_singularity` doğrudan `eye_drops` arkasına taşındı; bot maliyetleri gevşetildi (idle kilidi); telafi kolları (DIM_PER_TEN_MULT 1.58, DIMENSION_CHAIN_RATE 0.060, MAX_BUY_PACKS_CAP 380).
+
+### Uygulanan (ADR-0033, v0.27.1):
+- **`BASE_UNLOCKED_DIMENSIONS` 2 → 3** → yeni oyun D1+D2+D3 ile başlar ve **1. Akış Sıçraması D4'ü açar**. Sabit dışa açıldı; `DimensionsTab.vue` teaser'ı tek kaynaktan hesaplıyor.
+- **D3/D4 yumuşak maliyet merdiveni** (D3 ×32/3 bucket, D4 ×28/2 bucket) — milyar→trilyon duvarını kırar.
+- **Erken sıçrama gereksinimi 25 → 20** (yalnızca ilk üç sıçrama).
+
+### Doğrulama:
+- `npx vitest run` → **134/134 test geçti** (5 dosya).
+- `npm run build` → **0 tip hatası**, temiz derleme.
+- Harness: **1e8 → 1e13 geçişi 4. ve 5. dakika arasında** tamamlanıyor (öncesi ~40 dk sıkışma). İlk 90 dakikada **~7 dakikada bir yeni içerik**. Idle profili 6 saatte `log10=100.55` (önceki: 12 saatte 12.41).
+- Yan etki: active toplam koşu 4:29 → **2:28**; hedef bandın (180–240 dk) altında. Telafi kolu bilinçli olarak uygulanmadı (ADR-0033 §3).
+- Detay: [`decisions/0032-decade-pacing-ladder-and-bounties.md`](../decisions/0032-decade-pacing-ladder-and-bounties.md) · [`decisions/0033-three-dimension-start-and-early-ladder.md`](../decisions/0033-three-dimension-start-and-early-ladder.md)
+
+---
+
+## [2026-10-03] — Bulut Kaydetme Sistemi Düzeltme Turu: Çakışma Ekrânı Artık Çalışıyor (v0.26.1)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"buluta kaydetme kısmını bi review yap detaylı"* → inceleme sonucu özellikle **işlevsel olarak bozuk** bulundu; kullanıcı *"en iyi şekilde düzelt"* ile düzeltilmesini istedi.
+- Kök Neden: Bulut kaydetme katmanı ADR-0029'un Playwright doğrulamasından sonra **kimse tarafından tekrar elle çalıştırılmamıştı**. Üç P0 hata birbirine bağlıydı ve hepsi aynı kök nedenden geliyordu: karar mantığı ağ/depolama detaylarıyla iç içe geçmiş, test edilemez hale gelmişti.
+
+### Bulunan ve Düzeltilen 3 Kritik Kusur (P0):
+1. **`force` bayrağı tüm uygulamada ölü koddu** → Çakışma ekranındaki *"Bu Cıhazdakini Sakla"* butonu **her zaman sessizce başarısızdı** (modal kapanır, hiçbir şey yazılmaz, hata gösterilmez). Elle *"Buluta Yedekle"* butonu da boşa dönüyordu — oyuncunun verisini korumak için bastığı buton.
+2. **5 dakikalık otomatik senkronizasyon tek seferlik çalışıyordu** → Çakışma tespiti "yerel vs bulut farklı mı?" diye soruyordu; oyuncu 5 dakika oynayınca ikisi zaten farklı olduğu için **ilk yazımdan sonra hiçbir şey yazılmıyor**, oyuncu 5 dakikada bir kapatılamayan modal görüyordu. Normal oynanış ile gerçek çakışma ayırt edilemiyordu.
+3. **`updatedAt` çalışma zamanında `Timestamp`, tipi `number`** → Canlı ortamda "Invalid Date" gösteriyordu. Mock yol düz sayı döndürdüğü ve doğrulama mock modunda yapıldığı için **görünmemişti**.
+
+### Ek Düzeltmeler (P1/P2):
+- **`beforeunload` bulut yazımı gerçekte hiç tamamlanmıyordu** → `visibilitychange` tabanlı senkrona geçildi + sekmeye dönünce bayat yedeği hemen yakalama.
+- **Yazma koruması istemci saatine dayanıyordu** → Yanlış saatli cihaz başka cihazın ilerlemesini sessizce eziyordu. Saat bağımsız (referans eşitliği) korumaya geçildi.
+- **Çıkış yarışı** → `sessionEpoch` koruması; çıkışta uçuşta kalan yazma state'i bozuyordu.
+- **Çakışmada yerel yedek alınmıyordu** → Modal *"mevcut slot yedeği tutulur"* diyordu ama yedek almıyordu; söz tutulmuyordu. Artık alınıyor.
+- **Hard Reset kalıcı değildi** → Sıfırlamadan 5 dakika sonra eski ilerleme çakışma ekranıyla geri geliyordu.
+- **`hardReset()` otomatik kayıt kalıcı olarak susturuyordu** → `resumeSaves()` hiçbir yerden çağrılmıyordu.
+- **Çevrimdışı oyuncuya "veritabanı oluşturun" mesajı** → Geçici kalıcı hata ayrımı yapıldı.
+- **Simülasyon modunda giriş sonrası hiçbir şey yazılmıyordu** → `storage` olayı yalnızca diğer sekmelerde tetiklendiği için; aynı sekmeye de bildirim gönderiliyor.
+- **Zaman aşımı / ölü timer / denetimsiz cast / iPad etiketi / kalıcı önbellek** düzeltildi.
+
+### Yapılan Mimari Değişiklik:
+1. **Saf karar katmanı ayrıldı** — [src/core/auth/cloud-conflict.ts](file:///c:/Users/Yigit/Documents/Incremental/src/core/auth/cloud-conflict.ts). Firebase/localStorage bilmeyen, doğrudan test edilebilir modül: `evaluateWriteGuard()`, `decideSyncAction()`, `isSameSave()`, `toMillis()`, `isCloudSavePayload()`.
+2. **Referans (ETag) tabanlı çakışma tespiti** — Cihazın "en son gördüğü bulut revizyonu" slot başına saklanıyor. Soru artık *"bulut hâlâ benim bildiğim belge mi?"*. Bu, normal oynanışı çakışmadan ayırırken ADR-0029'un yeni cihaz korumasını yaşatıyor.
+3. **Firestore kuralları DEĞİŞMEDİ** — Veri modeline dokunulmadı, yeniden deploy **gerekmiyor**; sadece satır referansları güncellendi.
+4. **27 regresyon testi** eklendi — Her P0 için "önce şuydu, şimdi böyle" kilidi.
+
+### Doğrulama:
+- `npm test` → **5 dosya, 134 test geçti** (27'si yeni).
+- `npm run build` (`vue-tsc && vite build`) → **0 tip hatası**, 1686 modül.
+
+### ADR:
+- [ADR-0033 — Bulut Kaydetme Karar Katmanının Yeniden Tasarımı](file:///c:/Users/Yigit/Documents/Incremental/brain/decisions/0033-cloud-sync-decision-layer-and-etag-conflict-detection.md)
+
+---
+
+## [2026-10-03] — Uzun Basış (Hold / Long-Press) Taktil Tooltip & Format Pasifleri Görünürlüğü (v0.26.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"Pasiflerin Görünürlüğü için tooltipleri açalım ama tooltip biz üstüne götürdüğümüz gibi değilde üstüne uzun basarsak açılsın"*.
+- Kök Neden & Amaç: Eski hover tabanlı tooltip sistemi farenin gezdiği her yerde anında popup çıkararak ekran kirliliği (hover pollution) yarattığı için devre dışı bırakılmıştı. Pasiflerin ne işe yaradığı (D1 CPS senkronu, D3 vicdan kesintisi, D4 kriz frekansı vb.) gizli kalmıştı. Amaç; hover gürültüsünü sıfırlayıp mobilde ve masaüstünde sadece **bilinçli uzun basış (Hold / Long-Press ~380ms)** ile açılan dokunsal, haptik ve siberpunk cam detay kartları sunmak.
+
+### Yapılan Mimari ve Arayüz Geliştirmeleri:
+1. **Uzun Basış (Long-Press / Hold) Tooltip Motoru (`src/core/tooltip.ts`):**
+   - Hover gürültüsü tamamen engellendi (`mouseenter` tetiklenmez).
+   - `pointerdown` ile ~380ms zamanlayıcı başlatılır. 380ms dolmadan parmak/fare kaldırılırsa veya 8px'den fazla kaydırılırsa (scroll hareketi) anında iptal edilir (normal tıklamalar sıfır gecikmeyle çalışır).
+   - Tetiklendiğinde mobil cihazlarda `navigator.vibrate(15)` hafif haptik dokunuş geri bildirimi verilir.
+   - Balatro / Cyberpunk temalı cam kart: `backdrop-blur-md`, neon mor/mavi parlama, başlık ve gövde ayrımı.
+   - Ekran dışına taşmayı önleyen dinamik sınır tespiti (Viewport Clamping).
+   - Parmak/fare kaldırıldığında rahat okuma için 1200ms gecikmeli kapanma veya ekrana dokunulduğunda anında gizlenme.
+2. **Format Pasiflerinin Görünür Kılınması (`DimensionRow.vue`):**
+   - Her format (D1-D8) için satır içine özel `⚡ [Pasif Adı]` rozeti eklendi:
+     - D1 Masum Kedi: `⚡ Sync +0.5%`
+     - D2 Gece 3 Lezzet: `⚡ Üretim +3%`
+     - D3 ASMR Hipnoz: `⚡ Vicdan -3%`
+     - D4 Bölünmüş Dikkat: `⚡ Kriz +8%`
+     - D5 Sigma Grindset: `⚡ Sıçrama -3%`
+     - D6 Hint Cliffhanger: `⚡ Offline +2%`
+     - D7 Varoluş Vakti: `⚡ Üretim +4%`
+     - D8 Brainrot Singularity: `⚡ D8 +6%`
+   - Bu rozetlerin üzerine uzun basıldığında pasifin adı ve detaylı etkisi ekranda parlar.
+   - Format başlığı, çözünürlük rozeti (144p - 4K), toplam çarpan ve Ayna Sinerjisi rozetleri de bu uzun basış sistemiyle net ve bilgilendirici hale getirildi.
+3. **DimensionsTab & CrisisTab Senkronizasyonu (`DimensionsTab.vue`, `CrisisTab.vue`):**
+   - `d3Passive` (Vicdan paneli), `d4Passive` (Kriz sekmesi hero başlığı) ve `d5Passive` (Sıçrama kartı) rozetleri başlık-açıklama formatıyla zenginleştirildi.
+4. **Doğrulama:**
+   - `npm run build` ile 1682 modül 0 tip/derleme hatası ile doğrulandı.
+   - Playwright MCP ile canlı yerel dev server üzerinde uzun basış simülasyonu yapıldı: `Masum Kedi Pasifi` ipucu kartının `opacity: 1` ile doğru HTML yapısında açıldığı ve normal `mouseenter` durumunda kesinlikle açılmadığı (`hoverTriggered: false`) kanıtlandı.
+
+---
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"oyuna giriş sistemi ekleyelim oyuncu hem normal kayıt olmadan oynayabilsin hem kayıt olarak kayıt olduğunda google dan giriş ekleyelim mesela orada yedekleme seçeneği olsun ona basınca bulutuna yedekle gibi bir şey olsun işte sen biliyorsundur neler yapılacağını birde email ve şifreyle kayıt olma olsun bunun için en iyi planı yap"*.
+- Kök Neden & Amaç: Oyuncuların cihazlar arasında (PC, mobil, tablet) ilerlemelerini kaybetmeden oynamaları, yerel tarayıcı temizliğinde dopamin kaybı yaşamamaları ve sıfır sürtünmeyle ister misafir ister bağlı hesapla oynayabilmeleri.
+
+### Yapılan Mimari ve Arayüz Geliştirmeleri:
+1. **Sıfır Sürtünmeli Misafir Modu (Zero-Friction Guest Mode):**
+   - Oyuncu siteyi açtığında hiçbir zorunlu giriş ekranı gösterilmez; yerel 3-slot `LocalStorage` sistemi aynen çalışır.
+   - Giriş yapıldığında yerel ilerleme silinmez; kullanıcının ilk bulut yedeği olarak doğrudan hesaba bağlanır.
+2. **Google ile Tek Tık Giriş & E-posta Desteği (`src/core/auth/auth-service.ts`):**
+   - Sayfa yenilenmeden açılan Google OAuth Popup (`signInWithPopup`).
+   - E-posta ve Şifre ile kayıt, giriş ve şifre sıfırlama (Password Reset) desteği.
+   - Provider-agnostic mimari + `.env` tanımlanmadığında otomatik çalışan **"Simülasyon / Dev Modu"** (sıfır kilitlenme).
+3. **Akıllı Bulut Senkronizasyon & Yedekleme Motoru (`src/core/auth/cloud-save-service.ts`):**
+   - Firestore üzerinde `users/{uid}/cloud_saves/{slotId}` şeması.
+   - "Buluta Yedekle" (Upload Current Save) ve "Buluttan Yükle" (Download Cloud Save) aksiyonları.
+   - 5 dakikalık periyodik arka plan oto-senkronizasyonu ve `beforeunload` güvencesi.
+4. **Çakışma Kalkanı (`src/components/CloudConflictModal.vue`):**
+   - Buluttaki kayıt ile yerel kayıt arasında fark tespit edildiğinde açılan iki sütunlu karşılaştırma kartı (Dopamin, Şafak, Oynama Süresi, Son Güncelleme).
+   - Kullanıcıya "Bu Cihazdakini Sakla" vs "Buluttakini Yükle" seçim hakkı.
+5. **Arayüz Entegrasyonları (`AuthModal.vue`, `Header.vue`, `SettingsModal.vue`):**
+   - **Header:** Üst barda pilin yanına ve mobil dock'ta ayarların yanına profil/bulut rozeti ve canlı senkron ışığı.
+   - **AuthModal:** Siberpunk neon cam tasarım, Google butonu, E-posta/Şifre sekmeleri, bağlı hesap ve bulut depolama durum kartı.
+   - **SettingsModal:** "Kayıt & Slotlar" sekmesinin tepesine Bento tarzı "Bulut Senkronizasyonu" yönetim kartı.
+6. **Doğrulama:**
+   - `npm run build` ile 1682 modül 0 hata ile derlendi.
+   - Playwright ile canlı tarayıcıda Google girişi, buluta yedekleme, Header durum güncellemesi ve SettingsModal kartı test edildi.
+- **ADR Referansı:** `brain/decisions/0029-guest-mode-google-auth-and-cloud-save-system.md`
+- **Plan Referansı:** `auth_cloud_save_plan.md`
+
+---
+
+## [2026-10-03] — En İyi Sistem Ayarları Mimarisi & Çoklu Kayıt Slotları (v0.24.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"sistem ayarları kısmını en iyi hale getir internetten araştırma yap"*.
+- Kök neden: Eski ayarlar penceresi 668 satırlık tek parça dikey bir listeydi; çoklu slot desteği, dosya seçimi, kayıt önizleme doğrulaması ve donanım tasarrufu gibi modern incremental oyun standartlarından yoksundu.
+- İnternet Araştırması: *Cookie Clicker*, *Antimatter Dimensions*, *Synergism* ve Reddit topluluğu incremental QoL best practice'leri iki aşamalı canlı web fetch ile incelendi.
+
+### Yapılan Mimari ve Arayüz Geliştirmeleri:
+1. **Çoklu Kayıt Slotları (3 Bağımsız Slot — `src/core/save.ts` & `src/stores/game.ts`):**
+   - Slot 1, Slot 2 ve Slot 3 bağımsız saklama alanları.
+   - Slot 1 eski kayıtlarla %100 geriye dönük uyumlu (`DOOMSCROLL_SAVE_V1`).
+   - Her slot için canlı meta verisi (Dopamin, Çöküş, Süre, Son Kayıt Zamanı).
+   - Slotlar arası geçiş (`switchSaveSlot`), slot klonlama (`copySaveSlot`), slot temizleme.
+   - 1 dakikalık otomatik rotasyon yedeği ve arayüzden tek tıkla kurtarma (`restoreFromBackup`).
+2. **Kayıt Güvenliği & Akıllı Önizleme:**
+   - `inspectSaveString`: Dışarıdan yapıştırılan veya yüklenen `.txt` save dosyasını doğrular, içindeki dopamin, çöküş, süre ve sürüm özetini gösterir.
+   - Güvenli Hard Reset: Yanlışlıkla basmayı önlemek için input kutusuna `RESET` yazma şartı.
+3. **Yeni QoL & Performans Kontrolleri (`src/models/types.ts` & `src/style.css`):**
+   - Sayı Hassasiyeti (2 vs 3 ondalık basamak).
+   - Pil & Düşük GPU Tasarruf Modu (`.battery-saver`: neon glow ve ağır filtreleri kapatır).
+   - Uçan Yazılar (+Dopamin / Floating Text) Aç/Kapa.
+   - Satirik Reels Haber Bandı (News Ticker) Aç/Kapa.
+   - Çevrimdışı İlerleme Karşılama Ekranı Aç/Kapa.
+   - Klavye Kısayolları Aç/Kapa (1-9, M, Space).
+4. **Bento Grid & Tabbed Modal Arayüzü (`src/components/SettingsModal.vue`):**
+   - 5 ergonomik sekme: 🎮 Oynanış & QoL, 🎨 Görsel & Ekran, 🎧 Lo-Fi Radyo & SFX, 💾 Kayıt & Slotlar, ⌨️ Kısayollar & Bilgi.
+   - Canlı otomatik kayıt telemetrisi ("Son kayıt: X sn önce · 10 sn aralık").
+   - Panoya Kopyalama + `.txt` dosya olarak bilgisayara indirme + `<input type="file">` dosya seçici.
+
+### Doğrulama:
+- `vue-tsc && vite build`: Sıfır TypeScript hatası, 1657 modül başarıyla derlendi.
+- `Playwright MCP`: Canlı tarayıcıda yerel dev server üzerinde Settings modalı açıldı, sekmeler arası geçiş ve reaktif state doğrulaması kanıtlandı.
+- Detaylı ADR: [`brain/decisions/0028-best-in-class-settings-and-multi-slot-save-system.md`](file:///c:/Users/Yigit/Documents/Incremental/brain/decisions/0028-best-in-class-settings-and-multi-slot-save-system.md).
+
+---
+
+## [2026-10-03] — Modüler Müzik Motoru Mimarisi & Kod Ayrıştırma (v0.23.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"birde sanırım bu music engine çok büyük oldu dosya onu parçalasak nasıl olur"* -> *"yap"*.
+- Kök neden: `src/core/music-engine.ts` dosyası 2843 satıra ulaşarak monolitik bir yapı almıştı; ses sentezi, enstrüman modellemeleri, akor bankaları, mikser grafiği ve scheduler aynı dosyada bulunuyordu.
+- Hedef: 2843 satırlık monolitik dosyayı `src/core/music/` paketi altında modüler, odaklanmış ve tip-güvenli alt modüllere bölmek; tüketici bileşenler (`Header.vue`, `App.vue`, `SettingsModal.vue`, `stores/game.ts`) için sıfır kırılma garantili geriye dönük uyumlu bir façade sunmak.
+
+### Oluşturulan Modüler Mimari (`src/core/music/`):
+1. **`types.ts`:** `MusicTrackInfo`, `MUSIC_TRACKS` ve enstrümanlar/sequencer'lar arasındaki bağımlılığı çözen `SynthContext` sözleşmesi.
+2. **`notes.ts`:** C1'den B6'ya 12-ton tam kromatik frekans haritası.
+3. **`instruments/keys.ts`:** Rhodes Mark I fiziksel modelleme (`playRhodesNote`), Lo-Fi pluck (`playLofiPluck`), Juno supersaw pad (`playSupersawPad`), synth lead (`playLeadSynth`).
+4. **`instruments/bass.ts`:** Sub-bass sentezi (`playSubBass`), portamento yönetimi ve analog synth bas (`playSynthBass`).
+5. **`instruments/drums.ts`:** J Dilla drunk davulları (`playSoftKick`, `playGhostSnare`, `playSnare`, `playGatedSnare`, `playClapLayer`, `playRimshot`, `playTom`, `playCrash`, `playHiHat`, `playShaker`).
+6. **`instruments/ambient.ts`:** Boru orgu (`playPipeOrgan`), koro nefesi (`playChoirExhale`), Shepard inişi (`playShepardFall`), balina uğultusu (`playWhaleCall`), kristal çan (`playCrystalBell`), müzik kutusu (`playMusicBox`), uzay pingi (`playSpacePing`).
+7. **`tracks/lofi-chill.ts`:** 6 caz akor bankası ve 4-cycle formlu `02:47 AM Lo-Fi Chill` Auto-DJ sıralayıcısı.
+8. **`tracks/synthwave.ts`:** 8-bölümlü sinematik `Cyberpunk Midnight` sıralayıcısı.
+9. **`tracks/ambient-drone.ts`:** Sürekli katedral & derin uyku `Interstellar Deep Sleep` sıralayıcısı.
+10. **`tracks/subway-groove.ts`:** Senkoplu funk `Subway Beats & Groove` sıralayıcısı.
+11. **`audio-graph.ts`:** Web Audio API bağlamı, master zincir, analog bant satüratörü (`WaveShaperNode tanh`), konvolüsyon reverbi, delay ve sürekli pembe/kahve gürültü yatağı.
+12. **`index.ts`:** `MusicEngine` orkestratör sınıfı, lookahead zamanlayıcısı ("A Tale of Two Clocks"), public API ve `musicEngine` singleton'ı.
+13. **`src/core/music-engine.ts`:** Tüketiciler için geriye dönük uyumlu tek satırlık temiz façade (`export * from './music'`).
+
+### Doğrulama:
+- `vue-tsc && vite build`: Sıfır TypeScript hatası, temiz production paketi oluşturuldu (1655 modül başarıyla derlendi).
+
+---
+
+## [2026-10-03] — Master Lo-Fi Chill Müzik Motoru & Akustik DSP Devrimi (v0.22.0)
+
+### Motivasyon & Kullanıcı Talebi:
+- Kullanıcı talebi: *"lofi radyosunu geliştirelim çok iyi hale getirelim bunun için araştırma yap ve kendi bilginle harmanla"* -> *"direkt lo fi diye bir radyo var onun müziğini en iyi hale getirmek istedim onun için araştırma yap"*.
+- Hedef: Oyundaki `lofi_chill` ("02:47 AM Lo-Fi Chill") parçasını sıradan yapay bir synth döngüsünden çıkarıp; gerçek Lo-Fi hip hop prodüksiyonları (Lofi Girl, J Dilla, Nujabes, Potsu, ChilledCow) kalitesinde, analog kaset sıcaklığına sahip, zengin caz/neo-soul akorları içeren, unquantized "drunk" davul hissiyatlı ve asla sıkmayan bir başyapıta dönüştürmek.
+
+### Yapılan Akustik ve Müzik Teorisi İyileştirmeleri (`src/core/music-engine.ts`):
+1. **Tam Kromatik Frekans Tablosu (`NOTES`):**
+   - 12 tonluk tam kromatik aralık (C1'den B6'ya kadar hem bemol hem diyez alias'ları ile) sisteme eklendi.
+2. **Analog Kaset Manyetik Doygunluğu (`WaveShaperNode` Tape Saturation):**
+   - `Math.tanh(x * 1.35)` transfer eğrisi ve `oversample = '4x'` ile master zincire analog bant sıcaklığı ve soft-clipping harmonikleri entegre edildi.
+3. **Fender Rhodes Mark I Fiziksel Modellemesi (`playRhodesNote`):**
+   - **Tine Çanı (Metallic Chime):** 3.96x temel frekansta hızla sönen metalik rezonans çanı eklendi.
+   - **Keçe Tokmak Darbesi (Felt Thump):** 95Hz mekanik tokmak vuruşu transient'i.
+   - **Suitcase Stereo Optik Tremolo:** 3.4 Hz hızında sol/sağ kulak arasında yumuşakça salınan stereo panner modülasyonu.
+   - **Çift LFO Tape Wow & Flutter:** 0.32 Hz yavaş bant esnemesi ve 5.3 Hz mikro-titreme.
+   - **Tuş Hassasiyeti (Velocity Bark):** Sert vuruşlarda açılan, yumuşak vuruşlarda kadifeleşen dinamik filtre takibi.
+4. **6 Zengin Neo-Soul & Caz Akor Bankası (`getLofiBank`):**
+   - Rootless 9'lu, 11'li, 13'lü akorlar, ikincil dominantlar ve tritone substitution (Db9) yürüyüşleri.
+   - Bank 0 (Sunday Rain Fmaj9-Em9-Dm9-Cmaj9), Bank 1 (3AM Thoughts Am9-Dm9-Db9-Cmaj9), Bank 2 (Tokyo Highway Fmaj9-G13-Em7-Am9), Bank 3 (Midnight Cafe Dm9-G13-Cmaj9-A7b13), Bank 4 (Paper Cranes Bm7b5-E7b9-Am9-Fmaj7#11), Bank 5 (Raindrops Bbmaj9-Am7-Gm9-Fmaj9).
+5. **İnsan Eli Akor Taraması (Strum / Rake):**
+   - Notalar aynı anda değil, 22ms'lik organik arpej gecikmesi ve hafif stereo yayılımla klavyeye dökülür.
+6. **Yürüyen Sub-Bas ve Kromatik Yaklaşım:**
+   - 14. adımda bir sonraki ölçünün kök sesine yarım ton alttan/üstten basarak kayan (chromatic approach) yürüyen bas.
+   - Notalar arasında 35ms portamento/glide ve 340Hz sıcaklık filtresi.
+7. **J Dilla "Drunk" Davul Hissiyatı:**
+   - **Laid-back Snare:** Trampet tam vuruşta değil, +22ms kasti gecikmeyle arkadan gelir.
+   - **Ghost Snare:** 14/15. adımlarda fısıltı gibi fırça/kasnak dokunuşları.
+   - **Swung Drunk Kick:** 7. ve 10. adımlarda +14ms sürüklenen gevşek kick darbesi.
+   - **SP-404 Pumping:** Her kick vuruşunda müziği ve arka planı nefes gibi eğen ducking sidechain.
+   - **Vintage Muffled Hi-Hat:** 5400-6400Hz bandpass sıcak vintage kaset şapkası.
+8. **Şarkı Formu (Arrangement Cycle):**
+   - 4 döngülük döngü formu: A (Full Beat) -> Varyasyon -> B (Melodik Zirve) -> C (Gece Boşluğu / Breakdown).
+   - Breakdown bölümünde davullar kısılır, Rhodes akorları genişler, yağmur ve vinil öne çıkar, 62-63. adımlarda yumuşak trampet süpürmesiyle ana akışa tekrar drop yapılır.
+9. **Çağrı-Cevap (Call & Response) Melodisi (`playLofiPluck`):**
+   - 0-1. ölçüde soru motifi, 2-3. ölçüde cevap motifi, vintage vibrato ve stereo delay.
+
+### Doğrulama:
+- `vue-tsc && vite build`: Sıfır TypeScript hatası, sıfır linter uyarısı (1643 modül başarıyla derlendi).
 
 ### Motivasyon & Kullanıcı Talebi:
 - Kullanıcı talebi: *"saniyede binlerce hızlı şey olurken işte satın alma ve sayının artması falan böyle olunca sayfa donmaya başlıyor onu bi kontrol et"* -> *"en iyi şekilde optimize et"*.

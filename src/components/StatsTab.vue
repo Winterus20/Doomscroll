@@ -752,6 +752,16 @@ async function copyReport() {
           </span>
         </div>
 
+        <div class="glass-panel-card p-3 rounded-xl border border-cyan-400/20 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <Sparkles class="w-4 h-4 text-cyan-300" />
+            <span class="text-xs text-slate-300 font-medium">Yakalanan Void Reel</span>
+          </div>
+          <span class="text-sm font-mono font-bold text-cyan-200 tabular-nums">
+            {{ (store.stats.mythicsClicked || 0).toLocaleString('tr-TR') }}
+          </span>
+        </div>
+
         <div class="glass-panel-card p-3 rounded-xl border border-white/[0.06] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <EyeOff class="w-4 h-4 text-rose-400" />

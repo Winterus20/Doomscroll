@@ -1,0 +1,120 @@
+{
+  // =============================================================================
+  //  Doomscroll: The Endless Reels — Firebase proje yapılandırması
+  //  İlgili ADR: brain/decisions/0028-firestore-security-rules-and-cloud-write-guards.md
+  //
+  //  NOT: Firebase CLI bu dosyayı JSONC (yorum destekli) olarak okur; aşağıdaki
+  //  yorumlar tamamen bilgilendirme amaçlıdır. Bir CI işi bu dosyayı doğrularsa
+  //  JSON.parse yerine jsonc5 gibi bir yorum destekleyici çözümleyici
+  //  kullanmalıdır.
+  // =============================================================================
+
+  "firestore": {
+    // Varsayılan RED + sahiplik kuralları -> users/{uid}/cloud_saves/slot_{1,2,3}
+    // Kaynak: src/core/auth/cloud-save-service.ts:54 (yazma) ve :77 (okuma)
+    // Deploy: firebase deploy --only firestore:rules
+    "rules": "firestore.rules"
+    // "indexes" BİLİNÇLİ OLARAK YAZILMADI: bu projede sunucu tarafi
+    // sorgu/sıralama yoktur (yalnızca getDoc ile tek belge okunur). Var olmayan
+    // bir firestore.indexes.json dosyasına referans vermek deploy'u gereksiz
+    // yere kırardı.
+  },
+
+  "hosting": {
+    // Vite 6 varsayılan çıktı dizini: vite.config.ts build.outDir tanımlamıyor
+    // -> "npm run build" (vue-tsc && vite build) sonucu ./dist altına yazılır.
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    // SPA: derin bağlantılar (örn. doğrudan dist'e yüklenen sayfalar)
+    // index.html'e döner.
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        // Vite çıktı adı hash'li olduğu için immutable sayılabilir.
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        // index.html ASLA cache'lenmez: aksi halde eski JS/SPA ateş güncellemesi
+        // kullanıcıya ulaşmaz ve bulut kaydı eski build'den okunabilir.
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "SAMEORIGIN"
+          }
+          // BİLEREK OLARAK Content-Security-Policy YAZILMADI.
+          // signInWithPopup (src/core/auth/auth-service.ts:106) Google / Identity
+          // Toolkit iframe'ini kullanır; daraltılmış bir CSP geçerli uygulamayı
+          // kırar. CSP eklenirse en az şu alanlar açık kalmalıdır:
+          //   script-src  'self' https://apis.google.com https://www.gstatic.com
+          //   frame-src   https://accounts.google.com https://*.firebaseapp.com
+          //   connect-src 'self' https://*.googleapis.com
+          //               https://*.firebaseio.com
+          //               https://securetoken.googleapis.com
+          //               https://identitytoolkit.googleapis.com
+        ]
+      }
+    ]
+  }
+
+  // ---------------------------------------------------------------------------
+  //  .firebaserc ile proje eşlemesi
+  // ---------------------------------------------------------------------------
+  //  Bu depoda .firebaserc YOKTUR ve bu ADR onu oluşturmamıştır; proje eşlemesi
+  //  .firebaserc veya --project bayrağı ile yapılır. firebase.json dosyasında
+  //  proje kimliği BULUNMAZ.
+  //
+  //  Beklenen içerik:
+  //    {
+  //      "projects": {
+  //        "default": "<VITE_FIREBASE_PROJECT_ID ile aynı proje>",
+  //        "prod":    "<canlı proje>",
+  //        "dev":     "<emulator / staging proje>"
+  //      }
+  //    }
+  //
+  //  TAKMA AD (ALIAS) NOTLARI
+  //    default : firebase deploy --only firestore:rules        (bu dosyayı okur)
+  //    prod    : firebase deploy --only firestore:rules,hosting --project prod
+  //    dev     : firebase emulators:start --only firestore
+  //              (emulator aynı firestore.rules dosyasını kullanır)
+  //
+  //  Envanter notu: API anahtarları (.env / VITE_FIREBASE_*) ASLA depoya
+  //  girmez; .env* dosyaları .gitignore'da tutulmalıdır.
+  // ---------------------------------------------------------------------------
+}

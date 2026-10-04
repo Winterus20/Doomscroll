@@ -1,6 +1,87 @@
 # Yapılacaklar Listesi (Backlog & Roadmap)
 
+## 🎨 Balatro Taktil UI/UX ve Görsel Matematik Girişimi (5 Sütun)
+*(Referans: `brain/research/balatro-uiux-synthesis-roadmap.md`)*
+- [x] **Sütun 1: Canlı GLSL Arka Plan Girdabı (AlgorithmicSwirl.vue)** ✅ *(v0.27.0)*
+  - [x] WebGL2/WebGL1 Canvas tabanlı prosedürel Balatro Paint Swirl shader'ı.
+  - [x] Algoritma Frekansı (Hz), Kombo, Kriz ve Şafak durumlarına göre dinamik renk/hız reaksiyonu.
+  - [x] 0.5x buffer, batterySaver/reduceAnimations uyumu, ayarlar menüsü entegrasyonu.
+- [x] **Sütun 2: Balatro Sıralı Nedensellik (Sequential Triggering) ile Reels Vuruşu** ✅ *(v0.28.0)*
+  - [x] Çift Hızlı Mimari (Tier A: Mikro-kaskad 180-240ms, Tier B: Makro-surge bar, Tier C: Anti-lag coalescing).
+  - [x] Web Audio Lydian polifonik yükselen arpej (C4, E4, G4, C5 + 50Hz sub-bass slam + CRIT parlaması).
+  - [x] GPU hızlandırmalı yaylanan rozet katmanı (`SequentialStrikeLayer.vue`).
+  - [x] Ayarlar modalında "Sıralı Reels Vuruşu" toggle anahtarı ve reduceAnimations entegrasyonu.
+  - [x] 5 yeni birim testi (162/162 yeşil) ve Playwright canlı tarayıcı doğrulaması.
+- [ ] **Sütun 3: Taktil 3D Kart Fiziği & Gerçek "Reels Yukarı İtme" (Spring Damping)**
+- [ ] **Sütun 4: Dört Özel Format Sürümü (Foil, Holo, Poly, Negative)**
+- [x] **Sütun 5: Mekanik Slot Odometresi & Veri Kanalı Olarak Screen Shake** ✅ *(v0.29.0)*
+  - [x] Hız-reaktif sayaç: 250ms throttle, logaritmik ısı kademesi, basamak rulo, dekad flaşı (`Header.vue` + `style.css`).
+- [x] **Sütun 5.1: Dopamin Nabzı 2.0 (log-hız ısısı + büyüklük pop + tally tick)** ✅
+- [x] **Sütun 5.2: Sayaç Okunabilirliği (sonek rozeti + keskin gölge + hover netleşme)** ✅
+- [x] **Sütun 5.3: Çerçevesiz Sayaç (plaka kaldırma)** ✅
+- [x] **Sütun 5.4: Alev Efekti (hızlı artışta tutuşma, yavaşlayınca sönme)** ✅
+- [x] **Sütun 5.5: Alev Okunabilirlik Düzeltmesi (gradyan sökümü + çekirdek renk)** ✅
+
+---
+
 ## ⚡ Aktif & Taktil Çekirdek (Cookie Clicker & Trimps - Tamamlandı ✅)
+
+---
+
+## ✅ ÇÖZÜLDÜ: İçerik 0→1e308 boyunca yayılıyor (ADR-0032 + ADR-0033)
+
+Ölçüm: 13 özellik kilidinin tamamı 60. dakikada açılıyordu; kalan **%81'de (257 dk)
+sıfır yeni içerik**; 1e30–1e308 arası 278 dekad boştu. **Çözüldü:**
+- `src/game/pacing.ts` — 9 dekad bandı (0→308) + 13 basamaklı Dekad Yükselişi (+36× koşu içi çarpan).
+- `unlocks.ts` — 16 basamaklı dekad merdiveni (1e3 → 1e308).
+- `App.vue` — **"Sonraki Açılacak" bandı** + Şafak Yolu ilerlemesi + sıradaki prim rozeti.
+- Başarımlar — 11 ölçek basamağı (1e50→1e308) + 5 yeni kalıcı ödül; 68 → 75 başarım.
+- Meydan okumalar — artan zorluk eğrisi (1e40 → 1e1000).
+- SP periyodu 308 → 45; Dekad basamakları ile kalıcı güçlendirme tüm koşuya yayıldı.
+- **ADR-0034:** SP artık **yalnızca şafakta** kazanılır; Dekad Primi sistemi koşu içi
+  **Dekad Yükselişi** çarpanına çevrildi (şafakta sıfırlanır, SP üretmez).
+- Idle ölü kilidi kaldırıldı (6 saatte log10=100.55; önce 12 saatte 12.41).
+- **ADR-0033:** `BASE_UNLOCKED_DIMENSIONS` 2 → 3, **D4 artık 1. sıçramada açılıyor**;
+  D3/D4 yumuşak maliyet merdiveni; erken sıçrama gereksinimi 25 → 20.
+  **Milyar→trilyon geçişi ~40 dakikadan ~1 dakikaya indi.**
+- Doğrulama: 134/134 test, 0 tip hatası, harness ölçümü.
+- Kayıtlar: [ADR-0032](../decisions/0032-decade-pacing-ladder-and-bounties.md) ·
+  [ADR-0033](../decisions/0033-three-dimension-start-and-early-ladder.md)
+
+**Kalan iş:** ADR-0033 §3 — active koşu 2:28'e indi (hedef band 3–4 sa). Eğer
+hedef band korunacaksa tek telafi kolu: `DIM_PER_TEN_MULT` 1.58 → 1.60.
+
+**ADR-0034 sonrası açık denge sorusu:** SP artık yalnızca şafakta geldiği için 1. koşu
+yalnızca **1 SP** verir (kök düğüm `insomnia_heart`); ağacın ilk 15–20 düğümü boşta kalıyor.
+Seçenekler: (a) birinci şafak taban SP'sini yükselt (`singularityGain` tabanı), (b) ağacın
+erken kademesinin maliyetlerini düşür, (c) mevcut hâliyle kabul et (prestij döngüsü sağlam).
+
+**Sıradaki büyük iş:** Faz 2 içeriği (Corruptions / Talismans) — aşağıdaki madde.
+
+---
+
+## 🔴 EN ÖNCELİKLİ: Faz 2 ve Faz 3 içeriği yok (ADR-0031)
+
+GDD (`GAME_DESIGN.md` §7) dört prestij katmanı vaat ediyor. Gerçekte:
+
+| Faz | Durum |
+| :--- | :--- |
+| Faz 0 — Yatak & Telefon | ✅ Çalışıyor |
+| Faz 1 — Sabah 06:00 Çöküşü | ✅ Çalışıyor (SP, Nöral Ağaç, botlar, krizler, 8 meydan okuma) |
+| **Faz 2 — Kolektif Gece Nöbeti** | ❌ **Tek bayrak**: `nightWatchUnlocked` 1e4000'de `true` olur, `SingularityTab` "FAZ 2 AÇIK" rozeti basar — arkasında hiçbir şey yok |
+| **Faz 3 — Evrensel Doomscroll** | ❌ **Hiç yok** |
+
+`singularityGain = 10^((log10 - 308) / 308)` sayısal bir sonsuz döngü verir, ama
+arkasında yeni mekanik yok. Oyuncu 1e4000'e gelip **aynı 9 sekmeyle** tekrar oynar.
+
+**Yapılacaklar:**
+- [ ] Uyku Baskısı Matrisi (**Corruptions** — 12 sürgülü ceza, Synergism'ten).
+      `challenges.ts` altyapısına en yakın aday; prestij döngüsüne doğal oturur.
+- [ ] Gece Ekipmanları (**Talismans** — donanım soketleri). Daha görsel, daha hızlı.
+- [ ] Kadim Gece Varlıkları (**Celestials**) + The Script Engine (Faz 3).
+- [ ] **"Sonraki Açılacak" bandını gerçekten uygula** (altyapısı hazır, yüzeyi eksik —
+      yukarıdaki düzeltilmiş maddeye bak).
+
 - [x] **Gece Krizleri & Viral Bildirimler (Altın Kurabiye Mekaniği):**
   - [x] Ekranda süzülen ışıltılı anomaliler (RNG spawn, 3 farklı etki).
   - [x] **Rezonans Hipnozu (Combo Stacking):** Gece 3 (7x) ve Başparmak Histerisi (777x) aynı andayken 5,439x süper dopamin patlaması.
@@ -19,7 +100,12 @@
 - [x] Store getter'larını registry'e bağla (`isFeatureUnlocked`, `syncUnlocks`; lab/crisis/autobuyers getter'ları tek yerden üretiliyor — kritik `unlockedDimensionsCount` bug'ı fixlendi).
 - [x] Sekme içi kademeli açılmalar: Lab tohumları (Kedi→Kaşar→Subway→Phonk), Kriz büyüleri (Şarj→Espresso→Kulaklık→Yalan), Algoritma Yamaları + Akışı Yenile.
 - [x] Kilitli kart UX: `LockedFeature.vue` (kilit simgesi + şart metni + slate mini ilerleme çubuğu + v-tip).
-- [x] "Sonraki Açılacak" bandı (App.vue nav altında, `nextLocked` + ilerleme %).
+- [ ] ~~"Sonraki Açılacak" bandı~~ **DÜZELTME (ADR-0031):** Bu satır v0.11.0'da
+  "tamamlandı" işaretlenmiş ama **kodda hiçbir yerde yok**. `Header.vue:472` yorumu
+  bile bandın varlığını varsayıyordu. Gerçekte yalnızca `DimensionsTab.vue` içinde
+  TEK bir sonraki boyut ipucu ("D3 ASMR — 1. Akış Sıçraması ile açılır") var.
+  Altyapı hazır (`unlocks.ts:nextLocked()` 20 rungsuzluk merdiveni + hazır Türkçe
+  ipuçları + `LockedFeature.vue`), **yüzey eksik**. Bkz. aşağıdaki Faz 2 maddesi.
 - [x] Eşik ince ayarı: Lab (100 Dopamin → D2×25), Botlar (1e4 → 1e6), Anomali (başlangıç → 100 Dopamin), stances (Çılgın/Düşük Parlaklık → D1×50). ADR: `brain/decisions/0009-feature-unlock-ladder.md`.
 - Plan: `brain/research/feature-unlock-ladder-plan.md`
 

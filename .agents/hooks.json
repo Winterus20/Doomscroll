@@ -1,0 +1,46 @@
+{
+  "search-fetch-enforcer": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "search_web",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./hooks/search_tracker.cjs set",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "read_url_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./hooks/search_tracker.cjs clear",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./hooks/search_tracker.cjs check_write",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ./hooks/search_tracker.cjs enforce_stop",
+        "timeout": 5
+      }
+    ]
+  }
+}

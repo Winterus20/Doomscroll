@@ -44,6 +44,11 @@ export interface ChallengeDef {
 
 export const CHALLENGE_GOAL_MATTER = '1.79e308'
 
+// ADR-0032: Meydan Okuma Zorluk Eğrisi (1e40 → 1e1000).
+// Eski tasarımda tüm 8 meydan okuma da 1.79e308 hedefliyordu, yani oyuncu
+// ilk çöküşten sonra bile tam bir 4 saatlik koşu yapmadan tek bir challenge
+// tamamlayamıyordu. Eğri erken meydan okumaları erişilebilir kılar, son iki
+// meydan okumayı 1e308'in ötesine taşıyarak uzun vadeli endgame içeriği sağlar.
 export const CHALLENGES: ChallengeDef[] = [
   {
     id: 'c1',
@@ -53,7 +58,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: 'Telefon uçak modunda, başparmak manuel viteste.',
     ruleDesc: 'Otomatik Kaydırma Botları devre dışı; her şey elle alınır.',
     rewardDesc: 'Kalıcı ödül: Tüm boyutlar ×1.5',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e40',
     unlock: { kind: 'singularities', count: 1 },
     modifiers: { autobuyersDisabled: true },
     reward: { kind: 'dim_mult', value: 1.5 },
@@ -67,7 +72,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: '%1 pil ile priz kavgası: her dokunuş akışı keser.',
     ruleDesc: 'Her alım üretimi 3 sn durdurur, sonra 60 sn\'de lineer döner.',
     rewardDesc: 'Kalıcı ödül: Algoritma Frekansı etkisi +%15',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e70',
     unlock: { kind: 'singularities', count: 1 },
     modifiers: { productionHaltOnBuySec: 3 },
     reward: { kind: 'tickspeed_effect', value: 1.15 },
@@ -81,7 +86,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: 'Kayıtlı videolar tozlu başlar, izlendikçe parlar.',
     ruleDesc: 'D1 %1 güçte başlar ama sn\'de ×1.004 büyür; Sıçrama/Küme\'de sıfırlanır.',
     rewardDesc: 'Kalıcı ödül: Tıklama gücü ×2',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e110',
     unlock: { kind: 'singularities', count: 1 },
     modifiers: { dim1BasePowerMult: 0.01, dim1ExpoGrowthPerSec: 0.004 },
     reward: { kind: 'click_mult', value: 2 },
@@ -95,7 +100,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: 'Algoritma çift numaralı içerikleri sansürledi.',
     ruleDesc: 'Yalnızca tek boyutlar (1-3-5-7) üretir.',
     rewardDesc: 'Kalıcı ödül: Çift boyutlar ×2',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e160',
     unlock: { kind: 'singularities', count: 1 },
     modifiers: { oddTiersOnly: true },
     reward: { kind: 'even_dim_mult', value: 2 },
@@ -109,7 +114,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: 'Her kaydırma ekonomiyi biraz daha bozar.',
     ruleDesc: 'Her boyut/frekans alımı diğer tüm boyutların maliyetini koşu-içi birikimli ×1.5 şişirir.',
     rewardDesc: 'Kalıcı ödül: Boyut maliyetleri -%10',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e220',
     unlock: { kind: 'singularities', count: 3 },
     modifiers: { costInflationOnBuy: 1.5 },
     reward: { kind: 'dim_cost_discount', value: 0.9 },
@@ -123,7 +128,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: 'Gözler yanıyor, frekans düşüyor.',
     ruleDesc: 'Frekans tabanı %40, alım çarpanı yarıya iner.',
     rewardDesc: 'Kalıcı ödül: Frekans maliyeti -%15',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: CHALLENGE_GOAL_MATTER, // 1.79e308
     unlock: { kind: 'singularities', count: 3 },
     modifiers: { tickspeedBaseMult: 0.4, tickspeedBuyMultScale: 0.5 },
     reward: { kind: 'tickspeed_cost_discount', value: 0.85 },
@@ -136,8 +141,8 @@ export const CHALLENGES: ChallengeDef[] = [
     name: 'Hesap Kısıtlaması',
     flavor: 'Platform hesabını kısıtladı: 6 format kotası.',
     ruleDesc: 'Yalnızca 6 boyut açık; Sıçrama/Küme gereksinimleri D6 formatına göre ölçeklenir.',
-    rewardDesc: 'Kalıcı ödül: Sıçrama gücü 2.0 → 2.2',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    rewardDesc: 'Kalıcı ödül: Sıçrama gücü 1.66 → 2.2',
+    goalMatter: '1e500',
     unlock: { kind: 'singularities', count: 5 },
     modifiers: { maxDimensions: 6 },
     reward: { kind: 'shift_power', value: 2.2 },
@@ -151,7 +156,7 @@ export const CHALLENGES: ChallengeDef[] = [
     flavor: '127 okunmamış mesaj ve sayım artıyor.',
     ruleDesc: 'Bildirim sayacı dolar; Sıçrama/Küme %40 temizler. %100\'de Bildirim Fırtınası: üretim ×0.5, her +%25 taşmada ek ×0.75.',
     rewardDesc: 'Kalıcı ödül: SP kazancı +%15',
-    goalMatter: CHALLENGE_GOAL_MATTER,
+    goalMatter: '1e1000',
     unlock: { kind: 'singularities', count: 5 },
     modifiers: { notificationDoomRatePerSec: 0.01 },
     reward: { kind: 'sp_gain', value: 1.15 },
@@ -171,11 +176,11 @@ export interface ChallengeRewardEffects {
   tickspeedEffectMult: number // C2: frekans etkisi
   dimCostMult: number // C5: boyut maliyet çarpanı (<1 = indirim)
   tickspeedCostMult: number // C6: frekans maliyet çarpanı (<1 = indirim)
-  shiftPower: number // C7: sıçrama gücü (taban 2.0)
+  shiftPower: number // C7: sıçrama gücü (taban 1.6)
   spMult: number // C8: SP kazancı
 }
 
-export const BASE_SHIFT_POWER = 2.0
+export const BASE_SHIFT_POWER = 1.66
 
 /** 8/8 tamamlama rozeti ("Zombi Bakışı"): tüm boyutlara kalıcı çarpan. */
 export const ALL_CHALLENGES_COMPLETE_MULT = 1.25

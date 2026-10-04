@@ -1,0 +1,10 @@
+feat: Dimensions/Unfolding kimlik sistemi, cloud sync + auth, pacing altyapisi (v0.18.0 adayi)
+
+- Firestore guvenlik kurallari ve cloud write guard'lari (ADR-0030)
+- AuthModal, Google auth, bulut kayit sistemi ve ettag catisma tespiti (ADR-0029, ADR-0033)
+- Dimensions/Unfolding tier kimligi ve iki-dimension baslangic akisi (ADR-0025, ADR-0027)
+- Early-game pacing, decade ladder, bounties ve tur temiz ek ekonomi (ADR-0024, ADR-0032)
+- Balatro gorsel sistemi + sequential triggering reels (ADR-0038)
+- Integrity/performance/accessibility duzeltme gecisi (ADR-0031)
+- Vitest test altyapisi ve yeni test dosyalari (achievements, challenges, pacing, unlocks, sequential-strike, balance)
+- Harness/clickaudit build artifact'lari .gitignore ile repoya girmez

@@ -32,10 +32,10 @@ export default {
         }
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'Roboto Mono', 'monospace'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        // Display: oyunun imza öğesi (hero Dopamin sayacı) — cyberpunk/k HUD karakteri
-        display: ['Chakra Petch', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['m6x11', 'Pixelify Sans', 'JetBrains Mono', 'Fira Code', 'Roboto Mono', 'monospace'],
+        sans: ['m6x11', 'Pixelify Sans', 'Chakra Petch', 'Inter', 'system-ui', 'sans-serif'],
+        // Display: Balatro / Vampire Survivors kimliği — m6x11 imza, Pixelify Sans Türkçe + gövde yedeği
+        display: ['m6x11', 'Pixelify Sans', 'Chakra Petch', 'Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
         'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',

@@ -1,0 +1,271 @@
+rules_version = '2';
+
+// =============================================================================
+//  Doomscroll: The Endless Reels — Firestore Security Rules
+//  Sahip: src/core/auth/cloud-save-service.ts, src/models/auth-types.ts
+//  Surum: v0.26.0 (ADR-0028)
+// =============================================================================
+//
+//  VERİ MODELİ (kaynak koddan birebir)
+//  -----------------------------------------------------------------------------
+//  CloudSaveService.saveToCloud() yalnızca ŞU yolu yazar (cloud-save-service.ts:228):
+//
+//      doc(db, 'users', user.uid, 'cloud_saves', `slot_${slot}`)
+//      -> users/{userId}/cloud_saves/slot_{1|2|3}
+//
+//    * userId = Firebase Auth uid (Google / E-posta / anonim)
+//    * slotId = "slot_" + SaveSystem.getActiveSlot(); getActiveSlot() yalnızca
+//               1, 2 ve 3 değerlerini kabul eder, aksi halde 1'e düşer
+//               (src/core/save.ts:95-103).
+//
+//  Yazılan üst-düzey alanlar (cloud-save-service.ts:214-218 + auth-types.ts:22-37):
+//
+//    compressedData  : string    SaveSystem.exportSave() = LZString.compressToBase64(
+//                                JSON.stringify(state))  (src/core/save.ts:325-328)
+//    meta            : map       CloudSaveMeta (auth-types.ts:10-18)
+//      matter         : string    dopamin (break_eternity Decimal metni)
+//      singularities  : number    "Sabah 06:00 Çöküşü" sayacı
+//      playtime       : number    SANİYE cinsinden (types.ts:190 "saniye")
+//      version        : number    kayıt şema sürümü
+//      activeSlot     : number    1 | 2 | 3 (slotId ile TUTMALI)
+//      clientTimestamp: number    ms cinsinden istemci saati (state.lastUpdate)
+//      deviceName     : string?   OPSİYONEL ("Windows PC", "Mobil Cihaz" ...)
+//    updatedAt       : timestamp serverTimestamp() (cloud-save-service.ts:234)
+//
+//  ---------------------------------------------------------------------------
+//  TEHDİT: VERİTABANI TEST MODUNDA KALDIYSA DÜNYAYA AÇIK KAYITLAR
+//  ---------------------------------------------------------------------------
+//  Firestore varsayılan olarak 30 günlük "test modu" ile gelir ve test modunda
+//  TÜM okuma/yazma herkese açıktır. Bu projede oyuncu ilerlemesi tek bir
+//  LZ-String dizesi içinde tutulur; sızmış bir istemci (ya da test modunda
+//  unutulmuş bir proje) tüm oyuncuların kayıtlarını listeleyip okuyabilir,
+//  rakiplerinin dopaminini sıfırlayabilir veya ilerlemelerini çalabilir.
+//  "world-readable / world-writable saves" senaryosunu istemci tarafındaki hiçbir
+//  kontrol engelleyemediği için koruma MUTLAKA sunucu tarafında olmalıdır.
+//
+//  Bu dosya DERİNLİKLİ SAVUNMA (defence in depth) uygular:
+//    (a) varsayılan RED   — her izin açık bir allow ifadesidir;
+//    (b) yalnızca SAHİP    — request.auth.uid == userId;
+//    (c) yazma doğrulama  — hasOnly/hasAll, boyut sınırı, slotId<->activeSlot;
+//    (d) create ile yolun FORGELENMESİ engellenir (tam payload doğrulanır);
+//    (e) "herkesin kayıtlarını listeleme" için liste izni yalnızca sahibin;
+//    (f) en sonda catch-all match /{document=**} { allow ... if false; }
+//        ile İLERİDE eklenen her koleksiyon KAPALI doğar.
+//
+//  BU DOSYA SİLME (delete) İZNİ VERMEZ: uygulama hiçbir yerde deleteDoc()
+//  çağırmaz (cloud-save-service.ts yalnızca setDoc/getDoc kullanır). İleride
+//  "bulut kaydını sil" özelliği istenirse buraya bilinçli bir delete kuralı
+//  eklenmelidir; şu an sessizce açık bırakmak yerine kapalı tutulur.
+//
+//  ---------------------------------------------------------------------------
+//  DOĞRULAMA / DEPLOY
+//  -----------------------------------------------------------------------------
+//  firebase deploy --only firestore:rules
+//
+//  * firebase.json -> "firestore": { "rules": "firestore.rules" }
+//  * .firebaserc    -> { "projects": { "default": "<project-id>" } }
+//                     (VITE_FIREBASE_PROJECT_ID ile AYNI proje olmalı)
+//  * Önce Firebase Console > Rules sekmesinde test modunun KAPALI ve
+//    Production modun seçili olduğunu doğrulayın.
+//  * Firebase Emulator ile test:
+//      firebase emulators:exec --only firestore \
+//        "firebase deploy --only firestore:rules --project <project-id>"
+//    ya da iki kullanıcı ile tarayıcıda manuel: B, A'nın
+//    users/{A-uid}/cloud_saves/slot_1 belgesini okumaya çalışınca DENEMELİ.
+//  * NOT: Bu depo Firebase Emulator çalıştırmıyor; kurallar yazılırken
+//    "deny-by-default" tercih edildi ve izinler SADECE yukarıdaki gerçek
+//    cloud-save-service.ts çağrılarını karşılayacak şekilde daraltıldı.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    //  0) YARDIMCI FONKSİYONLAR
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Sahiplik: yol segmenti ile oturum uid'i birebir aynı olmalı. */
+    function isOwner(userId) {
+      return isSignedIn()
+        && userId is string
+        && userId.size() > 0
+        && userId.size() <= 128            // Firebase uid azami 128 karakter
+        && request.auth.uid == userId;
+    }
+
+    /** SaveSystem yalnızca slot 1, 2 ve 3'i kabul eder. */
+    function isValidSlotId(slotId) {
+      return slotId in ['slot_1', 'slot_2', 'slot_3'];
+    }
+
+    /** meta.activeSlot sayısından beklenen belge kimliği. */
+    function expectedSlotIdFor(slot) {
+      return slot == 1 ? 'slot_1' : (slot == 2 ? 'slot_2' : 'slot_3');
+    }
+
+    /** Belge kimliği ile meta.activeSlot birbirini göstermeli. */
+    function slotIdMatchesMeta(slotId) {
+      return slotId == expectedSlotIdFor(request.resource.data.meta.activeSlot);
+    }
+
+    /** compressedData: boş olmayan, makul boyutlu LZ-String base64 dizesi. */
+    function validCompressedData() {
+      let blob = request.resource.data.compressedData;
+      return blob is string
+        && blob.size() >= 8               // sıfır/tek-karakter kayıt anlamsız
+        && blob.size() <= 900000;         // Firestore doküman limiti ~1 MiB
+    }
+
+    /** meta: gerçek CloudSaveMeta şekli + makul sayı aralıkları. */
+    function validMeta() {
+      let m = request.resource.data.meta;
+      return m is map
+        // deviceName opsiyonel; geri kalan altı alan ZORUNLU
+        && m.keys().hasAll([
+             'matter',
+             'singularities',
+             'playtime',
+             'version',
+             'activeSlot',
+             'clientTimestamp'
+           ])
+        && m.keys().hasOnly([
+             'matter',
+             'singularities',
+             'playtime',
+             'version',
+             'activeSlot',
+             'clientTimestamp',
+             'deviceName'
+           ])
+        // dopamin: break_eternity metni, boş olamaz
+        && m.matter is string
+        && m.matter.size() > 0
+        && m.matter.size() <= 64
+        && m.matter.matches('^[0-9eE+.-]{1,64}$')
+        // sayaç: negatif veya absürt olamaz
+        && m.singularities is number
+        && m.singularities >= 0
+        && m.singularities <= 1000000000000000
+        // oynama süresi: SANİYE (types.ts:190)
+        && m.playtime is number
+        && m.playtime >= 0
+        && m.playtime <= 10000000000
+        // şema sürümü
+        && m.version is number
+        && m.version >= 1
+        && m.version <= 1000
+        // slot 1..3 ve belge kimliğiyle uyumlu
+        && m.activeSlot is number
+        && m.activeSlot >= 1
+        && m.activeSlot <= 3
+        // istemci saati: negatif olamaz, 2100'ten büyük olamaz
+        // (rules dilinde timestamp ile number karşılaştırılamaz; bu yüzden
+        //  sunucu saatine kıyaslama yerine mutlak bir üst sınır kullanıldı)
+        && m.clientTimestamp is number
+        && m.clientTimestamp >= 0
+        && m.clientTimestamp <= 4102444800000
+        // opsiyonel cihaz adı
+        && (!('deviceName' in m)
+            || (m.deviceName is string && m.deviceName.size() <= 64));
+    }
+
+    /**
+     * updatedAt istemciden GELMEZ. cloud-save-service.ts:234 her zaman
+     * serverTimestamp() yazar; kurallar bunu request.time olarak görür.
+     * Bu denetim: (1) istemcinin saati FORGELAMASINI, (2) kaydın "geleceğe"
+     * yazılmasını ve (3) sayısal bir updatedAt ile oyun tarihinin bozulmasını
+     * engeller.
+     */
+    function validUpdatedAt() {
+      return request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    /** Tam kayıt doğrulaması — create ve update için ortak. */
+    function validSaveDocument(userId, slotId) {
+      let d = request.resource.data;
+      return isOwner(userId)
+        && isValidSlotId(slotId)
+        && d is map
+        && d.keys().hasAll(['compressedData', 'meta', 'updatedAt'])
+        && d.keys().hasOnly(['compressedData', 'meta', 'updatedAt'])
+        && slotIdMatchesMeta(slotId)
+        && validCompressedData()
+        && validMeta()
+        && validUpdatedAt();
+    }
+
+    // =========================================================================
+    //  1) USERS/{userId}
+    //     Uygulama users/{userId} belgesini hiçbir zaman YAZMAZ ve OKUMAZ;
+    //     tüm veri users/{userId}/cloud_saves/{slotId} altındadır. Bu yüzden
+    //     profil belgesi bilinçli olarak TAMAMEN KAPALI bırakıldı. (Profil
+    //     alanları ileride eklenirse önce burada açık bir allow yazılmalıdır.)
+    // =========================================================================
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    //  2) users/{userId}/cloud_saves/slot_{1|2|3}   <-- TEK GERÇEK YOL
+    // =========================================================================
+    match /users/{userId}/cloud_saves/{slotId} {
+
+      /** Tekil okuma: yalnızca belge sahibi. */
+      allow get: if isOwner(userId) && isValidSlotId(slotId);
+
+      /**
+       * Liste: "herkesin kayıtlarını listeleme" açığını kapatır.
+       * Firestore her belge için bu kuralı ayrı ayrı değerlendirdiği için
+       * B kullanıcı A'nın koleksiyonunu listeleyemez (userId != B.uid).
+       * Aynı sebeple users/{userId} seviyesinde HİÇBİR liste izni yoktur.
+       */
+      allow list: if isOwner(userId);
+
+      /**
+       * Create: yeni bir yol FORGE edilebilirdi (örnegin başka bir oyuncunun
+       * slot'unda belge yazmak ya da kendi slot_1 belgesine slot_2 meta'sı
+       * yazmak). Bu yüzden create için de payload'ın TAMAMI doğrulanır.
+       */
+      allow create: if validSaveDocument(userId, slotId);
+
+      /**
+       * Update:
+       *   - sahiplik zorunlu,
+       *   - payload tam doğrulanır,
+       *   - diff.affectedKeys().hasOnly(...) ile sonradan "gizli" bir üst-düzey
+       *     alan eklenmesi (create ile yasak olan şey update ile açılmaz)
+       *     engellenir.
+       *   - path segmenti değiştirilemez: Firestore yol segmentlerinin
+       *     değiştirilmesine izin vermez; ek olarak userId her istekte
+       *     request.auth.uid ile karşılaştırılır.
+       */
+      allow update: if validSaveDocument(userId, slotId)
+                    && resource != null
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['compressedData', 'meta', 'updatedAt']);
+
+      /** Kayıt silme: uygulama deleteDoc() çağırmaz -> kapatılır. */
+      allow delete: if false;
+
+      /** Bu yolun altında bugün hiçbir alt koleksiyon yok; ileriye dönük kapalı. */
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // =========================================================================
+    //  3) CATCH-ALL: bugün var olmayan, yarın eklenecek HER koleksiyon
+    //     varsayılan olarak KAPALI doğar. Yeni bir koleksiyon eklerken buraya
+    //     yazmayı UNUTMAYIN — sessizce reddedilmesi tercih edilir.
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

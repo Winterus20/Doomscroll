@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore, COMBO_THRESHOLDS, COMBO_DECAY_MS } from '../stores/game'
-import { format } from '../core/format'
+import { format, formatParts } from '../core/format'
 import type { StanceType } from '../models/types'
 import {
   Moon,
@@ -12,38 +12,47 @@ import {
   ArrowUp,
   Cpu,
   Layers,
-  Wifi,
-  Signal,
   Battery,
   Play,
   Pause,
   SkipForward,
   Lock,
-  Sun
+  Sun,
+  Cloud
 } from 'lucide-vue-next'
 import { musicEngine, MUSIC_TRACKS } from '../core/music-engine'
+import { sounds } from '../core/audio'
 import { getFeatureById, unlockProgress } from '../game/unlocks'
-import { Decimal } from '../core/math'
+import { Decimal, D_1 } from '../core/math'
+import { useAuthStore } from '../stores/auth'
 import ConfirmModal from './ConfirmModal.vue'
+import confetti from 'canvas-confetti'
 
-const emit = defineEmits(['open-settings'])
+const emit = defineEmits(['open-settings', 'open-auth'])
 
 const store = useGameStore()
+const authStore = useAuthStore()
 const swipeBtnRef = ref<HTMLButtonElement | null>(null)
 const counterRef = ref<HTMLElement | null>(null)
+const perSecRef = ref<HTMLElement | null>(null)
+const dpsSurgeActive = ref(false)
+const dpsSurgeDelta = ref('')
 let popTimer: number | null = null
+let dpsSurgeTimer: number | null = null
 
-// Faz 4 juice + P0 Balatro: tıklamada sayaç pop; kombo aktifken kromatik versiyon
-function popCounter() {
-  const el = counterRef.value
+// Faz 4 juice + P0 Balatro: tıklamada sayaç pop; kombo aktifken kromatik versiyon.
+// Pop dış tablaya uygulanır — iç sayaçtaki sonsuz ısı nabzıyla çakışmaz.
+// Büyüklük kademesi: 0 normal tık, 1 üretim sıçraması, 2 büyük sıçrama/krit.
+function popCounter(intensity: 0 | 1 | 2 = 0) {
+  const el = counterRef.value?.parentElement ?? counterRef.value
   if (!el) return
-  const comboClass = comboActive.value ? 'count-pop-combo' : 'count-pop'
-  el.classList.remove('count-pop', 'count-pop-combo')
+  const comboClass = comboActive.value ? 'count-pop-combo' : intensity === 2 ? 'count-pop-lg' : intensity === 1 ? 'count-pop-md' : 'count-pop'
+  el.classList.remove('count-pop', 'count-pop-md', 'count-pop-lg', 'count-pop-combo')
   // Reflow ile animasyonu yeniden tetikle
   void el.offsetWidth
   el.classList.add(comboClass)
   if (popTimer !== null) clearTimeout(popTimer)
-  popTimer = window.setTimeout(() => el.classList.remove('count-pop', 'count-pop-combo'), 360)
+  popTimer = window.setTimeout(() => el.classList.remove('count-pop', 'count-pop-md', 'count-pop-lg', 'count-pop-combo'), 380)
 }
 
 // Canlı Ekolayzır (Visualizer) Barları
@@ -62,12 +71,245 @@ function nextTrack() {
   store.nextMusicTrack()
 }
 
-const formattedDopamine = computed(() => format(store.matter, 2, store.settings.notation))
+const formattedDopamine = computed(() => format(displayedMatter.value, 2, store.settings.notation))
+// Okunabilirlik: sonek (M/B/e45) ruloya girmez, ayrı rozet gibi çizilir.
+const dopaParts = computed(() => formatParts(displayedMatter.value, 2, store.settings.notation))
 const formattedPerSec = computed(() => format(store.matterPerSecond, 2, store.settings.notation))
 const formattedClickPower = computed(() => format(store.manualClickPower, 2, store.settings.notation))
 const tickspeedCost = computed(() => format(store.tickspeedCost, 2, store.settings.notation))
 const tickspeedMultiplier = computed(() => format(store.tickspeedMultiplier, 2, store.settings.notation))
 const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
+
+// Sütun 5 v2: rAF yumuşatma — görüntü değeri hedefe üstel yaklaşır, basamak şeritleri GPU'da kayar.
+// Kesikli pencere yerine sürekli akış; büyük sıçramada (log fark > 2) anında yapışır.
+const displayedMatter = ref<Decimal>(store.matter)
+const decadeFlash = ref(false)
+let smoothRaf = 0
+let lastFrame = 0
+let decadeTimer: number | null = null
+let lastDecade = 0
+
+const REEL_DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+function isDigitChar(ch: string): boolean {
+  return ch >= '0' && ch <= '9'
+}
+
+function currentDecade(): number {
+  try {
+    const m = store.matter
+    if (m.isNan() || Number.isNaN(m.mag)) return 0
+    if (!m.isFinite() || m.lte(0)) return 0
+    return Math.max(0, Math.floor(m.log10().toNumber()))
+  } catch {
+    return 0
+  }
+}
+
+// Log-hız ısısı: geç oyunda ölmeyen kademe. Taban = log10(mps) (mps 0.1→~0,
+// 1→0.13, 1e3→0.5, 1e7+→1.0); üzerine anlık göreli hızdan küçük momentum eklenir
+// (erken oyunda tıklama/sıçrama patlaması hissedilir, geç oyunda taban taşır).
+function logMpsNow(): number {
+  try {
+    const mps = store.matterPerSecond
+    if (mps.isNan() || Number.isNaN(mps.mag)) return -1
+    if (!mps.isFinite() || mps.lte(0)) return -1
+    return mps.log10().toNumber()
+  } catch {
+    return -1
+  }
+}
+
+const heatScore = computed(() => {
+  const l = logMpsNow()
+  if (!Number.isFinite(l)) return 0
+  const base = Math.min(1, Math.max(0, (l + 1) / 8))
+  let burst = 0
+  try {
+    const mps = store.matterPerSecond
+    if (mps.isFinite() && !mps.isNan() && mps.gt(0)) {
+      const baseM = store.matter.gte(D_1) ? store.matter : D_1
+      const rel = mps.div(baseM).toNumber()
+      if (Number.isFinite(rel) && rel > 0) burst = Math.min(0.35, rel * 0.35)
+    }
+  } catch { burst = 0 }
+  return Math.min(1, base + burst)
+})
+
+const motionOff = computed(() => store.settings.reduceAnimations || store.settings.batterySaver)
+
+// Logaritmik hız kademesi: skor <0.25 sakin, <0.5 ılık, <0.75 sıcak, üstü süpernova.
+type RateTier = 'calm' | 'warm' | 'hot' | 'supernova'
+const rateTier = computed<RateTier>(() => {
+  const s = heatScore.value
+  if (s >= 0.75) return 'supernova'
+  if (s >= 0.5) return 'hot'
+  if (s >= 0.25) return 'warm'
+  return 'calm'
+})
+
+
+// /s delta oku: ~1.5 sn arayla mps örneği, %5 bandı üstü ▲/▼.
+const mpsTrend = ref<1 | 0 | -1>(0)
+let trendLastMps = 0
+let trendLastT = 0
+
+function updateTrend(now: number) {
+  if (now - trendLastT < 1500) return
+  try {
+    const cur = store.matterPerSecond
+    if (trendLastT > 0 && cur.isFinite() && !cur.isNan()) {
+      const c = cur.toNumber()
+      if (Number.isFinite(c) && Number.isFinite(trendLastMps) && trendLastMps > 0 && c > 0) {
+        const d = (c - trendLastMps) / trendLastMps
+        mpsTrend.value = d > 0.05 ? 1 : d < -0.05 ? -1 : 0
+      }
+    }
+    trendLastMps = cur.isFinite() && !cur.isNan() ? cur.toNumber() : 0
+    trendLastT = now
+  } catch { /* yoksay */ }
+}
+
+// Alev histerezisi: 0.75'te tutuşur, 0.6'nın altına inmeden sönmez
+// (eşikte titreyip açılıp kapanmaz). Hareket kapalıyken alev yok.
+const flameOn = ref(false)
+watch(heatScore, (s) => {
+  if (!flameOn.value && s >= 0.75 && !motionOff.value) {
+    flameOn.value = true
+    // Tutuşma anı: tek seferlik kor patlaması (spam yok — geçişte bir kez)
+    try {
+      const r = counterRef.value?.getBoundingClientRect()
+      if (r) {
+        window.dispatchEvent(
+          new CustomEvent('doomscroll:shockwave', {
+            detail: { x: r.left + r.width / 2, y: r.top + r.height / 2, color: '#ff7b00', maxRadius: 150 }
+          })
+        )
+      }
+    } catch { /* yoksay */ }
+    sounds.playTallyTick(1)
+  } else if (flameOn.value && (s < 0.6 || motionOff.value)) {
+    flameOn.value = false
+  }
+})
+
+const counterHeatClass = computed(() => {
+  if (motionOff.value) return ''
+  switch (rateTier.value) {
+    case 'supernova':
+      return 'rate-supernova'
+    case 'hot':
+      return 'rate-hot'
+    case 'warm':
+      return 'rate-warm'
+    default:
+      return ''
+  }
+})
+
+// Odometre: format çıktısının ANA gövdesi karakterlere bölünür, değişen basamak
+// key değişimiyle rulo animasyonu alır. Sonek (M/B/e45) ayrı ve sabittir.
+const dopaChars = computed(() => dopaParts.value.main.split(''))
+
+function checkDecade() {
+  const dec = currentDecade()
+  if (dec > lastDecade) {
+    lastDecade = dec
+    // Ses her zaman (synth yöneticisi kapalıyken kendi susar); shake/shockwave
+    // sadece hareket serbestken — reduceAnimations/pil tasarrufunda yok.
+    if (!motionOff.value) {
+      decadeFlash.value = true
+      if (decadeTimer !== null) clearTimeout(decadeTimer)
+      decadeTimer = window.setTimeout(() => {
+        decadeFlash.value = false
+        decadeTimer = null
+      }, 900)
+      // Büyük dekadlar (10'arlı): konfeti + orta sarsıntı + şok dalgası + payoff.
+      if (dec % 10 === 0 && dec > 0) {
+        try {
+          confetti({ particleCount: 40, spread: 70, ticks: 120, disableForReducedMotion: true })
+        } catch { /* yoksay */ }
+        try {
+          sounds.playPayoff()
+          window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'medium' } }))
+          const r = counterRef.value?.getBoundingClientRect()
+          if (r) {
+            window.dispatchEvent(
+              new CustomEvent('doomscroll:shockwave', {
+                detail: { x: r.left + r.width / 2, y: r.top + r.height / 2, color: '#fbbf24', maxRadius: 220 }
+              })
+            )
+          }
+        } catch { /* yoksay */ }
+      } else {
+        // Tek dekad: hafif sarsıntı + tiz tick — "yeni büyüklük" hissi.
+        try {
+          window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
+        } catch { /* yoksay */ }
+        sounds.playTallyTick(0.7)
+      }
+    } else {
+      lastDecade = dec
+      sounds.playTallyTick(0.5)
+    }
+  } else if (dec !== lastDecade) {
+    lastDecade = dec
+  }
+}
+
+// Her karede görüntü değerini hedefe yaklaştır (üstel yumuşatma, ~6/sn hız sabiti).
+function tickSmooth(frameT: number) {
+  if (smoothRaf === 0) return
+  const dt = Math.min(0.1, Math.max(0, (frameT - lastFrame) / 1000 || 0))
+  lastFrame = frameT
+  const target = store.matter
+  if (motionOff.value) {
+    if (!displayedMatter.value.eq(target)) displayedMatter.value = target
+  } else {
+    const shown = displayedMatter.value
+    if (!shown.eq(target)) {
+      try {
+        if (
+          target.isNan() || Number.isNaN(target.mag) ||
+          shown.isNan() || Number.isNaN(shown.mag) ||
+          !target.isFinite() || !shown.isFinite() ||
+          shown.lte(0) || target.lte(0)
+        ) {
+          displayedMatter.value = target
+        } else {
+          const logDiff = Math.abs(target.log10().toNumber() - shown.log10().toNumber())
+          if (!Number.isFinite(logDiff) || logDiff > 2) {
+            displayedMatter.value = target
+          } else {
+            const relGap = target.minus(shown).abs().div(target).toNumber()
+            if (Number.isFinite(relGap) && relGap < 1e-9) {
+              displayedMatter.value = target
+            } else {
+              const k = 1 - Math.exp(-6 * dt)
+              const next = shown.plus(target.minus(shown).times(k))
+              displayedMatter.value = target.gt(shown)
+                ? (next.gt(target) ? target : next)
+                : (next.lt(target) ? target : next)
+            }
+          }
+        }
+      } catch {
+        displayedMatter.value = target
+      }
+    }
+  }
+  checkDecade()
+  updateTrend(frameT)
+  smoothRaf = requestAnimationFrame(tickSmooth)
+}
+
+function handleCounterVisibility() {
+  // Arka planda rAF durur; dönüşte eski kareden dev yumuşatma yerine anında yapış.
+  if (!document.hidden) {
+    lastFrame = performance.now()
+    displayedMatter.value = store.matter
+    lastDecade = currentDecade()
+  }
+}
 
 // Sabah 06:00 Çöküşü hazır: 1.79e308 Dopamin eşiği aşıldı
 const singularityReady = computed(() => store.canSingularity)
@@ -78,6 +320,13 @@ const singularityTip = computed(() =>
   singularityBroken.value
     ? `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Sınır yıkıldı: Shift/Galaxy botları e308 üstünde de çalışıyor.`
     : `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Shift/Galaxy botları sen kararı verene kadar bekliyor.`
+)
+
+// D1 (Masum Kedi) pasifi etkinse Kaydır tooltip'ine eklenir
+const swipeTip = computed(() =>
+  store.passiveBadges.d1Sync
+    ? 'Space ile de kaydır — D1 pasifi: CPS senkron tavanı +0.5%'
+    : 'Space tuşuna basarak da kaydırabilirsiniz'
 )
 
 function handleSingularity() {
@@ -133,12 +382,6 @@ const nightClock = computed(() => {
   const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
   const mm = String(totalMinutes % 60).padStart(2, '0')
   return `${hh}:${mm}`
-})
-
-const stanceLabel = computed(() => {
-  if (store.currentStance === 'spam') return 'Çılgın Kaydırma'
-  if (store.currentStance === 'private_mode') return 'Düşük Parlaklık'
-  return 'Yorgan Altı'
 })
 
 // 0-state onboarding: ilk format hiç alınmamışsa oyuncuya tek bir eylem çizilir
@@ -208,6 +451,41 @@ function buyTickspeed() {
   store.buyTickspeed()
 }
 
+function onProductionBump(e: Event) {
+  const detail = (e as CustomEvent<{ delta: string }>).detail
+  if (!detail?.delta) return
+  const delta = new Decimal(detail.delta)
+  if (delta.lte(0)) return
+  dpsSurgeDelta.value = `+${format(delta, 2, store.settings.notation)}/s`
+  dpsSurgeActive.value = true
+  // Büyüklük kademesi: sıçrama mevcut stoğun %25'ini aşarsa büyük pop + tiz tick.
+  try {
+    const baseM = store.matter.gte(D_1) ? store.matter : D_1
+    const ratio = delta.div(baseM).toNumber()
+    if (Number.isFinite(ratio) && ratio > 0.25) {
+      popCounter(2)
+      sounds.playTallyTick(1)
+    } else {
+      popCounter(1)
+      sounds.playTallyTick(0.55)
+    }
+  } catch {
+    popCounter(1)
+  }
+  const el = perSecRef.value
+  if (el) {
+    el.classList.remove('dps-surge')
+    void el.offsetWidth
+    el.classList.add('dps-surge')
+  }
+  if (dpsSurgeTimer !== null) clearTimeout(dpsSurgeTimer)
+  dpsSurgeTimer = window.setTimeout(() => {
+    dpsSurgeActive.value = false
+    dpsSurgeDelta.value = ''
+    dpsSurgeTimer = null
+  }, 1200)
+}
+
 // Combo rozeti: yalnızca Hipnotik Seri (combo_unlock) alınmışsa ve seri ≥2 iken görünür.
 // rAF döngüsü rozet görünürken başlar, seri ölünce durur — boşta CPU harcamaz.
 const comboCount = computed(() => store.clickCombo.count)
@@ -267,6 +545,13 @@ function handleManualClick(event?: MouseEvent) {
     y = rect.top + rect.height / 2
   }
 
+  // Taktil dokunsal titreşim (Web Vibration API - sessiz gece modunda bile haptik his)
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(8)
+    } catch { /* yoksay */ }
+  }
+
   // Taktil floating juice parçacığı
   window.dispatchEvent(
     new CustomEvent('doomscroll:tap', {
@@ -278,25 +563,34 @@ function handleManualClick(event?: MouseEvent) {
     })
   )
 
-  store.manualClick()
-  popCounter()
+  store.manualClick({ x, y })
+  popCounter(0)
 }
 
 // Klavye Kısayolu: Space ile Yukarı Kaydır
 function handleKeydown(e: KeyboardEvent) {
-  if (
-    e.code === 'Space' &&
-    (e.target as HTMLElement).tagName !== 'BUTTON' &&
-    (e.target as HTMLElement).tagName !== 'INPUT' &&
-    (e.target as HTMLElement).tagName !== 'TEXTAREA'
-  ) {
+  if (e.code === 'Space') {
+    const target = e.target as HTMLElement | null
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return
+    }
     e.preventDefault()
+    // Odaklanmış buton varsa odağı kaldır (Space'in son tıklanan butonu tekrar tetiklemesini engelle)
+    if (target && target.tagName === 'BUTTON') {
+      target.blur()
+    }
     handleManualClick()
   }
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('doomscroll:production-bump', onProductionBump as EventListener)
+  lastDecade = currentDecade()
+  displayedMatter.value = store.matter
+  lastFrame = performance.now()
+  smoothRaf = requestAnimationFrame(tickSmooth)
+  document.addEventListener('visibilitychange', handleCounterVisibility)
   visualizerInterval = window.setInterval(() => {
     if (store.settings.musicEnabled) {
       const data = musicEngine.getVisualizerData()
@@ -309,9 +603,23 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('doomscroll:production-bump', onProductionBump as EventListener)
+  if (dpsSurgeTimer !== null) {
+    clearTimeout(dpsSurgeTimer)
+    dpsSurgeTimer = null
+  }
   if (visualizerInterval !== null) {
     clearInterval(visualizerInterval)
     visualizerInterval = null
+  }
+  if (smoothRaf !== 0) {
+    cancelAnimationFrame(smoothRaf)
+    smoothRaf = 0
+  }
+  document.removeEventListener('visibilitychange', handleCounterVisibility)
+  if (decadeTimer !== null) {
+    clearTimeout(decadeTimer)
+    decadeTimer = null
   }
   if (popTimer !== null) {
     clearTimeout(popTimer)
@@ -332,8 +640,6 @@ onUnmounted(() => {
       <div class="flex items-center gap-2">
         <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
         <span class="font-bold text-slate-200 tracking-wider tabular-nums">{{ nightClock }}</span>
-        <span class="hidden sm:inline text-[11px] text-slate-500">|</span>
-        <span class="hidden sm:inline text-[11px] text-slate-400">{{ stanceLabel }}</span>
       </div>
 
       <!-- Orta: Gece Lo-Fi Radyo Mini Oynatıcı (U1: mobilde gizli — ilk bakışta sayaç + hedef tek odak) -->
@@ -379,67 +685,133 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Sağ: Şebeke, Wi-Fi & Pil (U1: diegetik kimlik korunur, sadece seyreltildi) -->
-      <div class="flex items-center gap-3">
-        <Signal class="hidden sm:block w-3.5 h-3.5 text-slate-400" />
-        <Wifi class="hidden sm:block w-3.5 h-3.5 text-slate-400" />
-        <div class="flex items-center gap-1 text-rose-400" v-tip="'Pil: %3 (Düşük Güç Modu)'">
-          <Battery class="w-4 h-4 text-rose-400" />
+      <!-- Sağ: Kullanıcı İsmi / Bulut & Pil -->
+      <div class="flex items-center gap-2">
+        <button
+          @click="emit('open-auth')"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all text-xs cursor-pointer active:scale-95"
+          :class="authStore.isAuthenticated ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20' : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-white'"
+          v-tip="authStore.isAuthenticated ? `${authStore.userDisplayName} (Bulut Hesabı)` : 'Giriş Yap / Kaydol'"
+        >
+          <Cloud class="w-3.5 h-3.5" :class="authStore.isAuthenticated ? 'text-cyan-400' : 'text-slate-400'" />
+          <span class="text-[11px] font-semibold">{{ authStore.isAuthenticated ? authStore.userDisplayName : 'Giriş Yap' }}</span>
+          <span v-if="authStore.isAuthenticated" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        </button>
+
+        <div class="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300" v-tip="'Pil: %3 (Düşük Güç Modu — yine de kaydırmaya devam)'">
+          <Battery class="w-4 h-4 text-rose-300" />
           <span class="text-[11px] font-bold tabular-nums">%3</span>
         </div>
       </div>
     </div>
 
-    <!-- 2. MERKEZİ DOPAMİN ÇEKİRDEĞİ -->
-    <div class="flex flex-col items-center justify-center text-center my-3 relative z-10">
+      <!-- 2. MERKEZİ DOPAMİN ÇEKİRDEĞİ — tek odak: sayı + hız, gerisi ikincil -->
+    <div class="flex flex-col items-center justify-center text-center my-4 py-1 relative z-10">
       <span class="text-xs font-bold text-slate-400 flex items-center gap-1.5 mb-0.5">
         <Zap class="w-3.5 h-3.5 text-purple-400" />
         <span>Dopamin</span>
       </span>
 
-      <!-- Sayıların zıplamaması ve taşmaması için tabular-nums; imza tipografi: Chakra Petch -->
-      <div
-        ref="counterRef"
-        class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
-        :class="singularityReady ? 'text-amber-200 counter-gold' : 'text-white counter-glow'"
-      >
-        {{ formattedDopamine }}
-      </div>
-
-      <div class="text-xs font-mono text-purple-300/80 flex items-center gap-2 mt-0.5">
-        <span class="tabular-nums">+{{ formattedPerSec }}/s</span>
-        <span
-          v-if="store.slackerLeechPercent > 0"
-          class="text-rose-400 font-semibold text-[11px] bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 tabular-nums shrink-0"
+      <!-- Premium sayaç tablası: piksel font şeritleri + ısıya göre renklenen plaka -->
+      <!-- Sütun 5 v2: şerit konuma sabitlenir, sadece translateY kayar — pürüzsüz slot rulosu -->
+      <!-- Çerçevesiz sayaç: pop hedefi olan sade sarmalayıcı, görsel plaka yok -->
+      <div class="dopa-wrap">
+        <div
+          ref="counterRef"
+          aria-live="polite"
+          :aria-label="`Dopamin: ${formattedDopamine}`"
+          class="dopa-reels text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
+          :class="[
+            flameOn
+              ? 'flame-text'
+              : singularityReady
+                ? 'text-amber-200 counter-gold'
+                : 'text-white counter-glow',
+            flameOn ? '' : counterHeatClass,
+            decadeFlash ? 'decade-flash' : ''
+          ]"
         >
-          -{{ (store.slackerLeechPercent * 100).toFixed(0) }}% Vicdan
-        </span>
+          <template
+            v-for="(ch, i) in dopaChars"
+            :key="i"
+          >
+            <span
+              v-if="isDigitChar(ch)"
+              class="reel"
+              aria-hidden="true"
+            >
+              <span
+                class="reel-strip"
+                :style="{ transform: `translateY(-${ch}em)` }"
+              ><span
+                v-for="d in REEL_DIGITS"
+                :key="d"
+                class="reel-cell"
+              >{{ d }}</span></span>
+            </span>
+            <span
+              v-else
+              :key="`s-${i}-${ch}`"
+              class="reel-static"
+              aria-hidden="true"
+            >{{ ch }}</span>
+          </template>
+          <span
+            v-if="dopaParts.suffix"
+            :key="`suf-${dopaParts.suffix}`"
+            class="reel-suffix"
+            :class="dopaParts.kind === 'exponent' ? 'reel-suffix-exp' : 'reel-suffix-std'"
+            aria-hidden="true"
+          >{{ dopaParts.suffix }}</span>
+          <span class="sr-only">{{ formattedDopamine }}</span>
+        </div>
       </div>
 
-      <!-- Balatro skor kutuları: FİŞ (mavi, tıklama gücü) × MULT (kırmızı, kombo) -->
-      <div class="mt-2 flex items-center justify-center gap-2">
-        <span class="balatro-chip balatro-chip-blue" v-tip="'Fiş: her kaydırmada bu kadar dopamin'">
-          Fiş +{{ formattedClickPower }}
-        </span>
-        <span class="text-slate-600 font-black font-mono text-sm select-none">×</span>
+      <div class="text-xs font-mono text-purple-300/80 flex items-center gap-2 mt-1">
         <span
-          class="balatro-chip"
-          :class="currentComboMult() > 1 ? 'balatro-chip-red hot' : 'balatro-chip-red balatro-chip-dim'"
-          v-tip="'Mult: üst üste kaydırmalarla yükselir, 1.5 sn durursan söner'"
+          ref="perSecRef"
+          :class="[
+            'tabular-nums text-[15px] font-semibold inline-flex items-center gap-1.5',
+            flameOn ? 'dps-burn' : 'text-purple-100'
+          ]"
         >
-          {{ currentComboMult() > 1 ? `Mult ×${currentComboMult()}` : 'Mult ×1' }}
+          <span>+{{ formattedPerSec }}/s</span>
+          <span
+            v-if="mpsTrend === 1"
+            class="dps-delta-up"
+            aria-hidden="true"
+          >▲</span>
+          <span
+            v-else-if="mpsTrend === -1"
+            class="dps-delta-down"
+            aria-hidden="true"
+          >▼</span>
+          <span
+            v-if="dpsSurgeActive && dpsSurgeDelta"
+            class="text-emerald-300 font-bold text-[11px] animate-pulse"
+          >{{ dpsSurgeDelta }}</span>
+        </span>
+        <span
+          v-if="store.formatUnlockBuffActive"
+          class="text-[10px] font-mono text-cyan-200 bg-cyan-500/15 px-1.5 py-0.2 rounded border border-cyan-400/30 tabular-nums shrink-0"
+          v-tip="'Yeni format keşfi: bu tier üretimine kısa süre ×1.25'"
+        >
+          📺 D{{ store.formatUnlockBuffTier }} · {{ store.formatUnlockBuffSecondsRemaining }}s
         </span>
       </div>
 
-      <!-- Sıradaki hedef — her zaman tek odak çizgisi (Three Reads / 2. okuma) -->
+      <!-- Sıradaki hamle tek küme (P2 cila) -->
+      <div class="mt-2 flex flex-col items-center gap-1.5">
+      <!-- Sıradaki hamle — header'daki acil satın alma; App.vue'daki "Sonraki Açılacak" (unlock merdiveni) ile karışmaması için önekli -->
       <div
-        class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[11px] font-semibold transition-colors"
+        class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[11px] font-semibold transition-colors"
         :class="nextGoal.ready
-          ? 'bg-purple-500/10 border-purple-500/35 text-purple-200'
+          ? 'bg-purple-500/15 border-purple-400/50 text-purple-100 shadow-sm'
           : 'bg-white/[0.03] border-white/[0.07] text-slate-400'"
         v-tip="nextGoal.ready ? 'Hemen satın alabileceğin bir şey var — fırsatı kaçırma!' : 'Bu hedefe yaklaştıkça yüzde doluyor.'"
       >
-        <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="nextGoal.ready ? 'bg-purple-400 animate-pulse' : 'bg-slate-500'"></span>
+        <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="nextGoal.ready ? 'bg-purple-300 animate-pulse' : 'bg-slate-500'"></span>
+        <span class="text-slate-500 font-normal">Sıradaki hamle:</span>
         <span>{{ nextGoal.label }}</span>
         <span v-if="nextGoal.value" class="tabular-nums font-bold">{{ nextGoal.value }}</span>
       </div>
@@ -447,17 +819,21 @@ onUnmounted(() => {
       <!-- 0-state onboarding: ilk eylem çağrısı (ilk D1 alınana kadar) -->
       <div
         v-if="showFirstSwipeHint"
-        class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/[0.07] border border-purple-500/25 text-[11px] font-mono font-semibold text-purple-200"
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/[0.07] border border-purple-500/25 text-[11px] font-mono font-semibold text-purple-200"
       >
         <ArrowUp class="w-3.5 h-3.5 text-purple-400 arrow-nudge" />
         <span>Başparmağı hazırla — ilk video için <span class="font-bold">Kaydır</span>'a bas</span>
+      </div>
       </div>
     </div>
 
     <!-- 3. DENETİM VE AKSİYON BUTONLARI ÇUBUĞU -->
     <div class="flex flex-col md:flex-row items-center justify-between gap-3 pt-3 border-t border-white/[0.05]">
-      <!-- Sol: Stance Modları (Denetim Merkezi) -->
-      <div class="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] shrink-0 justify-center md:justify-start w-fit mx-auto md:mx-0 max-w-full overflow-x-auto no-scrollbar">
+      <!-- Sol: Stance Modları (Denetim Merkezi - İlk 25 alımdan sonra veya duruş açılınca görünür) -->
+      <div
+        v-if="(store.dimensions[0]?.bought ?? 0) >= 25 || store.isFeatureUnlocked('stance_spam')"
+        class="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] shrink-0 justify-center md:justify-start w-fit mx-auto md:mx-0 max-w-full overflow-x-auto no-scrollbar"
+      >
         <button
           @click="setStance('trend')"
           class="btn-tactile hit-44 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
@@ -477,8 +853,8 @@ onUnmounted(() => {
           :class="stanceSpamLock
             ? 'text-slate-600 border border-white/[0.03] bg-black/20 opacity-70 cursor-not-allowed'
             : store.currentStance === 'spam'
-              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm cursor-pointer'
-              : 'text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer'"
+              ? 'bg-rose-500/15 text-rose-200 border border-rose-500/40 shadow-sm cursor-pointer'
+              : 'text-slate-500 hover:text-slate-200 border border-transparent cursor-pointer opacity-90'"
           v-tip="stanceSpamLock ? `Kilitli — ${stanceSpamLock.hint} (${stanceSpamLock.progress})` : 'Çılgın Kaydırma: Kaydırmaya 4× güç ve %50 daha sık kriz'"
         >
           <Lock v-if="stanceSpamLock" class="w-3.5 h-3.5 text-slate-600" />
@@ -504,7 +880,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Sağ: TAKTİL BUTONLAR (Kayıp/zıplama yapmayan sabit yükseklikli ve sarmasız buton grubu) -->
-      <div class="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto no-scrollbar py-0.5 max-w-full">
+      <!-- ADR-0029: no-scrollbar kaldırıldı. Kaydırılabilir olduğu görünmeyen bir
+           alan "bulunamaz" alandır; tarayıcı çubuğu yatay kaydırmayı belli eder. -->
+      <div class="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full">
         <!-- Hipnotik Seri rozeti: seri ≥2 iken Kaydır butonunun solunda belirir, geri sayım çubuğu 1.5 sn'de boşalır -->
         <div
           v-if="comboActive"
@@ -520,13 +898,13 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 1. Manuel Yukarı Kaydır (Space / Swipe Up) -->
+        <!-- 1. Manuel Yukarı Kaydır (Space / Swipe Up) — birincil aksiyon: en büyük, en parlak -->
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
-          class="btn-tactile btn-sheen h-11 px-2.5 sm:px-3.5 rounded-xl bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border border-purple-500/40 text-xs font-bold font-mono flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm active:scale-95 shrink-0 min-w-[85px] sm:min-w-[110px]"
+          class="btn-tactile btn-sheen h-12 px-3.5 sm:px-5 rounded-xl bg-purple-600/35 hover:bg-purple-600/45 text-white border border-purple-400/60 text-sm font-bold font-mono flex items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[120px] sm:min-w-[150px]"
           :class="{ 'cta-beacon': showFirstSwipeHint }"
-          v-tip="'Space tuşuna basarak da kaydırabilirsiniz'"
+          v-tip="swipeTip"
         >
           <ArrowUp class="w-4 h-4 text-purple-400 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
@@ -540,35 +918,35 @@ onUnmounted(() => {
           </div>
         </button>
 
-        <!-- 2. Algoritma Frekansı (Tickspeed) Butonu — basılı tutunca tekrarlar -->
+        <!-- 2. Algoritma Frekansı (Tickspeed) — ikincil üretim, mor sözlük (amber yalnızca Şafak/prestijde) -->
         <button
           @click="buyTickspeed"
           v-hold="buyTickspeed"
           :disabled="!canAffordTickspeed"
-          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[78px] sm:min-w-[95px]"
+          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[78px] sm:min-w-[95px]"
           :class="canAffordTickspeed
-            ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-500/40 cursor-pointer affordance-pulse'
+            ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 border-purple-500/30 cursor-pointer affordance-pulse'
             : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-50'"
-          :style="canAffordTickspeed ? { '--pulse-c1': 'rgba(245, 158, 11, 0.35)', '--pulse-c2': 'rgba(245, 158, 11, 0.8)' } : undefined"
+          :style="canAffordTickspeed ? { '--pulse-c1': 'rgba(168, 85, 247, 0.3)', '--pulse-c2': 'rgba(168, 85, 247, 0.7)' } : undefined"
           v-tip="'Algoritma Frekansını (Hz) yükseltir'"
         >
-          <Cpu class="w-4 h-4 text-amber-400 shrink-0" />
+          <Cpu class="w-4 h-4 text-purple-300 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
               <span class="text-[10px] text-slate-400">Hz</span>
               <span class="font-bold tabular-nums text-white text-xs">×{{ tickspeedMultiplier }}</span>
             </div>
-            <span class="text-[10px] text-amber-400/90 font-mono tabular-nums truncate max-w-[60px] sm:max-w-[80px]">
+            <span class="text-[10px] text-purple-300/90 font-mono tabular-nums truncate max-w-[60px] sm:max-w-[80px]">
               {{ tickspeedCost }}
             </span>
           </div>
         </button>
 
-        <!-- 3. Tümünü Al Butonu -->
+        <!-- 3. Tümünü Al Butonu — üçüncül, ghost -->
         <button
           @click="maxAll"
           :disabled="!canAffordAny"
-          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl font-bold text-xs tracking-wider flex items-center gap-1.5 sm:gap-2 transition-all border font-mono shrink-0 min-w-[65px] sm:min-w-[75px]"
+          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl font-bold text-xs tracking-wider flex items-center gap-1.5 sm:gap-2 transition-all border font-mono shrink-0 min-w-[65px] sm:min-w-[75px]"
           :class="canAffordAny
             ? 'bg-white/[0.08] hover:bg-white/[0.12] text-white border-white/20 cursor-pointer'
             : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-40'"
@@ -586,30 +964,39 @@ onUnmounted(() => {
           v-if="inChallenge || singularityReady"
           @click="handleSingularity"
           :disabled="inChallenge && !singularityReady"
-          class="btn-tactile h-11 px-2 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
+          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
           :class="inChallenge && !singularityReady
             ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-60'
             : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 shadow-md animate-pulse'"
           v-tip="inChallenge ? challengeTip : singularityTip"
         >
-          <Sun class="w-4 h-4 text-amber-900 shrink-0" />
+          <!-- ADR-0029: bu iki öğe amber-500 zemin üzerinde amber-900 idi
+               (4.22:1 ve 3.07:1). 10 px'lik metin 4.5:1 istiyor; slate-950
+               ~9.4:1 verir ve SingularityTab ile de tutarlı olur. -->
+          <Sun class="w-4 h-4 text-slate-950/80 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight min-w-0">
-            <span class="text-[10px] text-amber-900/80 font-normal">{{ inChallenge ? 'Meydan Okuma' : '06:00' }}</span>
+            <span class="text-[10px] text-slate-950/80 font-normal">{{ inChallenge ? 'Meydan Okuma' : '06:00' }}</span>
             <span class="text-xs font-black tabular-nums truncate max-w-[110px] sm:max-w-[150px]">
               {{ inChallenge ? challengeRewardShort : `+${singularityGainText}` }}
             </span>
           </div>
         </button>
 
-        <!-- 5. Ayarlar Butonu -->
-        <button
-          @click="emit('open-settings')"
-          class="btn-tactile h-11 w-10 sm:w-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] transition-all cursor-pointer flex items-center justify-center shrink-0"
-          v-tip="'Ayarlar'"
-        >
-          <Settings class="w-4 h-4" />
-        </button>
       </div>
+
+      <!-- 5. Ayarlar Butonu -->
+      <!-- ADR-0029: bu buton yatay kaydırma satırının DIŞINDA. Önceden satırın
+           en sonundaydı ve 360 px'te taşma nedeniyle görünmez biçimde kırpılıyordu
+           — yani telefonda "hareketi azalt / CRT / pil tasarrufu" ayarlarına
+           ULAŞILAMIYORDU. Artık asla taşmaz. -->
+      <button
+        @click="emit('open-settings')"
+        aria-label="Ayarlar"
+        class="btn-tactile h-12 w-10 sm:w-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer flex items-center justify-center shrink-0"
+        v-tip="'Ayarlar'"
+      >
+        <Settings class="w-4 h-4" />
+      </button>
     </div>
 
     <!-- Aktif meydan okuma bandı (ince): kural özeti + hedef çubuğu + vazgeç -->

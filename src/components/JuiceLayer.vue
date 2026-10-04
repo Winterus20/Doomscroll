@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useGameStore } from '../stores/game'
 
 export interface JuiceTriggerOptions {
   x: number
@@ -78,6 +79,65 @@ function getJuiceMode(): string {
   return juiceModeCache
 }
 
+const store = useGameStore()
+
+// Sistem tercihi (OS seviyesi): prefers-reduced-motion. Tek kez okunur, değişikliğe tepki verir.
+// tilt.ts'teki matchMedia kalıbının canlı (değişiklik dinleyen) hali.
+let prefersReducedMotion = false
+let reducedMotionQuery: MediaQueryList | null = null
+
+const onReducedMotionChange = (e: MediaQueryListEvent): void => {
+  prefersReducedMotion = e.matches
+}
+
+/**
+ * Hareket bastırma birleşimi üç kaynaktan gelir:
+ *  1) settings.reduceAnimations  — kullanıcı 'Animasyonları Azalt' ayarı
+ *  2) prefers-reduced-motion     — işletim sistemi tercihi
+ *  3) settings.batterySaver     — pil tasarrufu (aynı bastırmayı paylaşır)
+ * Üçü de aynı şeyi yapar: şok dalgası, kıvılcım, gövde sarsıntısı ve uçan metin üretilmez.
+ */
+function shouldReduceMotion(): boolean {
+  return (
+    prefersReducedMotion ||
+    store.settings.reduceAnimations === true ||
+    store.settings.batterySaver === true
+  )
+}
+
+/** 'Ucan Hasar / Dopamin Sayilari' ayarı: kapalıyken hiçbir metin parçacığı doğmaz. */
+function floatingTextsEnabled(): boolean {
+  return store.settings.floatingTexts !== false
+}
+
+// --- Hareketsizlik yardımcıları -------------------------------------------------
+// Bunlar mevcut efektleri kapatır; kalıcı bir rAF döngüsü KURMAZLAR.
+// Döngü yalnızca spawn ile başlar ve diziler boşalınca kendini kapatır (idle-safe).
+
+function stopAnimation(): void {
+  if (animId !== null) {
+    cancelAnimationFrame(animId)
+    animId = null
+  }
+}
+
+function clearBodyShake(): void {
+  if (shakeTimeout) {
+    clearTimeout(shakeTimeout)
+    shakeTimeout = null
+  }
+  document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+}
+
+/** Azaltılmış hareket açıldığı anda uçan tüm efektleri düşürür (döngü kendini kapatır). */
+function suppressActiveEffects(): void {
+  particles.length = 0
+  shockwaves.length = 0
+  sparks.length = 0
+  stopAnimation()
+  clearBodyShake()
+}
+
 function resizeCanvas() {
   if (!canvasRef.value) return
   const canvas = canvasRef.value
@@ -91,6 +151,16 @@ function resizeCanvas() {
 }
 
 function spawnParticle(x: number, y: number, text: string, color = '#e2e8f0', big = false) {
+  // Ucan yazi tekligi (STEP 3): 'Ucan Hasar / Dopamin Sayilari' kapaliyken metin dogmaz.
+  if (!floatingTextsEnabled()) return
+
+  // AZALTILMIS HAREKET TERCİHİ — metin parçacıkları için alınan karar: TAMAMEN bastırılır
+  // (azaltılmış moda düşürülmez). Gerekçe: uçan yazılar sadece hareketle anlam taşıyan
+  // süsleme efektidir; aynı bilgi (alınan miktar/saniye) satırın kalıcı sayaçlarında ve
+  // satın alma butonunun etiketinde zaten durur. Kısmi (statik) sürüm bırakmak,
+  // hareketi sıfırlamadan ekranı kapatıp göstermek zorunda kalmak anlamına gelirdi.
+  if (shouldReduceMotion()) return
+
   // P0 Balatro: juice moduna göre yoğunluk — calm sade, tilt parti
   const mode = getJuiceMode()
   const repeats = big ? (mode === 'tilt' ? 5 : mode === 'calm' ? 1 : 3) : 1
@@ -140,15 +210,18 @@ function spawnSingle(
 
 function triggerJuice(options: JuiceTriggerOptions) {
   const { x, y, text, color, big } = options
-  if (text) {
-    spawnParticle(x, y, text, color, big)
-  }
+  if (!text) return
+  // Erken çıkış: rAF döngüsü hiç başlamaz → katman idle-safe kalır
+  if (!floatingTextsEnabled() || shouldReduceMotion()) return
+  spawnParticle(x, y, text, color, big)
 }
 
 function spawnShockwave(x: number, y: number, color = '#a855f7', maxRadius = 180) {
   const mode = getJuiceMode()
 
-  if (mode === 'calm') return
+  // Azaltilmis hareket (ayar + OS tercihi + pil tasarrufu): dalga VE kıvılcım üretilmez.
+  // juiceMode 'calm' da aynı bastırmayı yapar.
+  if (shouldReduceMotion() || mode === 'calm') return
 
   // 1. Ana Dış Şok Dalgası
   shockwaves.push({
@@ -203,6 +276,13 @@ function triggerShockwave(options: ShockwaveTriggerOptions) {
 function loop() {
   if (!ctx || !canvasRef.value) {
     animId = null
+    return
+  }
+
+  // Ayar ortada açıldıysa kalan son kareleri de çizme; döngü burada kendini kapatır
+  // (yine kalıcı döngü yok: spawn ile başlar, boşalınca biter).
+  if (shouldReduceMotion()) {
+    suppressActiveEffects()
     return
   }
 
@@ -303,6 +383,8 @@ function loop() {
 }
 
 function handleTapEvent(e: Event) {
+  // Sıralı Reels Vuruşu açıkken sayıyı SequentialStrikeLayer çizer; çift sayı engellenir.
+  if (store.settings.sequentialStrike !== false) return
   const customEvent = e as CustomEvent<JuiceTriggerOptions>
   if (customEvent.detail) {
     triggerJuice(customEvent.detail)
@@ -317,6 +399,12 @@ function handleShockwaveEvent(e: Event) {
 }
 
 function handleShakeEvent(e: Event) {
+  // Azaltılmış hareket: gövde sarsıntısı sınıfı HİÇ eklenmez (ve açık kalan temizlenir)
+  if (shouldReduceMotion()) {
+    clearBodyShake()
+    return
+  }
+
   // P0 Balatro: shake kademesi — detail.level: 'soft' | 'medium' | 'hard'
   const level = (e as CustomEvent<{ level?: string }>).detail?.level ?? 'medium'
   const cls = level === 'hard' ? 'shake-hard' : level === 'soft' ? 'shake-soft' : 'screen-shake'
@@ -341,6 +429,34 @@ function handleJuiceModeEvent(e: Event) {
   }
 }
 
+// --- Store bağlantıları -------------------------------------------------------------
+// juiceMode: App.vue olayı da besliyor; bu watcher katmanı tek başına da doğru tutar.
+watch(
+  () => store.settings.juiceMode,
+  (mode) => {
+    if (mode === 'calm' || mode === 'balanced' || mode === 'tilt') {
+      juiceModeCache = mode
+    }
+  },
+  { immediate: true }
+)
+
+// Azaltılmış hareket: üç kaynaktan biri açılırsa uçan efektleri hemen düşür
+watch(
+  shouldReduceMotion,
+  (reduced) => {
+    if (reduced) suppressActiveEffects()
+  }
+)
+
+// Ucan yazi tekligi kapatildiysa mevcut metin parçaciklari dusurulur.
+// Dalga/kıvılcım uçuşu sürüyorsa döngü onları bitirip kendi kapanır (donmuş kare kalmaz).
+watch(floatingTextsEnabled, (enabled) => {
+  if (enabled) return
+  particles.length = 0
+  if (shockwaves.length === 0 && sparks.length === 0) stopAnimation()
+})
+
 onMounted(() => {
   if (canvasRef.value) {
     ctx = canvasRef.value.getContext('2d')
@@ -353,6 +469,15 @@ onMounted(() => {
       juiceModeCache = tiny
     }
   } catch { /* yoksay */ }
+
+  // Sistem hareket tercihi: bir kez oku, çalışma boyunca değişiklikleri dinle
+  if (typeof window.matchMedia === 'function') {
+    reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    prefersReducedMotion = reducedMotionQuery.matches
+    if (typeof reducedMotionQuery.addEventListener === 'function') {
+      reducedMotionQuery.addEventListener('change', onReducedMotionChange)
+    }
+  }
 
   window.addEventListener('resize', resizeCanvas)
   window.addEventListener('doomscroll:tap', handleTapEvent)
@@ -386,6 +511,13 @@ onUnmounted(() => {
     delete window.__setJuiceMode
   }
 
+  if (reducedMotionQuery) {
+    if (typeof reducedMotionQuery.removeEventListener === 'function') {
+      reducedMotionQuery.removeEventListener('change', onReducedMotionChange)
+    }
+    reducedMotionQuery = null
+  }
+
   if (animId !== null) {
     cancelAnimationFrame(animId)
     animId = null
@@ -395,7 +527,7 @@ onUnmounted(() => {
     clearTimeout(shakeTimeout)
     shakeTimeout = null
   }
-  document.body.classList.remove('screen-shake')
+  document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
 
   particles.length = 0
   shockwaves.length = 0

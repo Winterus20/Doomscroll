@@ -1,5 +1,93 @@
 # Aktif Görev (In-Progress)
 
+## ✅ Tamamlanan: Reset Düzeltmesi + Alev Okunabilirlik 5.5 (2026-10-04)
+- **Doğrulama:** `npm run build` 0 hata (1692 modül) + `npm test` 162/162 yeşil.
+
+## ✅ Tamamlanan: Dopamin Nabzı 2.0 — Sayaç Juice (2026-10-04)
+- **Kapsam:** `Header.vue` (log-hız ısısı, büyüklük pop, /s delta oku, dekad shake+shockwave),
+  `style.css` (ısı ramp glow, pop kademesi, sheen hızı), `audio.ts` (tally tick + payoff).
+- **Doğrulama:** `npm run build` 0 hata (1692 modül) + `npm test` 162/162 yeşil.
+
+## ✅ Tamamlanan: Balatro Sütun 2: "Reels Vuruşu" Sıralı Nedensellik (Sequential Triggering) (v0.28.0)
+- **Kapsam:**
+  - `brain/research/balatro-column-2-sequential-triggering-deep-dive.md`: Derin araştırma belgesi.
+  - `ADR-0038`: Mimari karar kaydı.
+  - `src/models/types.ts`: StrikeStage, SequentialStrikePayload, GameSettings.sequentialStrike.
+  - `src/core/audio.ts`: playSequentialStrike (Lydian yükselen polifonik arpej + sub-bass tokmağı + CRIT parlaması) & playMacroSurge.
+  - `src/stores/game.ts`: swipeBreakdown getter'ı, manualClick coordinates & sequential events, dimensionShift/buyGalaxy macro-surge.
+  - `src/components/SequentialStrikeLayer.vue`: Mikro kaskat rozetleri, yaylanma animasyonu, anti-lag coalescing ve sinematik makro surge barı.
+  - `src/components/Header.vue` & `src/components/DimensionsTab.vue`: Koordinat senkronizasyonu.
+  - `src/components/SettingsModal.vue`: Görsel sekmesine "Sıralı Reels Vuruşu (Balatro Pop-Chain)" toggle anahtarı.
+  - `src/App.vue`: Katman montajı.
+  - `src/stores/sequential-strike.test.ts`: 5 yeni birim testi.
+- **Doğrulama:** `npm run build` 0 hata, 1692 modül + `npx vitest run` 162/162 test geçti + Playwright canlı tarayıcı testi tamamlandı.
+
+---
+- **Kapsam:**
+  - `src/models/types.ts`: `GameSettings` içine `swirlShaderQuality: 'off' | 'balanced' | 'high'` eklendi.
+  - `src/stores/game.ts`: Varsayılan ayar ve ayar yönetimi.
+  - `src/components/AlgorithmicSwirl.vue`: WebGL2 (fallback WebGL1) Balatro Paint Swirl shader'ı, 0.5x retro piksel tamponu, 5-iteratif kaos dalgası, kutupsal UV bükülmesi, pürüzsüz Lerp motoru (hız & renkler), `visibilitychange` ile arka planda sıfır tüketim, context-loss dayanıklılığı.
+  - `src/App.vue`: En alt z-katmanına (`fixed inset-0 pointer-events-none`) montaj.
+  - `src/components/SettingsModal.vue`: Görsel sekmesine "Algoritma Arka Plan Girdabı (Balatro Swirl)" ayarı.
+- **Doğrulama:** `npm run build` 0 hata, 1689 modül + `npx vitest run` 157/157 test geçti + Playwright canlı tarayıcı render & ayarlar modalı testi tamamlandı.
+
+---
+
+## ✅ Tamamlanan: SP Yalnızca Şafakta (ADR-0034)
+
+- **Kullanıcı talebi:** *"sp sadece şafak yaptığımızda gelmeli"* → şafak dışı SP kaynağı (ADR-0032 Dekad Primi, 72 SP) kaldırıldı.
+- **Kullanıcı seçimi:** Ödül koşu içi buff'a çevrilsin (SP hiç artmasın).
+- **Kapsam:** `pacing.ts` (`DECADE_SURGES`), `game.ts` (`decadeSurgeMult` + `tickspeedMultiplier` + `resetRunState`), `save-version.ts` (13 → 14), `App.vue` (rozet), `pacing.test.ts` (11 test).
+- **Doğrulama:** `npm run build` **0 hata** (1686 modül) + `npx vitest run` **135/135**.
+- **Açık denge sorusu:** 1. koşu artık 1 SP veriyor (kök düğüm). Ağacın erken kademeleri
+  boş kalıyor — `brain/tasks/todo.md` "SP ekonomisi" maddesi.
+- **Detay:** `brain/decisions/0034-sp-only-at-dawn-decade-surge-run-buff.md`
+
+---
+
+## 🔄 Bu Tur: Bütünlük, Performans ve Erişilebilirlik Düzeltme Turu (v0.26.0) — TAMAMLANDI
+
+- **Kapsam:** dört paralel denetim (ilerleme/ekonomi, mühendislik, UX/a11y, kayıt/güvenlik); her bulgu grep + kod okuma + 360 px tarayıcı ölçümüyle yeniden doğrulandı.
+- **Ekonomi (3 gerçek hata):** geçici 'Format Keşfi' bonusunun cache anahtarı türev alan içermediği için kalıcı çarpana dönüşmesi; `matterPerSecond`'ın her tick yalnızca rekor için hesaplanması; **NaN dopaminin tüm açılma merdivenini geçmiş gibi göstermesi** (`AGENTS.md` `dec.isNan()` kuralının ihlali); başarım çarpanın beyaz listsiz yüklenmesi.
+- **Kayıt/güvenlik:** `SAVE_VERSION` tek kaynağa (`src/core/save-version.ts`) + gelecek sürüm koruması; bozuk kayıt karantinasi (`*_CORRUPT`); yedeklemenin tüm slotlara genişletilmesi; bulut yazma işlem (transaction) + ön koşul koruması (`CloudWriteConflictError`); periyodik senkronun önce çakışma kontrolünden geçmesi; sayısal Decimal karşılaştırması; bulut indirmeden önce `snapshotSlot()`.
+- **Performans:** O(n²) `ACHIEVEMENTS.filter()` döngü içi çağrısı → modül yükünde indeks; `achievementMultiplier` tick içi tarama → uzunluk anahtarlı memo.
+- **Erişilebilirlik/mobil:** `src/core/focus-trap.ts` ile altı modalda gerçek `role="dialog"` + odak tuzağı; `v-tip` için focus/blur/Escape + `aria-describedby` (uzun basış davranışı aynen korundu); `aria-live` toast'larda; **360 px'te kırpılan ayar dişlisi taşma satırından dışarı taşındı**; aktif sekme görünür alana çekiliyor; `prefers-reduced-motion` kapsamı genişletildi; `batterySaver` artık gerçekten JS yükü azaltıyor; `floatingTexts` bağlandı, `newsTickerEnabled` (bileşeni hiç yazılmamış) kaldırıldı.
+- **Güvenlik:** `firestore.rules` + `firebase.json` (deny-by-default, sahiplik kontrollü); `permission-denied` mesajı artık Test Modunu açmayı değil kapatmayı söylüyor.
+- **Hijyen:** vitest + **92 test**; `dist/` izlemeden çıkarıldı; `README.md`; ADR numaralandırma çakışması çözüldü; GAME_DESIGN.md başarım rakamları gerçek veriye hizalandı (8 kategori / 68 / ×3.59 / 10 gizli); sürüm 0.26.0.
+- **Doğrulama:** `npm run build` (vue-tsc + vite) **0 hata, 1684 modül** ve `npm test` **92/92 geçti**.
+- **Detay:** `brain/decisions/0031-integrity-performance-and-accessibility-fix-pass.md` | Güvenlik: ADR-0030
+
+---
+
+## ✅ Tamamlanan: Misafir Modu, Google & E-posta Girişi ve Bulut Senkronizasyonu (v0.25.0)
+- **Kapsam:**
+  - `package.json`: `firebase` entegrasyonu.
+  - `src/models/auth-types.ts`: `AuthUser`, `CloudSaveData`, `CloudConflictData`, `SyncStatus` tipleri.
+  - `src/core/auth/firebase-config.ts`: Canlı Firebase ve akıllı Dev/Mock sağlayıcı mimarisi.
+  - `src/core/auth/auth-service.ts`: Google Popup, E-posta/Şifre kayıt/giriş, Şifremi unuttum, Oturum kapatma.
+  - `src/core/auth/cloud-save-service.ts`: Firestore bulut kayıt/yükleme, akıllı çakışma dedektörü.
+  - `src/stores/auth.ts`: Pinia auth store'u, reaktif kullanıcı durumu ve otomatik senkronizasyon.
+  - `src/components/AuthModal.vue`: Cyberpunk/Neon cam giriş modalı ve hesap yönetim paneli.
+  - `src/components/CloudConflictModal.vue`: İki sütunlu yerel vs bulut karşılaştırma ve seçim modalı.
+  - `src/components/Header.vue`: Profil / Bulut durumu butonu ve canlı senkron ışığı.
+  - `src/components/SettingsModal.vue`: Kayıt sekmesine "☁️ Bulut Senkronizasyonu" kartı.
+  - `src/App.vue`: Modal bağlamaları ve otomatik bulut döngüsü entegrasyonu.
+- **Doğrulama:** `npm run build` ile 0 tip hatası (1682 modül) + Playwright ile canlı tarayıcı testi (`localhost:4173`). Plan: `auth_cloud_save_plan.md` | ADR: `0021-guest-mode-google-auth-and-cloud-save-system.md`.
+
+---
+
+## ✅ Tamamlanan: En İyi Sistem Ayarları Mimarisi & Çoklu Kayıt Slotları (v0.24.0)
+- **Kapsam:**
+  - `src/core/save.ts`: 3 bağımsız kayıt slotu (`SaveSlotMeta`), slot kopyalama, slot geçişi, periyodik rotasyon yedeği ve `inspectSaveString` kayıt önizleme denetimi.
+  - `src/stores/game.ts`: `switchSaveSlot`, `copySaveSlot`, `deleteSaveSlot`, `restoreFromBackup` action'ları ve yeni QoL varsayılanları.
+  - `src/models/types.ts`: `decimalPlaces`, `batterySaver`, `floatingTexts`, `newsTickerEnabled`, `offlineProgressModal`, `hotkeysEnabled`, `activeSlot`.
+  - `src/style.css`: `.battery-saver` GPU/CPU yükünü düşüren stil kuralları.
+  - `src/App.vue`: Pil tasarruf sınıfı, kısayol toggle kalkanı, çevrimdışı modal ayarı.
+  - `src/components/SettingsModal.vue`: 5 sekmeli (Oynanış, Görsel, Lo-Fi Radyo, Kayıt & Slotlar, Kısayollar) Bento Grid mimarisi; dosya seçici, canlı otomatik kayıt telemetrisi, akıllı doğrulama kartı ve güvenli "RESET" hard reset onay kutusu.
+- **Doğrulama:** `npm run build` ile 0 tip/derleme hatası (1657 modül) + Playwright yerel dev server canlı arayüz doğrulama testi. Detay: `completed.md` v0.24.0 girdisi | ADR: `brain/decisions/0020-best-in-class-settings-and-multi-slot-save-system.md`.
+
+---
+
 ## ✅ Tamamlanan: Hibrit Rapor ve Gece Telemetrisi Mimarisi (v0.21.0)
 - **Kapsam:**
   - `src/models/types.ts`: `PastSingularityRecord`, `PlayerStats` (highestDps, totalManualDopamine), save serileştirme arayüzleri.

@@ -1,15 +1,29 @@
 import { Decimal } from '../core/math'
+import { ARC_LOG10_MAX, decadeGate } from './pacing'
 
 /**
- * Özellik Merdiveni (Progressive Feature Unlock) — v0.11.1
- * Tek kaynaklı kilitleme registry'si.
+ * Özellik Merdiveni (Progressive Feature Unlock)
  *
- * Tasarım prensibi (ADR-0009):
- * - Kilitlemeler state'ten türetilmiş olarak hesaplanır; bir kez açılan özellik
- *   `unlockedFeatures` listesiyle yapışkan (sticky) kalır (Sıçrama sıfırlamalarına
- *   rağmen yeniden kapanmaz).
- * - Eski save'larla uyum: liste yoksa boş başlar; koşul zaten sağlanmışsa
- *   açılır (kayıp yok, migrasyyon gerekmez).
+ * Tasarım prensibi (ADR-0009): kilitlemeler state'ten türetilir; bir kez açılan
+ * özellik `unlockedFeatures` listesiyle yapışkan (sticky) kalır.
+ *
+ * ADR-0032 — dekad omurgası: eski merdiven 13 basamağın hepsini log10 ≈ 26'da
+ * açıyordu (koşunun ilk %17'si), sonra 278 dekad boş kalıyordu. Ölçüm:
+ * brain/scratchpad/harness/results-308-audit.json.
+ *
+ * Artık her basamak bir dekad eşiğine bağlıdır ve 0 → 308 boyunca yayılır.
+ * `dimBought` kapıları bilinçli olarak merdivenden çıkarıldı: satın alınan
+ * boyut sayıları sıçramalarda birikiyor (ölçümde D8×190, 17 sıçrama), bu yüzden
+ * "şu kadar D4" kapısı hangi dekada açılacağını öngörülebilir biçimde ifade
+ * edemiyordu. Dekad kapısı kesin, deterministik ve 308 hedefini doğrudan gösterir.
+ * `dimBought` kapıları yalnızca boyut keşfi teaser'larında (DimensionsTab) kalır.
+ *
+ * ADR-0035 — açılış bir OLAY'dır, kapı değil. Dopamin kapıları artık koşu içi
+ * `matter` yerine `lifetimePeakMatter` (hayat boyu tepe nokta) üzerinden
+ * değerlendirilir: Sıçrama / Küme / şafak dopamini sıfırladığında açılan özellik
+ * yeniden kilitlenmez. `unlockedFeatures` listesi (ADR-0009) 0.5 sn'lik senkron
+ * penceresinde kaçabildiği için asıl kayıt bu tepe noktadır; liste yalnızca
+ * "hangi özellikler açıldı" ayrıntısı ve UI ipucu olarak kalır.
  */
 
 export type UnlockReq =
@@ -23,6 +37,18 @@ export type UnlockReq =
 
 export interface UnlockContext {
   matter: Decimal
+  /**
+   * Hayat boyu ulaşılan en yüksek dopamin (ADR-0035).
+   *
+   * Koşu içi `matter` Sıçrama/Küme/şafak ile sıfırlandığı için tek başına
+   * "açıldım mı?" sorusuna cevap veremez. Bu alan su seviyesidir: bir kez
+   * yükseldi mi bir daha inmez. `unlockedFeatures` listesinin (ADR-0009) 0.5 sn'lik
+   * senkron penceresini kapatır — botun otomatik sıçraması ya da çevrimdışı
+   * ilerleme adımı listeye yazılmadan reset çalıştırırsa bile kapı açık kalır.
+   *
+   * Opsiyoneldir: alan yoksa (eski kayıt, harici bağlam) davranış `matter`'a düşer.
+   */
+  lifetimePeakMatter?: Decimal
   dimensions: Array<{ amount: Decimal; bought: number }>
   dimensionShifts: number
   galaxies: number
@@ -31,16 +57,55 @@ export interface UnlockContext {
   anomaliesClicked: number
 }
 
+/**
+ * İki Decimal'dan büyüğünü döndürür; NaN tarafı yok sayılır.
+ * AGENTS.md: `dec.isNan() || Number.isNaN(dec.mag)`.
+ */
+export function raisedLifetimePeak(current: Decimal, candidate: Decimal | undefined): Decimal {
+  const curBad = current.isNan() || Number.isNaN(current.mag)
+  const candBad = !candidate || candidate.isNan() || Number.isNaN(candidate.mag)
+  if (curBad && candBad) return new Decimal(0)
+  if (curBad) return candidate as Decimal
+  if (candBad) return current
+  return candidate!.gt(current) ? candidate! : current
+}
+
+/**
+ * Bir kilit kapısının değerlendirileceği "etkin dopamin": koşu içi miktar ile
+ * hayat boyu tepe noktasından büyüğü. AÇILIŞ BİR OLAYDIR, KAPI DEĞİL.
+ */
+export function lifetimeUnlockDopamine(
+  matter: Decimal,
+  lifetimePeakMatter?: Decimal
+): Decimal {
+  return raisedLifetimePeak(matter, lifetimePeakMatter)
+}
+
+/**
+ * Dopamin kapısı aşıldı mı? Tek doğru kaynak: `checkUnlock` ve dışarıdaki
+ * görünürlük kontrolleri (örn. Şafak sekmesi) hep bu fonksiyonu çağırır.
+ */
+export function meetsDopamineGate(
+  matter: Decimal,
+  lifetimePeakMatter: Decimal | undefined,
+  amount: string
+): boolean {
+  const peak = lifetimeUnlockDopamine(matter, lifetimePeakMatter)
+  if (peak.isNan() || Number.isNaN(peak.mag)) return false
+  return peak.gte(new Decimal(amount))
+}
+
 export interface FeatureUnlock {
   id: string
-  name: string // 'Algoritma Laboratuvarı'
-  hint: string // 'D2 formatını 25 adet sahibi ol'
+  name: string
+  hint: string
   req: UnlockReq
-  order: number // görünürlük / merdiven sırası
+  order: number
 }
 
 export function buildUnlockContext(state: {
   matter: Decimal
+  lifetimePeakMatter?: Decimal
   dimensions: Array<{ amount: Decimal; bought: number }>
   dimensionShifts: number
   galaxies: number
@@ -49,6 +114,7 @@ export function buildUnlockContext(state: {
 }): UnlockContext {
   return {
     matter: state.matter,
+    lifetimePeakMatter: state.lifetimePeakMatter,
     dimensions: state.dimensions,
     dimensionShifts: state.dimensionShifts,
     galaxies: state.galaxies,
@@ -66,7 +132,9 @@ export function checkUnlock(ctx: UnlockContext, feature: FeatureUnlock): boolean
       return !!dim && dim.bought >= req.count
     }
     case 'dopamine':
-      return ctx.matter.gte(new Decimal(req.amount))
+      // ADR-0035: dopamin sıfırlandığında açılım geri alınmaz. Kapı koşu içi
+      // `matter` yerine hayat boyu tepe noktasına bakar (bkz. lifetimeUnlockDopamine).
+      return meetsDopamineGate(ctx.matter, ctx.lifetimePeakMatter, req.amount)
     case 'shifts':
       return ctx.dimensionShifts >= req.count
     case 'galaxies':
@@ -93,7 +161,10 @@ export function unlockProgress(
     }
     case 'dopamine': {
       const target = new Decimal(req.amount)
-      const current = ctx.matter.gt(target) ? target : ctx.matter
+      // İlerleme de aynı su seviyesini okur: reset sonrası çubuk geriye gitmez.
+      const peak = lifetimeUnlockDopamine(ctx.matter, ctx.lifetimePeakMatter)
+      const isBad = peak.isNan() || Number.isNaN(peak.mag)
+      const current = isBad ? new Decimal(0) : peak.gt(target) ? target : peak
       return { current: current.toNumber(), target: target.toNumber() }
     }
     case 'shifts':
@@ -110,130 +181,159 @@ export function unlockProgress(
 }
 
 /**
- * Faz 0 (Yatak & Telefon) merdiveni — pacing, /tmp/pace7.js simülasyonuyla doğrulanmıştır
- * (günlük oyuncu: 1.5 tıklama/sn, 2× otomatik kayıt; dimBought = gerçek satın alma):
- *  1e3 Dopamin ~16sn · 1e5 ~41sn · 1e7 ~1dk10sn · 1e9 ~1dk27sn
- *  D4×10 ~57sn · D2×25 ~1dk51sn · D1×50 ~3dk02sn · D3×25 ~3dk22sn · D4×25 ~8dk40sn
+ * İlerleme çubuğu için 0..1 oran.
  *
- * v0.11.1 pacing revizyonu (kullanıcı: "açılması/alması çok kolay"):
- *  - Kritik düzeltme: dimBought kontrolleri amount (üretimle büyür) yerine bought
- *    (gerçek satın alım) üzerinden — Cookie Clicker 'own N buildings' tasarımı.
- *    Eski haliyle D1×50 duruşu max-all simülasyonunda ~13 sn'de açılıyordu.
- *  - Dopamin eşikleri yukarı çekildi: Kriz 100→1e3 · Yamalar 500→1e5 ·
- *    Yenile 1e3→1e7 · Botlar & Azaplar 1e6→1e9.
+ * ADR-0032: `unlockProgress` dopamin dalında `toNumber()` döndürdüğü için 1e308
+ * ve üzeri hedeflerde `Infinity / Infinity` üretiyordu (NaN yüzde). Dopamin
+ * kapıları logaritmik ölçekte ölçülür — 1e30 → 1e308 aralığı doğrusal ölçekte
+ * pratikte "sıfır ilerleme" gibi görünürdü.
+ *
+ * ADR-0035: ölçüm koşu içi `matter` yerine hayat boyu tepe noktasından yapılır;
+ * böylece reset sonrası çubuk sıfıra düşmez.
+ */
+export function unlockProgressFraction(ctx: UnlockContext, feature: FeatureUnlock): number {
+  const req = feature.req
+  if (req.kind === 'dopamine') {
+    const peak = lifetimeUnlockDopamine(ctx.matter, ctx.lifetimePeakMatter)
+    if (peak.isNan() || Number.isNaN(peak.mag)) return 0
+    const target = Math.log10(new Decimal(req.amount).toNumber())
+    if (!Number.isFinite(target) || target <= 0) return 0
+    const current = Math.min(log10Of(peak), target)
+    return Math.max(0, Math.min(1, current / target))
+  }
+  const { current, target } = unlockProgress(ctx, feature)
+  if (target <= 0) return 0
+  return Math.max(0, Math.min(1, current / target))
+}
+
+function log10Of(matter: Decimal): number {
+  if (matter.isNan() || Number.isNaN(matter.mag)) return 0
+  const l = matter.log10()
+  if (l.isNan() || Number.isNaN(l.mag)) return 0
+  return l.toNumber()
+}
+
+/**
+ * Dekad merdiveni (ADR-0032).
+ *
+ * `order` alanı doğrudan dekad üssünün 10 katıdır: nextLocked() küçük order'ı
+ * seçtiği için merdivenin görünür sırası ve zamanlaması aynı sayıdan gelir.
+ * Hedef süreler, brain/scratchpad/harness ölçümündeki active profilinin geçtiği
+ * dekadlara göre konmuştur (300 dk'lık mevcut koşu; ölçüm düzeltmesiyle
+ * 240 dk bandına iner).
  */
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   {
     id: 'crisis_spawn',
     name: 'Gece Krizleri',
     hint: '1.000 Dopamin biriktir',
-    req: { kind: 'dopamine', amount: '1e3' },
+    req: { kind: 'dopamine', amount: decadeGate(3) },
     order: 10
-  },
-  {
-    id: 'patch_shop',
-    name: 'Algoritma Yamaları Dükkanı',
-    hint: '100K Dopamin biriktir',
-    req: { kind: 'dopamine', amount: '1e5' },
-    order: 20
-  },
-  {
-    id: 'refresh_feed',
-    name: 'Akışı Yenile',
-    hint: '10M Dopamin biriktir',
-    req: { kind: 'dopamine', amount: '1e7' },
-    order: 30
   },
   {
     id: 'autobuyers',
     name: 'Otomatik Botlar Sekmesi',
-    hint: '1B (1e9) Dopamin biriktir',
-    req: { kind: 'dopamine', amount: '1e9' },
-    order: 40
-  },
-  {
-    id: 'guilt_slackers',
-    name: 'Vicdan Azapları',
-    hint: '1B (1e9) Dopamin biriktir',
-    req: { kind: 'dopamine', amount: '1e9' },
-    order: 50
-  },
-  {
-    id: 'crisis',
-    name: 'Gece Kriz Yönetimi Sekmesi',
-    hint: 'D4 (Subway Surfers) formatını 10 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 4, count: 10 },
-    order: 60
+    hint: '1e12 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(12) },
+    order: 120
   },
   {
     id: 'stance_spam',
     name: 'Çılgın Kaydırma Duruşu',
-    hint: 'D1 (Kedi Videoları) formatını 50 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 1, count: 50 },
-    order: 70
+    hint: '1e14 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(14) },
+    order: 140
   },
   {
     id: 'stance_private',
     name: 'Düşük Parlaklık Duruşu',
-    hint: 'D1 (Kedi Videoları) formatını 50 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 1, count: 50 },
-    order: 71
+    hint: '1e18 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(18) },
+    order: 180
   },
   {
-    id: 'lab',
-    name: 'Algoritma Laboratuvarı Sekmesi',
-    hint: 'D2 (Sokak Lezzeti) formatını 25 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 2, count: 25 },
-    order: 80
+    id: 'colony',
+    name: 'Nöral İzleme Kolonisi',
+    hint: '1e22 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(22) },
+    order: 220
   },
   {
-    id: 'seed_cheese',
-    name: 'Eritme Kaşar Cızırtısı Tohumu',
-    hint: 'D2 (Sokak Lezzeti) formatını 50 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 2, count: 50 },
-    order: 90
-  },
-  {
-    id: 'seed_subway',
-    name: 'Subway Surfers Beat Tohumu',
-    hint: 'D3 (ASMR Sabun) formatını 25 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 3, count: 25 },
-    order: 100
-  },
-  {
-    id: 'seed_phonk',
-    name: 'Gece 4 Sigma Phonk Tohumu',
-    hint: 'D4 (Subway Surfers) formatını 25 adet sahibi ol',
-    req: { kind: 'dimBought', tier: 4, count: 25 },
-    order: 110
+    id: 'crisis',
+    name: 'Gece Kriz Yönetimi Sekmesi',
+    hint: '1e28 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(28) },
+    order: 280
   },
   {
     id: 'spell_espresso',
     name: 'Çift Espresso Shot Kararı',
-    hint: '2 Gece Kararı al',
-    req: { kind: 'spellsCast', count: 2 },
-    order: 120
+    hint: '1e34 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(34) },
+    order: 340
   },
   {
     id: 'spell_noise',
     name: 'Gürültü Önleyici Kulaklık Kararı',
-    hint: '3 Gece Kararı al',
-    req: { kind: 'spellsCast', count: 3 },
-    order: 130
+    hint: '1e42 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(42) },
+    order: 420
   },
   {
     id: 'spell_sleep',
     name: "'Yarın Erken Kalkmam Gerekmiyor' Yalanı",
-    hint: '4 Gece Kararı al',
-    req: { kind: 'spellsCast', count: 4 },
-    order: 140
+    hint: '1e52 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(52) },
+    order: 520
+  },
+  {
+    id: 'lab',
+    name: 'Algoritma Laboratuvarı Sekmesi',
+    hint: '1e65 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(65) },
+    order: 650
+  },
+  {
+    id: 'seed_cheese',
+    name: 'Eritme Kaşar Cızırtısı Tohumu',
+    hint: '1e80 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(80) },
+    order: 800
+  },
+  {
+    id: 'seed_subway',
+    name: 'Subway Surfers Beat Tohumu',
+    hint: '1e100 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(100) },
+    order: 1000
+  },
+  {
+    id: 'seed_phonk',
+    name: 'Gece 4 Sigma Phonk Tohumu',
+    hint: '1e125 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(125) },
+    order: 1250
+  },
+  {
+    id: 'guilt_slackers',
+    name: 'Vicdan Azapları',
+    hint: '1e160 Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(160) },
+    order: 1600
+  },
+  {
+    id: 'night_watch',
+    name: 'Kolektif Gece Nöbeti',
+    hint: `1e${ARC_LOG10_MAX} Dopamin biriktir — Şafak eşiği`,
+    req: { kind: 'dopamine', amount: decadeGate(ARC_LOG10_MAX) },
+    order: ARC_LOG10_MAX * 10
   },
   {
     id: 'challenges',
     name: 'Gece Kriz Meydan Okumaları',
     hint: '1 Sabah 06:00 Çöküşü yaşa',
     req: { kind: 'singularities', count: 1 },
-    order: 150
+    order: ARC_LOG10_MAX * 10 + 10
   }
 ]
 

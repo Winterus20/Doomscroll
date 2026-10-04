@@ -2,7 +2,7 @@ import { Decimal } from '../core/math'
 import type { NotationType } from '../core/format'
 
 export type StanceType = 'trend' | 'spam' | 'private_mode'
-export type AnomalyType = 'fyp' | 'heart_frenzy' | 'sponsor'
+export type AnomalyType = 'fyp' | 'heart_frenzy' | 'sponsor' | 'void'
 export type BuffType = AnomalyType | 'espresso'
 
 export interface DimensionData {
@@ -28,6 +28,7 @@ export interface FloatingAnomaly {
   x: number // Yüzde ekran konumu (10 - 85)
   y: number // Yüzde ekran konumu (15 - 80)
   remainingTime: number // Ekranda kalacağı kalan saniye
+  totalTime: number // Spawn anındaki toplam süre (halka/bar yüzdesi için)
   title: string
   desc: string
 }
@@ -78,34 +79,12 @@ export type CrisisSpellType = 'fast_charge' | 'espresso_shot' | 'noise_cancellin
 
 export type AutobuyerMode = 'single' | 'bulk' | 'max'
 
-export type AlgorithmUpgradeId =
-  | 'play_speed'
-  | 'double_tap'
-  | 'amoled_black'
-  | 'bg_listen'
-  | 'bookmark_pack'
-  | 'bass_boost'
-
-export interface AlgorithmUpgradeDef {
-  id: AlgorithmUpgradeId
-  name: string
-  icon: string
-  desc: string
-  cost: Decimal
-}
-
 export interface ResolutionMilestone {
   count: number
   name: string
   shortName: string
   mult: number
   colorClass: string
-  desc: string
-}
-
-export interface CollectiveMilestone {
-  minBought: number
-  mult: number
   desc: string
 }
 
@@ -146,8 +125,18 @@ export interface NeuralEffects {
   comboUnlocked: boolean // Combo sistemi açıldı mı
 }
 
+export interface SaveSlotMeta {
+  slot: number
+  exists: boolean
+  matter?: string
+  singularities?: number
+  playtime?: number
+  timestamp?: number
+}
+
 export interface GameSettings {
   notation: NotationType
+  decimalPlaces: number // Ondalık hassasiyet (2 veya 3)
   soundEnabled: boolean
   soundVolume: number
   theme: 'cyberpunk' | 'dark'
@@ -167,6 +156,38 @@ export interface GameSettings {
   juiceMode: 'calm' | 'balanced' | 'tilt' // Balatro juice yoğunluğu
   screenOverlayEffects: boolean // Doomscroll ekran dokuları (parmak izi lekesi ve kriz çatlağı)
   holoCardsEnabled: boolean // Balatro tarzı 3D kart tilt ve holo kaplamalar
+  swirlShaderQuality: 'off' | 'balanced' | 'high' // Balatro tarzı dinamik arka plan girdap shader'ı
+  sequentialStrike: boolean // Balatro Sütun 2: Sıralı Reels Vuruşu (Pop-chain cascade)
+  // Sistem & Performans QoL (v22 - En İyi Ayarlar)
+  batterySaver: boolean // Düşük CPU/GPU tasarruf modu
+  floatingTexts: boolean // Tıklama ve kritik uçan yazıları
+  newsTickerEnabled: boolean // Üst haber bandı açık/kapalı
+  offlineProgressModal: boolean // Çevrimdışı rapor modalı
+  hotkeysEnabled: boolean // Klavye kısayolları (1-9, M vb.)
+  activeSlot: number // 1, 2 veya 3
+}
+
+/** Balatro Sütun 2: Sıralı Nedensellik (Sequential Triggering) Basamak Tipleri */
+export type StrikeStageId = 'base' | 'synergy' | 'stance_combo' | 'crit' | 'final'
+
+export interface StrikeStage {
+  id: StrikeStageId
+  label: string
+  text: string
+  color: string
+  bgClass: string
+  borderClass: string
+  icon?: string
+  multiplier?: number
+}
+
+export interface SequentialStrikePayload {
+  x: number
+  y: number
+  stages: StrikeStage[]
+  finalAmount: Decimal
+  isCrit: boolean
+  comboCount: number
 }
 
 // Çevrimdışı / arka plan yakalama raporu — "Tekrar hoş geldin" modalı bunu gösterir
@@ -197,6 +218,7 @@ export interface PlayerStats {
   highestDps: Decimal // Anlık ulaşılan zirve saniyelik üretim
   totalManualDopamine: Decimal // Başparmak kaydırmasından gelen toplam dopamin
   anomaliesClicked: number // Tıklanan Gece Krizleri
+  mythicsClicked: number // Tıklanan Void Reel (nadir 4. tip)
   combosTriggered: number // Süper Rezonans Hipnozları
   slackersFired: number // Susturulan Vicdan Azapları
   labHarvests: number // Algoritma Lab Hasatları
@@ -226,6 +248,12 @@ export type AchievementRewardKind =
   | 'caffeine_regen'
   | 'caffeine_boost'
   | 'starting_matter'
+  // ADR-0032: 1e308'e kadar uzanan kalıcı başarımlar
+  | 'prod_x125'
+  | 'dim_cost_x085'
+  | 'click_x3'
+  | 'shift_power_boost'
+  | 'prod_x2'
 
 export interface AchievementReward {
   kind: AchievementRewardKind
@@ -251,6 +279,7 @@ export interface AchievementContext {
   playtime: number
   singularityCount: number
   anomaliesClicked: number
+  mythicsClicked: number
   combosTriggered: number
   slackersFired: number
   labHarvests: number
@@ -287,6 +316,10 @@ export interface SerializedPlayerState {
   }>
   tickspeedBought: number
   dimensionShifts: number
+  dimensionCapFloor?: number
+  formatDiscoverSeenCap?: number
+  formatUnlockBuffTier?: number
+  formatUnlockBuffUntil?: number
   galaxies: number
   singularityPoints: string
   currentStance: StanceType
@@ -300,6 +333,12 @@ export interface SerializedPlayerState {
     leechedKpi?: string // Eski kayıt geriye dönük uyumluluk
   }>
   caffeineEnergy?: number
+  /** v13: enerji tavanı (v12'de kaydedilmiyordu, yüklemede clamp tavanı olarak kullanılıyordu) */
+  maxCaffeineEnergy?: number
+  /** v13: Viral Zirve koşu ilerlemesi (daha önce kaydedilmiyordu) */
+  isViralActive?: boolean
+  viralTimeRemaining?: number
+  viralViews?: number
   labCells?: Array<{
     id: number
     seedType: LabSeedType | null
@@ -314,18 +353,18 @@ export interface SerializedPlayerState {
   autobuyerBulkUnlocked?: boolean
   autobuyerMaxUnlocked?: boolean
   singularities?: number // Tekillik sayısı (v10: bot unlock koşulu için kalıcı)
-  nightWatchUnlocked?: boolean // Faz 2 kilometre taşı (1e4000 Dopamin)
+  nightWatchUnlocked?: boolean // Faz 2 kilometre taşı (1e308 Dopamin — ADR-0033)
   singularityUpgrades?: Record<string, number>
   neuralNodesBought?: Record<string, number> // Nöral Ağaç satın alımları (v9)
   clickCombo?: { count: number; lastClickAt: number } // Tıklama serisi (geçici, güvenli varsayılanla yüklenir)
-  buyAmount?: 10 | 100 | 'max' // Reels satın alma modu (v10 QoL)
   activeChallenge?: string | null // Aktif Gece Krizi (v10)
   completedChallenges?: string[] // Tamamlanan Gece Krizleri (v10)
   challengeBestTimes?: Record<string, number> // Challenge en iyi süreleri, sn (v10)
+  mythicPity?: number // Void Reel garanti sayacı (v11: 25 spawn'da 1 garanti)
+  claimedBounties?: number[] // Hayat boyu açılan dekad basamakları (ADR-0032)
+  decadeSurgeMult?: number // Koşu içi Dekad Yükselişi çarpanı (ADR-0034, v14)
   sacrificeCount?: number
   sacrificeMultiplier?: string
-  algorithmUpgrades?: string[]
-  refreshCooldown?: number
   neuralBots?: string // Nöral İzleme Kolonisi (v8)
   napCount?: number
   napMultiplier?: string
@@ -339,6 +378,7 @@ export interface SerializedPlayerState {
     singularityCount: number
     fastestSingularity: number
     anomaliesClicked: number
+    mythicsClicked?: number
     combosTriggered: number
     slackersFired: number
     labHarvests?: number
@@ -360,4 +400,12 @@ export interface SerializedPlayerState {
   achievements?: string[]
   achievementsSeenCount?: number
   unlockedFeatures?: string[] // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilit açılışları
+  /** ADR-0035 (v15): hayat boyu ulaşılan en yüksek dopamin. Açılış kalıcılığının
+   *  asıl kaydı — Sıçrama/Küme/şafak `matter`'ı sıfırlasa da kapılar buradan açılır.
+   *  Eski kayıtlarda yok: yükleme sırasında `stats.highestMatter` + mevcut dopaminden türetilir. */
+  lifetimePeakMatter?: string
+  /** ADR-0035 (v15): hayat boyu en çok yapılan Akış Sıçraması sayısı. Akış Kümesi
+   *  `dimensionShifts`'i 0'a indirdiği için sıçrama sayacına bağlı açılışlar
+   *  (Önbellek Temizleme) bu kalıcı tepe noktadan okur. */
+  lifetimePeakShifts?: number
 }

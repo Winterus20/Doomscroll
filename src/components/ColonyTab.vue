@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useGameStore, COLONY_CORE_COST, COLONY_MIN_NAP_BOTS } from '../stores/game'
+import { useGameStore, COLONY_CORE_COST } from '../stores/game'
 import { formatNumber } from '../core/format'
 import { Network, Brain, Moon, Lock, TrendingUp, Hourglass } from 'lucide-vue-next'
 import TabHero from './TabHero.vue'
@@ -22,7 +22,9 @@ const projectedBots = computed(() => {
 const timeToNapMinutes = computed(() => {
   if (store.neuralBots.lte(0)) return null
   if (store.canPowerNap) return 0
-  const needed = Math.log(COLONY_MIN_NAP_BOTS / Math.max(1, store.neuralBots.toNumber())) / store.botBreedRate
+  const ratio = store.minNapBots.div(store.neuralBots.gte(1) ? store.neuralBots : 1).toNumber()
+  if (ratio <= 1) return 0
+  const needed = Math.log(ratio) / store.botBreedRate
   return Math.max(1, Math.ceil(needed / 60))
 })
 
@@ -136,7 +138,7 @@ const showNapConfirm = ref(false)
           TOPLU UYKU — ×{{ formatNumber(store.powerNapGain) }} Kalıcı Çarpan Kazan
         </span>
         <span v-else>
-          Toplu Uyku için {{ formatNumber(COLONY_MIN_NAP_BOTS) }} bot gerekli
+          Toplu Uyku için {{ formatNumber(store.minNapBots) }} bot gerekli
           <template v-if="timeToNapMinutes"> (~{{ timeToNapMinutes }} dk)</template>
         </span>
       </button>

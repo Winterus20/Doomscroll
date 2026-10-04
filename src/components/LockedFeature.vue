@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { Decimal } from '../core/math'
 import { useGameStore } from '../stores/game'
-import { getFeatureById, unlockProgress } from '../game/unlocks'
+import { getFeatureById, unlockProgress, unlockProgressFraction } from '../game/unlocks'
 import { formatNumber } from '../core/format'
 import { Lock } from 'lucide-vue-next'
 
@@ -17,10 +17,12 @@ const progress = computed(() => {
   return unlockProgress(store.unlockContext, f)
 })
 
+// ADR-0032: dopamin kapıları 1e308 ölçeğine kadar gidiyor; doğrusal oran
+// Infinity üretirdi. unlockProgressFraction dopamin için logaritmik ölçek kullanır.
 const percent = computed(() => {
-  const { current, target } = progress.value
-  if (target <= 0) return 0
-  return Math.min(100, Math.max(0, (current / target) * 100))
+  const f = feature.value
+  if (!f) return 0
+  return unlockProgressFraction(store.unlockContext, f) * 100
 })
 
 const formattedCurrent = computed(() =>
@@ -45,7 +47,10 @@ const formattedTarget = computed(() =>
         <div class="text-xs font-bold font-mono text-slate-400 truncate">{{ feature.name }}</div>
         <div class="text-[10px] font-mono text-slate-500">{{ feature.hint }}</div>
       </div>
-      <span class="ml-auto text-[10px] font-mono text-slate-500 tabular-nums shrink-0">
+      <span
+        v-if="feature.req.kind !== 'dopamine'"
+        class="ml-auto text-[10px] font-mono text-slate-500 tabular-nums shrink-0"
+      >
         {{ formattedCurrent }} / {{ formattedTarget }}
       </span>
     </div>

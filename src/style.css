@@ -2,15 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Balatro piksel asset'i — public/fonts içinde duruyordu ama hiç bağlanmamıştı.
+   Odometre basamakları bu fontla slot-makinesi kimliğine kavuşur. */
+@font-face {
+  font-family: "m6x11";
+  src: url("/fonts/m6x11.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   body {
     @apply bg-[#08090d] text-slate-100 selection:bg-purple-500/20 selection:text-purple-300;
+    font-family: "m6x11", "Pixelify Sans", "Chakra Petch", Inter, system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: 0.02em;
   }
   button:focus-visible,
   input:focus-visible {
     outline: 2px solid rgba(168, 85, 247, 0.6);
     outline-offset: 2px;
+  }
+  /* Balatro / Vampire Survivors kimliği: başlık + buton + sayaçlarda
+     piksel font biraz büyük ve kalın durur — küçük puntoyu telafi eder. */
+  h1, h2, h3, .btn-primary, .balatro-chip, .edition-tag {
+    font-family: "m6x11", "Pixelify Sans", "Chakra Petch", Inter, system-ui, sans-serif;
+    letter-spacing: 0.03em;
   }
 }
 
@@ -125,12 +143,12 @@
 }
 .stat-box-label {
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   color: #94a3b8;
   line-height: 1.2;
 }
 .stat-box-value {
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   font-weight: 700;
   font-size: 0.8rem;
   line-height: 1.2;
@@ -140,10 +158,10 @@
    A1: all-caps mono eyebrow kalıbı (AI tell SD4/T5) sentence-case
    gövde yüzüne çevrildi; mono yalnız gerçek sayı verisinde kaldı. */
 .section-label {
-  font-size: 12px;
-  font-family: var(--font-sans-stack, Inter, system-ui, sans-serif);
+  font-size: 13px;
+  font-family: "m6x11", "Pixelify Sans", Inter, system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
   color: #cbd5e1;
   display: flex;
   align-items: center;
@@ -151,7 +169,7 @@
 }
 .section-hint {
   font-size: 11px;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: "m6x11", "Pixelify Sans", Inter, system-ui, sans-serif;
   color: #7b8ba3; /* 5.75:1 — Faz 1 AA düzeltmesi */
 }
 
@@ -163,7 +181,7 @@
   padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
@@ -284,7 +302,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   font-weight: 700;
   border-radius: 0.65rem;
   border: 1px solid transparent;
@@ -318,6 +336,53 @@
 .count-pop {
   animation: count-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   transform-origin: center;
+}
+
+/* Büyüklük kademeli pop — üretim sıçraması (md) ve büyük sıçrama/krit (lg). */
+@keyframes count-pop-md {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+.count-pop-md {
+  animation: count-pop-md 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+}
+@keyframes count-pop-lg {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.13); }
+  60% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+.count-pop-lg {
+  animation: count-pop-lg 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+}
+
+@keyframes dps-surge {
+  0% { transform: scale(1); color: rgb(196 181 253); }
+  25% { transform: scale(1.12); color: rgb(110 231 183); text-shadow: 0 0 12px rgba(52, 211, 153, 0.55); }
+  100% { transform: scale(1); color: rgb(196 181 253); }
+}
+.dps-surge {
+  animation: dps-surge 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* /s delta oku — son ~1.5 sn eğimi: yükseliş yeşili, düşüş soluk. */
+.dps-delta-up {
+  color: #6ee7b7;
+  font-size: 12px;
+  line-height: 1;
+  animation: dps-delta-blink 1.2s ease-in-out infinite;
+}
+.dps-delta-down {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1;
+}
+@keyframes dps-delta-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 /* Screen Shake (Clean micro-shake) */
@@ -501,7 +566,7 @@ body::after {
   gap: 0.3rem;
   padding: 0.3rem 0.7rem;
   border-radius: 0.6rem;
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   font-weight: 800;
   font-size: 12px;
   line-height: 1;
@@ -534,12 +599,161 @@ body::after {
   opacity: 0.55;
 }
 
-/* Sayaç glow — imza sayacı hep hafif parlar, tekillik hazırsa altına döner */
+/* Sayaç glow — imza sayacı hep hafif parlar, tekillik hazırsa altına döner.
+   Okunabilirlik: bulanıklık dar tutulur, derinlik 2px taban gölgeden gelir. */
 .counter-glow {
-  text-shadow: 0 0 26px rgba(168, 85, 247, 0.35), 0 2px 0 rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 14px rgba(168, 85, 247, 0.4), 0 2px 0 rgba(0, 0, 0, 0.65);
 }
 .counter-gold {
-  text-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 2px 0 rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.5), 0 2px 0 rgba(0, 0, 0, 0.65);
+}
+
+/* Sütun 5: hız-reaktif sayaç ısısı — logaritmik kademe, sürekli nefes.
+   calm: baz glow yeterli. warm/hot/supernova şiddetlenir. */
+@keyframes rate-pulse-warm {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.012); }
+}
+@keyframes rate-pulse-hot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+@keyframes rate-pulse-supernova {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.rate-warm {
+  text-shadow: 0 0 14px rgba(52, 211, 153, 0.5), 0 2px 0 rgba(0, 0, 0, 0.65);
+  animation: rate-pulse-warm 2.2s ease-in-out infinite;
+}
+.rate-hot {
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.55), 0 2px 0 rgba(0, 0, 0, 0.65);
+  animation: rate-pulse-hot 1.4s ease-in-out infinite;
+}
+/* Supernova: kromatik ayrım rakamda 1px'e indirildi (okunabilirlik);
+   asıl elektrik plaka çerçevesinde. */
+.rate-supernova {
+  text-shadow: -1px 0 0 rgba(255, 99, 104, 0.4), 1px 0 0 rgba(60, 180, 255, 0.4), 0 0 16px rgba(168, 85, 247, 0.5);
+  animation: rate-pulse-supernova 0.9s ease-in-out infinite;
+}
+
+/* Alev: sayı çok hızlı artarken rakamlar tutuşur, yavaşlayınca söner.
+   Gradyan-kesme tekniği piksel fontu çamurlaştırdığı için yasak —
+   alev = soluk sıcak çekirdek + turuncu hale + hafif titreme. */
+.flame-text {
+  background: none;
+  color: #ffedb0;
+  text-shadow:
+    0 0 8px rgba(255, 140, 0, 0.9),
+    0 0 24px rgba(255, 60, 0, 0.5),
+    0 2px 0 rgba(0, 0, 0, 0.65);
+  filter: none;
+  animation: flame-flicker 0.32s ease-in-out infinite;
+}
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  30% { transform: scale(1.008, 1.015) skewX(0.3deg); }
+  60% { transform: scale(0.998, 1.008) skewX(-0.3deg); }
+}
+/* Alevde sonek rozetleri de kor rengine döner (şeffaflık yok — miras alınmaz). */
+.flame-text .reel-suffix-exp,
+.flame-text .reel-suffix-std {
+  color: #ffd97a;
+  -webkit-text-fill-color: #ffd97a;
+  text-shadow: 0 0 10px rgba(255, 123, 0, 0.8), 0 2px 0 rgba(0, 0, 0, 0.65);
+}
+/* Alevde /s satırı turuncuya döner. */
+.dps-burn {
+  color: #fdba74;
+  text-shadow: 0 0 12px rgba(255, 123, 0, 0.5);
+}
+/* Pil tasarrufu / azaltılmış hareket: alev tamamen bembeyaz metne düşer
+   (background: none + transparent color = görünmez metin olurdu). */
+.reduce-anim .flame-text,
+.battery-saver .flame-text {
+  background: none !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+/* Gerçek slot şeridi — her basamak 0-9 sütunudur, GPU transform ile kayar.
+   Şerit konuma sabitlenir (key=konum), sadece translateY değişir: pürüzsüz rulo. */
+.dopa-reels {
+  display: inline-flex;
+  align-items: flex-start;
+  /* m6x11plus Türkçe glifleri (ğ, ş, ı, İ, ç) kapsar; baz m6x11'de eksik
+     glif düşerse Pixelify Sans piksel yığına kayar — sayaç asla tofu olmaz. */
+  font-family: "m6x11plus", "m6x11", "Pixelify Sans", "Chakra Petch", ui-monospace, monospace;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+/* Sonek rozeti: üs/sonek ruloya girmez, küçük ve renkli durur.
+   Üs (e45) amber = prestij dili, harf (M/B) mor = üretim dili. */
+.reel-suffix {
+  align-self: flex-end;
+  font-size: 0.52em;
+  line-height: 1;
+  padding-bottom: 0.1em;
+  margin-left: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  animation: reel-static-in 0.3s ease-out;
+}
+.reel-suffix-exp {
+  color: #fcd34d;
+  text-shadow: 0 0 14px rgba(251, 191, 36, 0.45), 0 2px 0 rgba(0, 0, 0, 0.65);
+}
+.reel-suffix-std {
+  color: #d8b4fe;
+  text-shadow: 0 0 14px rgba(168, 85, 247, 0.45), 0 2px 0 rgba(0, 0, 0, 0.65);
+}
+.reel {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  will-change: transform;
+}
+.reel-strip {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.reel-cell {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+.reel-static {
+  display: inline-block;
+  height: 1em;
+  line-height: 1;
+  animation: reel-static-in 0.3s ease-out;
+}
+@keyframes reel-static-in {
+  0% { opacity: 0.3; transform: translateY(20%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Çerçevesiz sarmalayıcı — pop animasyonunun hedefi, görsel yükü yok. */
+.dopa-wrap {
+  display: inline-block;
+}
+/* Üzerine gelince rulo hızla netleşir — okumak isteyen beklemez. */
+.dopa-wrap:hover .reel-strip {
+  transition-duration: 0.12s;
+}
+
+/* Dekad flaşı — 10^n geçişinde tek seferlik parlama + sayaç zıplaması. */
+.decade-flash {
+  animation: decade-flash-anim 0.9s ease-out;
+}
+@keyframes decade-flash-anim {
+  0% { filter: brightness(1.7); transform: scale(1.06); }
+  40% { filter: brightness(1.25); transform: scale(1.02); }
+  100% { filter: brightness(1); transform: scale(1); }
 }
 
 /* Sheen süpürmesi — alınabilir birincil butonda ışık gezinir */
@@ -564,16 +778,27 @@ body::after {
   90%, 100% { left: 130%; }
 }
 
-/* Anomali wobble — Balatro kartı gibi canlı durur */
+/* Anomali wobble — Balatro kartı gibi canlı durur (taban translate sabit: animasyon kapalıysa kayma yok) */
 @keyframes anomaly-wobble-anim {
   0%, 100% { transform: translate(-50%, -50%) rotate(-1.2deg); }
   50% { transform: translate(-50%, -48%) rotate(1.2deg); }
 }
 .anomaly-wobble {
+  transform: translate(-50%, -50%);
   animation: anomaly-wobble-anim 3.2s ease-in-out infinite;
+  contain: layout paint;
 }
-.anomaly-wobble:hover {
-  animation-play-state: paused;
+.anomaly-item:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.8);
+  outline-offset: 3px;
+  border-radius: 1rem;
+}
+.anomaly-capsule {
+  transition: filter 0.15s ease, box-shadow 0.2s ease;
+}
+.anomaly-wobble:hover .anomaly-capsule,
+.anomaly-wobble:focus-visible .anomaly-capsule {
+  filter: brightness(1.14);
 }
 .anomaly-glow-purple {
   box-shadow: 0 0 28px -2px rgba(168, 85, 247, 0.65), 0 0 12px rgba(192, 132, 252, 0.4);
@@ -586,6 +811,26 @@ body::after {
 .anomaly-glow-amber {
   box-shadow: 0 0 28px -2px rgba(245, 158, 11, 0.65), 0 0 12px rgba(252, 211, 77, 0.4);
   --beam-color: #fcd34d;
+}
+.anomaly-glow-void {
+  box-shadow: 0 0 34px -2px rgba(34, 211, 238, 0.7), 0 0 16px rgba(192, 132, 252, 0.5);
+  --beam-color: #22d3ee;
+}
+.anomaly-mythic {
+  animation-duration: 2.2s;
+}
+@keyframes anomaly-pop-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.anomaly-pop-enter-active {
+  animation: anomaly-pop-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.anomaly-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  transform: translate(-50%, -50%) scale(0.85);
+  opacity: 0;
 }
 
 /* ==========================================================================
@@ -661,6 +906,9 @@ body::after {
 }
 .crisis-aura-amber {
   box-shadow: inset 0 0 75px 12px rgba(245, 158, 11, 0.32);
+}
+.crisis-aura-void {
+  box-shadow: inset 0 0 80px 14px rgba(34, 211, 238, 0.3), inset 0 0 120px 30px rgba(168, 85, 247, 0.22);
 }
 @keyframes combo-aura-pulse-anim {
   0% {
@@ -870,7 +1118,7 @@ body::after {
   gap: 0.25rem;
   padding: 0.15rem 0.45rem;
   border-radius: 0.375rem;
-  font-family: ui-monospace, monospace;
+  font-family: "m6x11", "Pixelify Sans", ui-monospace, monospace;
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.05em;
@@ -927,6 +1175,24 @@ body::after {
   scrollbar-width: none;
 }
 
+/* ADR-0029: kaydırılabilir alan GÖRÜNÜR olmalı. Sekme dock'u 360 px'te 9
+   sekmeyi taşıyamıyor; kaydırma çubuğunu gizlemek alanı "bulunamaz" yapıyordu.
+   İnce, temaya uygun bir çubuk bırakıldı. */
+.ds-nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+.ds-nav-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+.ds-nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ds-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .affordance-pulse,
   .tab-dot,
@@ -936,20 +1202,71 @@ body::after {
   .balatro-chip-red.hot,
   .btn-sheen::before,
   .anomaly-wobble,
+  .anomaly-pop-enter-active,
   .foil-badge::after,
   .count-pop,
+  .count-pop-md,
+  .count-pop-lg,
   .count-pop-combo,
   .buy-bounce,
   .cta-beacon,
   .arrow-nudge,
   .edition-poly::after,
-  .edition-tag-poly {
+  .edition-tag-poly,
+  /* ADR-0029: liste en gürültülü hareketleri kapsamıyordu — sonsuz dönen kriz
+     kapsülü çerçevesi, kriz parlaması, tam ekran aura nabzı ve üretim artışı
+     flaşı. */
+  .anomaly-beam-border,
+  .crisis-shimmer,
+  .crisis-aura-combo,
+  .dps-surge,
+  .edition-poly,
+  .crt-overlay,
+  .crt-vignette,
+  .crt-scanlines,
+  .rate-warm,
+  .rate-hot,
+  .rate-supernova,
+  .flame-text,
+  .reel-static,
+  .reel-suffix,
+  .decade-flash,
+  .dps-delta-blink,
+  .animate-pulse {
     animation: none !important;
   }
-  .card-tilt-surface {
+  .card-tilt-surface,
+  .tilt-card:hover {
     transform: none !important;
+  }
+  .reel-strip {
+    transition: none !important;
+  }
+  /* OS azaltılmış hareket: alev metni görünmez bırakmaz, beyaza düşer. */
+  .flame-text {
+    background: none !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    filter: none !important;
   }
   .progress-fill {
     transition: none;
   }
+  /* OS tercihi CRT ekran dokusunu da kapatır (eskiden yalnızca oyun içi
+     ayardan kapanıyordu). */
+  .crt-scanlines,
+  .crt-vignette {
+    display: none !important;
+  }
 }
+
+/* Pil & Düşük Donanım Tasarruf Modu (v22) */
+.battery-saver * {
+  text-shadow: none !important;
+}
+.battery-saver .glass-panel,
+.battery-saver .modal-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+

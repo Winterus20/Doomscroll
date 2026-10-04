@@ -36,7 +36,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="layer-toast fixed bottom-4 right-4 flex flex-col gap-2 w-72 max-w-[calc(100vw-2rem)]">
+  <!-- role="status" + aria-live="polite": başarım açılışları ekran okuyucuya duyurulur.
+       Toast bir modal değildir; odak tuzağı ve sekme döngüsü burada bilinçli olarak YOK. -->
+  <div
+    role="status"
+    aria-live="polite"
+    class="layer-toast fixed bottom-4 right-4 flex flex-col gap-2 w-72 max-w-[calc(100vw-2rem)]"
+  >
     <div
       v-for="id in store.achievementToastQueue"
       :key="id"

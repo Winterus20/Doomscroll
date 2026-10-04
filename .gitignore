@@ -1,6 +1,12 @@
 # Dependencies
 node_modules/
 
+# Production build (ADR-0031)
+# dist/ izleniyordu ve izlenmeye devam ediyordu. Vite paketi VITE_* Firebase
+# anahtarlarını içine gömdüğü için her derlemede üretilen paket repoya
+# sızma riski taşıyordu. Artık sürüm kontrolüne girmez.
+dist/
+
 # Build cache / logs
 *.log
 npm-debug.log*
@@ -18,3 +24,11 @@ Thumbs.db
 .env
 .env.local
 .freebuff/
+
+# Harness / clickaudit build artifacts (repoya girmez, dist/ mantigi ile ayni gerekce)
+brain/scratchpad/harness/out/
+brain/scratchpad/harness/results*.json
+brain/scratchpad/harness/bench*.json
+brain/scratchpad/harness/smoke*.json
+brain/scratchpad/clickaudit/out/
+brain/scratchpad/clickaudit/result*.json

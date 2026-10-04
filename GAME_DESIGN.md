@@ -42,6 +42,8 @@ Temel Kaynak: **DOPAMİN (Dopamine)**
 Tıklama Eylemi: **"👆 YUKARI KAYDIR! (Swipe Up / Scroll!)"**
 İşlem Hızı: **"Algoritma Frekansı (Hz)"**
 
+**Açılış kuralı (ADR-0025/0026/0027):** yeni koşuda **D1–D2** görünür (format keşfi unfolding — her yeni format bir Akış Sıçraması ödülüdür); erken paket maliyetleri yumuşak merdiven (D1 ~×55/adım, sonra klasik); her **Akış Sıçraması** +1 format (max D8). Eski save'ler `dimensionCapFloor` ile en az eski açık tier sayısını korur.
+
 | Boyut | İstasyon Adı | İronik Açıklama |
 | :--- | :--- | :--- |
 | **Boyut 1** | **Masum Kedi & Köpek Videoları** | *"Ay ne tatlı miyavlıyor, tamam bunu izleyip hemen uyuyorum..."* (Masum başlangıç). |
@@ -171,14 +173,16 @@ Reset döngüsü alt-saniyeye indiğinde oyun üst mekaniklere devredilir (*Anti
 
 ## 8. Gece Başarımları (Plaketler) & Kalıcı Ödüller
 
-- **Kapsam:** 7 kategori × 8 = **56 başarım** (`src/game/achievements.ts` — saf veri + `check(ctx)` predicate'leri).
+- **Kapsam:** 8 kategori × değişken = **68 başarım** (`src/game/achievements.ts` — saf veri + `check(ctx)` predicate'leri).
+  Dopamin Bağımlılığı (8) · Boyut Yozlaşması (8) · Otomasyon Ordusu (11) · Gece Krizleri (9) · Vicdan Azapları (8) · Algoritma Laboratuvarı (8) · Tekillik Yolculuğu (8) · Meydan Okumaları (8).
+  *(ADR-0031: bu bölüm eskiden 7 × 8 = 56 diyordu ve gerçek veriden 12 başarım eksikti.)*
   Dopamin Bağımlılığı · Boyut Yozlaşması · Otomasyon Ordusu · Gece Krizleri · Vicdan Azapları · Algoritma Laboratuvarı · Tekillik Yolculuğu.
-- **Global çarpan (kalıcı):** `1.012^(başarım) × 1.06^(tam kategori)` → tam sette ≈ **×2.93**.
+- **Global çarpan (kalıcı):** `1.012^(başarım) × 1.06^(tam kategori)` → tam sette (68 başarım, 8 dolu satır) ≈ **×3.59**.
   Üretim (`matterPerSecond` + boyut zinciri) ve tıklamaya (`manualClickPower`) uygulanır;
   **SP kazancına (`singularityGain`) uygulanmaz** — prestij ekonomisi (~3 saat hedefi) korunur.
 - **10 niş kalıcı ödül:** Tıklama ×2 · Frekans maliyeti -%5 · Kriz sıklığı +%10 · Azap sızıntısı -%15 ·
   Kafein yenilenmesi +%25 · Kafein Serumu +%25 · SP dükkanı -%5 · Lab hasadı +%10 · Buff süresi +%20 ·
   Sıfırlanma sonrası 1.000 Dopaminle başla.
-- **7 gizli (shadow) başarım:** kilitliyken `???` görünür, ödül vermez — sadece plaket (Cookie Clicker modeli).
+- **10 gizli (shadow) başarım:** kilitliyken `???` görünür, ödül vermez — sadece plaket (Cookie Clicker modeli).
 - **Kalıcılık:** `state.achievements` hiçbir reset action'ına (`dimensionShift`/`buyGalaxy`/`singularityReset`) girmez → prestij dahil otomatik kalıcı. Kayıt `serialize` v7.
 - **Kontrol:** `store.update()` sonunda `checkAchievements()` (sadece kilitli id'ler taranır) → toast kuyruğu (sağ üst, 4 sn) + ödüllüde konfeti, satır tamamlamada büyük konfeti. Offline simülasyon aynı yolu kullandığı için çevrimdışıyken de tetiklenir.

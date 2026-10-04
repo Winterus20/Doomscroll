@@ -1,39 +1,54 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useGameStore, ALGORITHM_UPGRADES } from '../stores/game'
+import { useGameStore, BASE_UNLOCKED_DIMENSIONS } from '../stores/game'
 import { format } from '../core/format'
 import { D_0 } from '../core/math'
-import type { AlgorithmUpgradeId } from '../models/types'
+import { getTierIdentity } from '../game/dimension_identity'
 import DimensionRow from './DimensionRow.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import {
-  Sun,
-  Sunrise,
   Sparkles,
   Radio,
   EyeOff,
   AlertCircle,
-  RefreshCw,
   Trash2,
-  Cpu,
-  CheckCircle2,
-  Layers,
-  TrendingUp
+  ChevronDown,
+  Lock
 } from 'lucide-vue-next'
 
 const store = useGameStore()
-const collectiveInfo = computed(() => store.collectiveMilestoneInfo)
+// P2 cila: Vicdan kartı katlanabilir — alt scroll zorunluluğu kalkar, ceza rozeti üstte kalır
+const slackersOpen = ref(false)
+
+// Bağlamsal pasif rozetleri — etki ettiği mekanikte gösterilir (satırlar temiz kalır)
+const d3Passive = computed(() => {
+  const id = getTierIdentity(3)
+  if (!store.passiveBadges.d3Leech || !id) return null
+  return { label: `D3 -${Math.round((1 - id.passive.value) * 100)}%`, desc: id.passive.desc }
+})
+const d5Passive = computed(() => {
+  const id = getTierIdentity(5)
+  if (!store.passiveBadges.d5Shift || !id) return null
+  return { label: `D5 -${Math.round((1 - id.passive.value) * 100)}%`, desc: id.passive.desc }
+})
 
 const visibleDimensions = computed(() => {
   return store.dimensions.slice(0, store.unlockedDimensionsCount)
 })
 
-const shiftReq = computed(() => store.shiftRequirement)
-const isShiftUnlock = computed(() => store.dimensionShifts < 4)
+// ADR-0027: sıradaki kilitli format teaser'ı — unfolding "merak metni" (P1, research §5).
+const nextLockedTier = computed(() => {
+  const unlocked = store.unlockedDimensionsCount
+  if (unlocked >= 8 || store.activeChallenge) return null
+  const tier = unlocked + 1
+  const identity = getTierIdentity(tier)
+  // Kaçıncı Akış Sıçramasında açılacağı tek kaynaktan türetilir (ADR-0033).
+  const shiftsNeeded = Math.max(1, tier - BASE_UNLOCKED_DIMENSIONS)
+  return { tier, label: identity?.label ?? `D${tier}`, shiftsNeeded }
+})
 
-// Özellik Merdiveni kademeleri (Akışı Yenile: 10M Dopamin · Yama Dükkanı: 100K Dopamin)
-const refreshFeedUnlocked = computed(() => store.isFeatureUnlocked('refresh_feed'))
-const patchShopUnlocked = computed(() => store.isFeatureUnlocked('patch_shop'))
+const shiftReq = computed(() => store.shiftRequirement)
+const isShiftUnlock = computed(() => store.dimensionShifts < 6)
 
 const currentShiftDimAmount = computed(() => {
   const dim = store.dimensions[shiftReq.value.tier - 1]
@@ -59,36 +74,10 @@ const galaxyProgressPercent = computed(() => {
   return Math.min(100, Math.max(0, ratio * 100))
 })
 
-const singularityProgress = computed(() => {
-  if (store.matter.lt(10)) return 0
-  const logVal = store.matter.log10().toNumber()
-  return Math.min(100, Math.max(0, (logVal / 308.25) * 100))
-})
-
 // Önbellek Temizleme (Sacrifice) açık mı?
-const isSacrificeUnlocked = computed(() => {
-  return store.dimensionShifts >= 5 || (store.dimensions[7] && store.dimensions[7].amount.gt(0))
-})
-
-function triggerRefresh(e: MouseEvent) {
-  if (!store.canRefresh) return
-  const target = e.currentTarget as HTMLElement | null
-  const rect = target?.getBoundingClientRect()
-  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2
-  const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2
-
-  window.dispatchEvent(
-    new CustomEvent('doomscroll:tap', {
-      detail: {
-        x,
-        y,
-        text: '3× Trend Dalgası!',
-        color: '#67e8f9'
-      }
-    })
-  )
-  store.pullToRefresh()
-}
+// ADR-0035: artık `dimensionShifts >= 5` değil — Akış Kümesi o sayacı 0'a indirdiği
+// için kart her kümeden sonra kayboluyordu. Store'daki kalıcı getter tek kaynak.
+const isSacrificeUnlocked = computed(() => store.sacrificeUnlocked)
 
 function triggerSacrifice(e: MouseEvent) {
   if (!store.canSacrifice) return
@@ -120,27 +109,6 @@ function doSacrifice(e?: MouseEvent) {
     })
   )
   store.sacrificeDimensions()
-}
-
-function buyUpgrade(e: MouseEvent, id: AlgorithmUpgradeId) {
-  const target = e.currentTarget as HTMLElement | null
-  const rect = target?.getBoundingClientRect()
-  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2
-  const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2
-
-  const success = store.buyAlgorithmUpgrade(id)
-  if (success) {
-    window.dispatchEvent(
-      new CustomEvent('doomscroll:tap', {
-      detail: {
-        x,
-        y,
-        text: 'Yama Yüklendi!',
-        color: '#67e8f9'
-      }
-      })
-    )
-  }
 }
 
 function triggerShift(e: MouseEvent) {
@@ -187,59 +155,20 @@ function triggerGalaxy(e: MouseEvent) {
   store.buyGalaxy()
 }
 
-function triggerSingularity(e: MouseEvent) {
-  if (!store.canSingularity) return
-  // QoL: onaysız tetiklenen buton artık onay diyaloğuna bağlı
-  if (store.settings.confirmDialogs) {
-    showSingularityConfirm.value = true
-    return
-  }
-  doSingularity(e)
-}
-
-function doSingularity(e?: MouseEvent) {
-  if (!store.canSingularity) return
-  window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'hard' } }))
-
-  const target = e?.currentTarget as HTMLElement | null
-  const rect = target?.getBoundingClientRect()
-  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2
-  const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2
-
-  window.dispatchEvent(
-    new CustomEvent('doomscroll:tap', {
-      detail: {
-        x,
-        y,
-        text: 'GÜNEŞ DOĞDU!',
-        color: '#fbbf24',
-        big: true
-      }
-    })
-  )
-  store.singularityReset()
-}
-
-// QoL: onay diyaloğu görünürlükleri
-const showSingularityConfirm = ref(false)
+// QoL: onay diyaloğu görünürlüğü
 const showSacrificeConfirm = ref(false)
-
-// QoL: satın alma modu seçenekleri (1 paket = 10 adet üzerinden)
-const BUY_MODES: Array<{ value: 10 | 100 | 'max'; label: string; tip: string }> = [
-  { value: 10, label: '×10', tip: '×10: 10 adet al (1 paket — en küçük alım)' },
-  { value: 100, label: '×100', tip: '×100: 100 adet al (10 paket birden)' },
-  { value: 'max', label: 'Maks', tip: 'Maks: paran yettiği kadar paket al' }
-]
-
-// Kolektif Trend erken oyunda korkutucu olmasın: ilk eşik (25) uzaktayken
-// darboğaz rozeti + bar gizlenir, tek satır hedef gösterilir.
-const isCollectiveEarly = computed(() => store.collectiveMinBought < 10)
 
 // Akış Kümesi kartı D8 çağında anlamlıdır: ilk sıçrama öncesi ve D5 kapalıysa
 // ölü kart yerine tek satır hedef gösterilir.
 const showGalaxyCard = computed(
   () => store.dimensionShifts >= 1 || store.galaxies > 0 || store.unlockedDimensionsCount >= 5
 )
+
+const gridColsClass = computed(() => {
+  if (isSacrificeUnlocked.value) return 'md:grid-cols-3'
+  if (showGalaxyCard.value) return 'md:grid-cols-2'
+  return 'grid-cols-1'
+})
 
 function handleSlackerClick(e: MouseEvent, id: string) {
   window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
@@ -265,145 +194,84 @@ function handleSlackerClick(e: MouseEvent, id: string) {
   )
   store.clickSlacker(id)
 }
+
+// Dokunmatik Yukarı Kaydırma (Touch Swipe-Up Gesture)
+let touchStartY = 0
+let touchStartX = 0
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 1) {
+    touchStartY = e.touches[0].clientY
+    touchStartX = e.touches[0].clientX
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (e.changedTouches.length === 1) {
+    const deltaY = e.changedTouches[0].clientY - touchStartY
+    const deltaX = e.changedTouches[0].clientX - touchStartX
+    // Yukarı doğru belirgin bir fiskeleme jesti (min 36px dikey, yataydan dik)
+    if (deltaY <= -36 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+      const x = e.changedTouches[0].clientX
+      const y = e.changedTouches[0].clientY
+
+      // Taktil dokunsal titreşim
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(8)
+        } catch { /* yoksay */ }
+      }
+
+      window.dispatchEvent(
+        new CustomEvent('doomscroll:tap', {
+          detail: {
+            x,
+            y,
+            text: `+${format(store.manualClickPower, 2, store.settings.notation)}`
+          }
+        })
+      )
+      store.manualClick({ x, y })
+    }
+  }
+}
 </script>
 
 <template>
-  <div class="space-y-3">
-    <!-- 1. Şafak İlerleme Çubuğu & Akışı Yenile Taktil Butonu -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <!-- Şafak İlerleme Çubuğu -->
-      <div
-        class="glass-panel-card px-3.5 py-2 rounded-xl flex items-center justify-between gap-3 border border-white/[0.06] flex-1"
-        v-tip="'Hedef: 1.79e308 Dopamin ile Sabah 06:00 Tekilliği'"
-      >
-        <div class="flex items-center gap-2 text-xs font-mono text-slate-300 shrink-0">
-          <Sun class="w-3.5 h-3.5 text-amber-400" />
-          <span class="font-medium">Şafak (06:00):</span>
-        </div>
-
-        <div class="progress-track progress-track-sm max-w-md progress-track-bordered flex-1">
-          <div
-            class="progress-fill progress-fill-dawn"
-            :style="{ width: `${singularityProgress}%` }"
-          ></div>
-        </div>
-
-        <span class="text-xs font-mono font-bold text-amber-300 tabular-nums shrink-0">
-          {{ singularityProgress.toFixed(2) }}%
-        </span>
-      </div>
-
-      <!-- Akışı Yenile (Pull to Refresh) Taktil Butonu (1.000 Dopamin ile açılır) -->
-      <button
-        v-if="refreshFeedUnlocked"
-        @click="triggerRefresh($event)"
-        :disabled="!store.canRefresh"
-        class="btn-tactile px-3.5 py-2 rounded-xl flex items-center justify-center gap-2 border font-mono text-xs font-semibold transition-all shrink-0 cursor-pointer"
-        :class="store.isRefreshActive
-          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm animate-pulse'
-          : store.canRefresh
-            ? 'bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 border-cyan-500/40 cursor-pointer'
-            : 'bg-black/30 text-slate-500 border-white/[0.04] cursor-not-allowed opacity-50'"
-        v-tip="store.isRefreshActive ? 'Trend Dalgası Aktif: Tüm üretim 3× hızlandı!' : 'Yeni trend dalgası başlatır: 12 sn 3× üretim (60 sn bekleme)'"
-      >
-        <RefreshCw class="w-3.5 h-3.5 shrink-0" :class="{ 'animate-spin': store.isRefreshActive }" />
-        <span v-if="store.isRefreshActive" class="tabular-nums">3× Trend ({{ Math.ceil(store.refreshActiveTime) }}s)</span>
-        <span v-else-if="store.canRefresh">Akışı Yenile!</span>
-        <span v-else class="tabular-nums">Yenile ({{ Math.ceil(store.refreshCooldown) }}s)</span>
-      </button>
-    </div>
-
-    <!-- 1.5. Kolektif Trend Eşiği (En Zayıf Halka - All-Format Milestones) -->
-    <div
-      class="glass-panel-card p-3 rounded-xl border border-indigo-500/20 bg-indigo-950/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-      v-tip="'Tüm açık formatlar belirli bir seviyeye ulaştığında evrensel üretim katlanır!'"
-    >
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
-          <Layers class="w-4 h-4" />
-        </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-bold text-xs text-indigo-200">Kolektif Trend</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold tabular-nums">
-              ×{{ format(store.collectiveMultiplier, 1, store.settings.notation) }} Aktif
-            </span>
-          </div>
-          <div class="text-[11px] text-slate-400 font-mono mt-0.5">
-            <span v-if="collectiveInfo.next">
-              Sıradaki: <span class="text-indigo-300 font-semibold">{{ collectiveInfo.next.minBought }} Eşiği</span> ({{ collectiveInfo.next.desc }})
-            </span>
-            <span v-else class="text-emerald-400 font-semibold">Tüm Kolektif Eşikler Aşıldı! (Maksimum Bonus)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sağ: İlerleme Barı + Darboğaz Uyarısı (erken oyunda tek satır hedef) -->
-      <div v-if="isCollectiveEarly" class="text-[11px] font-mono text-slate-500 shrink-0">
-        Hedef: tüm açık formatları <span class="text-indigo-300 font-semibold">10 adete</span> çıkar → ilk bonus
-      </div>
-      <div v-else-if="collectiveInfo.next" class="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 w-full md:w-auto shrink-0">
-        <div class="flex flex-col gap-1 w-full sm:w-36">
-          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>En Düşük: {{ collectiveInfo.minBought }}</span>
-            <span class="text-indigo-300 font-semibold">{{ collectiveInfo.next.minBought }}</span>
-          </div>
-          <div class="progress-track progress-track-sm progress-track-bordered w-full">
-            <div
-              class="progress-fill progress-fill-purple"
-              :style="{ width: `${collectiveInfo.progress}%` }"
-            ></div>
-          </div>
-        </div>
-
-        <!-- Darboğaz Rozeti (En gerideki format) -->
-        <div
-          class="px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] font-mono flex items-center gap-1.5 shrink-0"
-          v-tip="`Kolektif bonusu almak için en gerideki formatı yükselt: ${collectiveInfo.bottleneck.name}`"
-        >
-          <TrendingUp class="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span>En Geride: <strong>{{ collectiveInfo.bottleneck.name }}</strong> ({{ collectiveInfo.bottleneck.bought }}/{{ collectiveInfo.next.minBought }})</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. Sabah 06:00 Tekillik Çöküşü Hazır Uyarısı -->
-    <div
-      v-if="store.canSingularity"
-      class="p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/40 flex items-center justify-between gap-3"
-    >
-      <div class="flex items-center gap-2.5">
-        <Sunrise class="w-5 h-5 text-amber-400 shrink-0" />
-        <div>
-          <div class="text-xs font-bold text-white uppercase tracking-wider font-mono">Güneş Doğdu!</div>
-          <div class="text-xs font-mono text-amber-300 tabular-nums">
-            +{{ format(store.singularityGain, 0, store.settings.notation) }} Uykusuzluk Puanı (SP)
-          </div>
-        </div>
-      </div>
-
-      <button
-        @click="triggerSingularity($event)"
-        class="btn-tactile px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold text-xs uppercase cursor-pointer shrink-0"
-      >
-        Tekillik Sıfırla
-      </button>
-    </div>
-
-    <!-- 3. Vicdan Azapları (Kompakt Chips) -->
+  <div
+    class="space-y-3"
+    @touchstart.passive="handleTouchStart"
+    @touchend.passive="handleTouchEnd"
+  >
+    <!-- 3. Vicdan Azapları — katlanabilir: başlık her zaman görünür, chipler açılır/kapanır -->
     <div
       v-if="store.slackers.length > 0"
-      class="glass-panel-card p-3 rounded-xl border border-rose-900/40 bg-rose-950/10 space-y-2"
+      class="glass-panel-card p-2.5 rounded-xl border border-rose-500/30 bg-rose-950/15 space-y-0"
     >
-      <div class="flex items-center justify-between text-xs font-mono text-rose-300">
-        <div class="flex items-center gap-1.5">
-          <AlertCircle class="w-3.5 h-3.5 text-rose-400" />
+      <button
+        @click="slackersOpen = !slackersOpen"
+        class="w-full flex items-center justify-between text-xs font-mono py-0.5 cursor-pointer"
+        v-tip="slackersOpen ? 'Vicdan chiplerini gizle' : 'Vicdan chiplerini göster'"
+      >
+        <div class="flex items-center gap-1.5 text-rose-200 font-bold">
+          <AlertCircle class="w-3.5 h-3.5 text-rose-300" />
           <span>Vicdan Azabı (-{{ (store.slackerLeechPercent * 100).toFixed(0) }}%)</span>
+          <span class="text-[10px] font-normal text-slate-500">({{ store.slackers.length }})</span>
+          <span
+            v-if="d3Passive"
+            class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
+            v-tip="`D3 ASMR Hipnoz Pasifi: ${d3Passive.desc}`"
+          >
+            {{ d3Passive.label }}
+          </span>
         </div>
-        <span class="text-[11px] text-slate-500">3 tıkla %120 iade</span>
-      </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="text-[11px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">3 tıkla → %120 iade</span>
+          <ChevronDown class="w-3.5 h-3.5 text-slate-500 transition-transform" :class="{ 'rotate-180': !slackersOpen }" />
+        </div>
+      </button>
 
-      <div class="flex flex-wrap gap-2">
+      <div v-show="slackersOpen" class="flex flex-wrap gap-2 pt-2">
         <button
           v-for="slacker in store.slackers"
           :key="slacker.id"
@@ -421,25 +289,6 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       </div>
     </div>
 
-    <!-- QoL: satın alma modu seçici — tüm format satırları seçili modda alır (Cookie Clicker bulk buy deseni) -->
-    <div class="flex items-center gap-1.5">
-      <div class="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/40 border border-white/[0.06]">
-        <button
-          v-for="mode in BUY_MODES"
-          :key="mode.value"
-          @click="store.setBuyAmount(mode.value)"
-          class="btn-tactile px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-all cursor-pointer border"
-          :class="store.buyAmount === mode.value
-            ? 'bg-purple-500/25 text-purple-200 border-purple-400/40'
-            : 'bg-transparent text-slate-500 hover:text-slate-300 border-transparent'"
-          v-tip="mode.tip"
-        >
-          {{ mode.label }}
-        </button>
-      </div>
-      <span class="text-[10px] font-mono text-slate-500">satın alma modu (1 paket = 10 adet)</span>
-    </div>
-
     <!-- 4. Format Listesi (D1-D8 Kompakt Satırlar) -->
     <div class="space-y-1.5">
       <DimensionRow
@@ -449,69 +298,23 @@ function handleSlackerClick(e: MouseEvent, id: string) {
       />
     </div>
 
-    <!-- 5. Algoritma Yamaları & Taktiksel İyileştirmeler (Cookie Clicker Upgrade Store — 100K Dopamin ile açılır) -->
-    <div v-if="patchShopUnlocked" class="glass-panel-card p-3 rounded-xl border border-white/[0.06] space-y-2.5">
-      <div class="flex items-center justify-between text-xs font-mono text-slate-300">
-        <div class="flex items-center gap-1.5">
-          <Cpu class="w-3.5 h-3.5 text-cyan-400" />
-          <span class="font-bold text-sm text-slate-100">Algoritma Yamaları</span>
-        </div>
-        <span class="text-[11px] text-slate-500">
-          {{ store.algorithmUpgrades.length }} / {{ ALGORITHM_UPGRADES.length }} Yüklendi
-        </span>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        <div
-          v-for="upg in ALGORITHM_UPGRADES"
-          :key="upg.id"
-          class="p-2.5 rounded-lg border flex flex-col justify-between gap-2 transition-all"
-          :class="store.hasAlgorithmUpgrade(upg.id)
-            ? 'bg-cyan-500/[0.04] border-cyan-500/30'
-            : store.matter.gte(upg.cost)
-              ? 'bg-white/[0.03] border-white/20 hover:border-cyan-400/40 cursor-pointer'
-              : 'bg-black/20 border-white/[0.04] opacity-50'"
-        >
-          <div>
-            <div class="flex items-center justify-between gap-1 mb-1">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-sm shrink-0">{{ upg.icon }}</span>
-                <span class="text-xs font-semibold text-slate-200 truncate">{{ upg.name }}</span>
-              </div>
-              <span
-                v-if="store.hasAlgorithmUpgrade(upg.id)"
-                class="flex items-center gap-0.5 text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-1.5 py-0.2 rounded shrink-0"
-              >
-                <CheckCircle2 class="w-3 h-3 text-cyan-400" />
-                <span>Aktif</span>
-              </span>
-            </div>
-            <p class="text-[11px] text-slate-400 leading-snug line-clamp-2">
-              {{ upg.desc }}
-            </p>
-          </div>
-
-          <div v-if="!store.hasAlgorithmUpgrade(upg.id)" class="pt-1 flex items-center justify-end">
-            <button
-              @click="buyUpgrade($event, upg.id)"
-              :disabled="store.matter.lt(upg.cost)"
-              class="btn-tactile w-full py-1 rounded text-[11px] font-mono font-medium transition-all border flex items-center justify-center gap-1.5"
-              :class="store.matter.gte(upg.cost)
-                ? 'bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-200 border-cyan-500/40 cursor-pointer shadow-xs'
-                : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed'"
-            >
-              <span>Yükle:</span>
-              <span class="tabular-nums font-semibold">{{ format(upg.cost, 1, store.settings.notation) }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- ADR-0027: sıradaki format teaser'ı — 2 boyut başlangıcında D3 merak metni -->
+    <div
+      v-if="nextLockedTier"
+      class="text-[11px] font-mono text-slate-500 px-1 flex items-center gap-1.5"
+      v-tip="'Akış Sıçraması yaptıkça yeni reels formatları açılır'"
+    >
+      <Lock class="w-3 h-3 text-slate-600 shrink-0" />
+      <span>
+        D{{ nextLockedTier.tier }} {{ nextLockedTier.label }} —
+        <span class="text-slate-400">{{ nextLockedTier.shiftsNeeded }}. Akış Sıçraması ile açılır</span>
+      </span>
     </div>
 
-    <!-- 6. Bento Kartlar: Sıçrama, Kümeler ve Önbellek Temizleme -->
+    <!-- 5. Bento Kartlar: Sıçrama, Kümeler ve Önbellek Temizleme -->
     <div
       class="grid grid-cols-1 gap-3 pt-1"
-      :class="isSacrificeUnlocked ? 'md:grid-cols-3' : 'md:grid-cols-2'"
+      :class="gridColsClass"
     >
       <!-- Akış Sıçraması (Shift) -->
       <div
@@ -528,6 +331,13 @@ function handleSlackerClick(e: MouseEvent, id: string) {
             <div class="flex items-center gap-1.5">
               <span class="font-semibold text-xs text-slate-200">Akış Sıçraması</span>
               <span class="text-[10px] font-mono text-purple-400">Sv: {{ store.dimensionShifts }}</span>
+              <span
+                v-if="d5Passive"
+                class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
+                v-tip="`D5 Sigma Grindset Pasifi: ${d5Passive.desc}`"
+              >
+                {{ d5Passive.label }}
+              </span>
             </div>
             <div class="text-[11px] font-mono text-slate-400 tabular-nums">
               {{ format(currentShiftDimAmount, 0, store.settings.notation) }} / {{ format(shiftReq.amount, 0, store.settings.notation) }} D{{ shiftReq.tier }}
@@ -588,16 +398,6 @@ function handleSlackerClick(e: MouseEvent, id: string) {
         </button>
       </div>
 
-      <!-- Erken oyun: küme kartı yerine tek satır hedef -->
-      <div
-        v-if="!showGalaxyCard"
-        class="px-3 py-2 rounded-xl border border-white/[0.04] bg-black/20 text-[11px] font-mono text-slate-500 flex items-center gap-2"
-        v-tip="'Akış Kümesi D8 çağında açılır; önce Akış Sıçraması ile yeni formatlar aç'"
-      >
-        <Radio class="w-3.5 h-3.5 text-slate-600 shrink-0" />
-        <span>Akış Kümesi D8 çağında açılır — önce Sıçrama ile yeni formatlar aç</span>
-      </div>
-
       <!-- Önbelleği Temizleme (Dimension Sacrifice - Antimatter Dimensions) -->
       <div
         v-if="isSacrificeUnlocked"
@@ -645,15 +445,6 @@ function handleSlackerClick(e: MouseEvent, id: string) {
         :danger="true"
         @confirm="showSacrificeConfirm = false; doSacrifice($event)"
         @cancel="showSacrificeConfirm = false"
-      />
-      <ConfirmModal
-        v-if="showSingularityConfirm"
-        title="Sabah 06:00 Çöküşü"
-        message="Dopamin ve istasyonların sıfırlanacak; karşılığında kalıcı Uykusuzluk Puanı (SP) kazanacaksın. Hazır mısın?"
-        confirm-label="Güneşi Karşıla"
-        :danger="false"
-        @confirm="showSingularityConfirm = false; doSingularity()"
-        @cancel="showSingularityConfirm = false"
       />
     </div>
   </div>

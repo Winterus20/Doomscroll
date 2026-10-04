@@ -50,9 +50,9 @@ function requirementMet(key: string): boolean {
 }
 
 function modeLabel(mode: string | undefined): string {
-  if (mode === 'bulk') return 'TOPLU'
-  if (mode === 'max') return 'MAX'
-  return 'TEKLİ'
+  if (mode === 'bulk') return '×10'
+  if (mode === 'max') return 'MAKS'
+  return '×1'
 }
 
 function setMode(key: string, mode: AutobuyerMode): void {
@@ -105,19 +105,19 @@ function onMinGainInput(event: Event, key: string): void {
       </template>
     </TabHero>
 
-    <!-- Kademe Kartları: Tekli -> Toplu -> Max -->
+    <!-- Kademe Kartları: ×1 -> ×10 -> Maks -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="glass-panel-card p-4 rounded-xl border-emerald-500/30 bg-emerald-950/10">
-        <div class="text-xs font-bold font-mono text-emerald-300 mb-1">1. TEKLİ ALIM</div>
-        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">Her bot tek tek açılır. 8sn'de 1 paket alır. Erken oyun manuel kalır, hız patlaması yok.</div>
+        <div class="text-xs font-bold font-mono text-emerald-300 mb-1">1. ×1 ALIM</div>
+        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">Her bot tek tek açılır. 8sn'de 1 adet alır. Erken oyun manuel kalır, hız patlaması yok.</div>
         <div class="text-[11px] font-mono text-emerald-400 mt-2">Durum: HER ZAMAN AÇIK</div>
       </div>
       <div class="glass-panel-card p-4 rounded-xl" :class="store.autobuyerBulkUnlocked ? 'border-blue-500/40 bg-blue-950/20' : ''">
         <div class="flex items-center gap-2 mb-1">
           <Layers class="w-3.5 h-3.5 text-blue-400" />
-          <div class="text-xs font-bold font-mono text-slate-200">2. TOPLU ALIM</div>
+          <div class="text-xs font-bold font-mono text-slate-200">2. ×10 ALIM</div>
         </div>
-        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">1.5sn'de 5 pakete kadar alır. Sıçrama ister.</div>
+        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">Her basışta 1 paket (10 adet) alır. Sıçrama ister.</div>
         <div class="text-[11px] font-mono mt-2 tabular-nums" :class="store.autobuyerBulkUnlocked ? 'text-blue-300' : 'text-slate-500'">
           <span v-if="store.autobuyerBulkUnlocked">Durum: AÇIK</span>
           <span v-else>İster: {{ formatNumber(AUTOBUYER_BULK_COST, store.settings.notation) }} + {{ AUTOBUYER_BULK_SHIFT_REQ }} Sıçrama</span>
@@ -129,15 +129,15 @@ function onMinGainInput(event: Event, key: string): void {
           class="btn-tactile mt-3 w-full py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border"
           :class="store.canUnlockBulk ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/50' : 'bg-black/30 text-slate-600 border-white/[0.05]'"
         >
-          {{ store.canUnlockBulk ? 'Toplu Modu Aç' : 'Kilitli' }}
+          {{ store.canUnlockBulk ? '×10 Modu Aç' : 'Kilitli' }}
         </button>
       </div>
       <div class="glass-panel-card p-4 rounded-xl" :class="store.autobuyerMaxUnlocked ? 'border-amber-500/40 bg-amber-950/20' : ''">
         <div class="flex items-center gap-2 mb-1">
           <Zap class="w-3.5 h-3.5 text-amber-400" />
-          <div class="text-xs font-bold font-mono text-slate-200">3. MAX ALIM</div>
+          <div class="text-xs font-bold font-mono text-slate-200">3. MAKS ALIM</div>
         </div>
-        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">0.5sn'de paran yettiği kadar alır. Küme ister, en son açılır.</div>
+        <div class="text-[11px] text-slate-400 font-mono leading-relaxed">Her basışta paran yettiği kadar alır. Küme ister, en son açılır.</div>
         <div class="text-[11px] font-mono mt-2 tabular-nums" :class="store.autobuyerMaxUnlocked ? 'text-amber-300' : 'text-slate-500'">
           <span v-if="store.autobuyerMaxUnlocked">Durum: AÇIK</span>
           <span v-else>İster: {{ formatNumber(AUTOBUYER_MAX_COST, store.settings.notation) }} + {{ AUTOBUYER_MAX_GALAXY_REQ }} Küme</span>
@@ -149,7 +149,7 @@ function onMinGainInput(event: Event, key: string): void {
           class="btn-tactile mt-3 w-full py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border"
           :class="store.canUnlockMax ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-500/50' : 'bg-black/30 text-slate-600 border-white/[0.05]'"
         >
-          {{ store.canUnlockMax ? 'Max Modu Aç' : 'Kilitli' }}
+          {{ store.canUnlockMax ? 'Maks Modu Aç' : 'Kilitli' }}
         </button>
       </div>
     </div>
@@ -197,7 +197,7 @@ function onMinGainInput(event: Event, key: string): void {
             <span v-else>
               Açılış Maliyeti: <span class="text-blue-300 font-bold tabular-nums">{{ formatNumber(AUTOBUYER_COSTS[key], store.settings.notation) }} Dopamin</span>
               <span v-if="requirementText(String(key))" class="block text-[10px] mt-0.5" :class="requirementMet(String(key)) ? 'text-emerald-400' : 'text-amber-400'">İster: {{ requirementText(String(key)) }}</span>
-              <span class="block text-[10px] text-slate-500 mt-0.5">Tekli modda başlar (8-20sn'de 1 paket)</span>
+              <span class="block text-[10px] text-slate-500 mt-0.5">×1 modda başlar (8-20sn'de 1 adet)</span>
             </span>
           </div>
         </div>
@@ -228,25 +228,25 @@ function onMinGainInput(event: Event, key: string): void {
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"
             :class="(bot.mode || 'single') === 'single' ? 'bg-emerald-500/25 text-emerald-200 border-emerald-500/50' : 'bg-black/40 text-slate-500 border-white/[0.06] hover:border-white/[0.14]'"
           >
-            TEKLİ
+            ×1
           </button>
           <button
             @click="setMode(String(key), 'bulk')"
             :disabled="!store.autobuyerBulkUnlocked"
-            v-tip="!store.autobuyerBulkUnlocked ? 'Önce Toplu Alım kademesini aç' : '1.5sn de 5 paket'"
+            v-tip="!store.autobuyerBulkUnlocked ? 'Önce ×10 Alım kademesini aç' : 'her basışta 1 paket (10 adet)'"
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"
             :class="bot.mode === 'bulk' ? 'bg-blue-500/25 text-blue-200 border-blue-500/50' : store.autobuyerBulkUnlocked ? 'bg-black/40 text-slate-400 border-white/[0.06] hover:border-blue-500/50' : 'bg-black/30 text-slate-700 border-white/[0.04] cursor-not-allowed'"
           >
-            TOPLU
+            ×10
           </button>
           <button
             @click="setMode(String(key), 'max')"
             :disabled="!store.autobuyerMaxUnlocked"
-            v-tip="!store.autobuyerMaxUnlocked ? 'Önce Max Alım kademesini aç' : '0.5sn de max'"
+            v-tip="!store.autobuyerMaxUnlocked ? 'Önce Maks Alım kademesini aç' : 'her basışta paran yettiği kadar'"
             class="py-1 rounded-md text-[10px] font-mono font-bold border transition-all cursor-pointer"
             :class="bot.mode === 'max' ? 'bg-amber-500/25 text-amber-200 border-amber-500/50' : store.autobuyerMaxUnlocked ? 'bg-black/40 text-slate-400 border-white/[0.06] hover:border-amber-500/50' : 'bg-black/30 text-slate-700 border-white/[0.04] cursor-not-allowed'"
           >
-            MAX
+            MAKS
           </button>
         </div>
 

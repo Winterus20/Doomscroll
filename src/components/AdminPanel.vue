@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useGameStore, SINGULARITY_UPGRADES, NEURAL_TREE, NEURAL_LEGACY_UPGRADE_IDS } from '../stores/game'
 import { Decimal } from '../core/math'
 import { SaveSystem } from '../core/save'
+import { useAuthStore } from '../stores/auth'
+import { CloudSaveService } from '../core/auth/cloud-save-service'
 import { X, ShieldAlert } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -10,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useGameStore()
+const authStore = useAuthStore()
 
 const customAmount = ref('1e12')
 const customSp = ref('100')
@@ -148,10 +151,10 @@ function giveFrenzy() {
   store.activeBuffs.push({
     id: `buff-admin-frenzy-${Date.now()}`,
     type: 'heart_frenzy',
-    name: '👆 Başparmak Histerisi (777× Kaydır)',
+    name: '👆 Başparmak Histerisi (300× Kaydır)',
     duration: 300,
     remaining: 300,
-    multiplier: 777
+    multiplier: 300
   })
   flash('Histeri buffı verildi (5 dk)')
 }
@@ -159,7 +162,7 @@ function giveFrenzy() {
 function giveCombo() {
   giveFyp()
   giveFrenzy()
-  flash('KOMBO aktif (5439x)')
+  flash('KOMBO aktif (2100x)')
 }
 
 function clearBuffs() {
@@ -352,10 +355,17 @@ function forceSingularity() {
 }
 
 function hardReset() {
-  if (window.confirm('Tüm kayıt silinsin mi? (Hard Reset)')) {
-    SaveSystem.hardReset()
-    window.location.reload()
+  if (!window.confirm('Tüm kayıt silinsin mi? (Hard Reset)')) return
+  SaveSystem.hardReset()
+  // ADR-0033: bulut kaydı kalırsa sıfırlamadan sonra eski ilerleme geri gelir.
+  CloudSaveService.forgetAllLocalRevisions()
+  const uid = authStore.user?.uid
+  if (uid) CloudSaveService.forgetMockCloud(uid)
+  if (authStore.isAuthenticated) {
+    void authStore.saveToCloud(true).then(() => window.location.reload())
+    return
   }
+  window.location.reload()
 }
 </script>
 
@@ -426,8 +436,8 @@ function hardReset() {
           <h4 class="font-bold text-rose-300 tracking-wider">🔥 BUFF & OLAY</h4>
           <div class="flex flex-wrap gap-1.5">
             <button @click="giveFyp" class="px-2 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/30 cursor-pointer">Gece 3 (7x)</button>
-            <button @click="giveFrenzy" class="px-2 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/30 cursor-pointer">Histeri (777x)</button>
-            <button @click="giveCombo" class="px-2 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/40 text-white border border-rose-400/50 font-bold cursor-pointer">KOMBO 5439x</button>
+            <button @click="giveFrenzy" class="px-2 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/30 cursor-pointer">Histeri (300x)</button>
+            <button @click="giveCombo" class="px-2 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/40 text-white border border-rose-400/50 font-bold cursor-pointer">KOMBO 2100x</button>
             <button @click="clearBuffs" class="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer">Buff Temizle</button>
           </div>
           <div class="flex flex-wrap gap-1.5">
