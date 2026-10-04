@@ -1,20 +1,20 @@
-# AGENTS.md — Doomscroll: The Endless Reels Otonom Geliştirici Direktifleri
+# AGENTS.md — UROBOROS (The Cosmic Feast) Otonom Geliştirici Direktifleri
 
-Bu belge, **Doomscroll: The Endless Reels** projesinde çalışacak tüm yapay zeka kodlama asistanları (Antigravity, Cursor, Claude Code, Codex vb.) için bağlayıcı operasyonel çalışma anayasasıdır. Bu repoda görev alan her agent buradaki kurallara istisnasız uymakla yükümlüdür.
+Bu belge, **UROBOROS (The Cosmic Feast)** projesinde çalışacak tüm yapay zeka kodlama asistanları (Antigravity, Cursor, Claude Code, Codex vb.) için bağlayıcı operasyonel çalışma anayasasıdır. Bu repoda görev alan her agent buradaki kurallara istisnasız uymakla yükümlüdür.
 
 ---
 
 ## 1. Proje Özeti ve Temel Vizyon
-- **Proje Adı:** Doomscroll: The Endless Reels (Gece 3 Reels Bağımlılığı & Dopamin Kıyameti)
-- **Konu & Hiciv:** Gece 02:47'de "sadece 2 dakika Reels izleyip uyuyacağım" diye yatağa girip; başparmağının hipnotik olarak yukarı kaymasıyla sabahın 06:15'ine, kuş seslerine, göz kanlanmasına ve evreni içine çeken sonsuz bir dopamin tekilliğine sürüklenme.
-- **Tür:** Yeni Nesil Hibrit Çok Katmanlı Incremental / Idle Oyunu (*Antimatter Dimensions* + *Cookie Clicker* + *Synergism* sentezi).
-- **Temel Felsefe:** "Bekleme oyunu değil; taktil yukarı kaydırma, gece krizleri, açılan gece mini-oyunları ve algoritma optimizasyonu."
+- **Proje Adı:** UROBOROS (The Cosmic Feast)
+- **Konu & Lore:** Bir su damlasındaki moleküler bağları ayrıştırmakla başlayıp, Planck duvarını yırtarak mikro-karadelik oluşturan ve tüm Samanyolu Galaksisi'ni yutan sonsuz bir kuantum-kozmik tekillik döngüsü.
+- **Tür:** Yeni Nesil Hibrit Çok Katmanlı Incremental / Idle Oyunu (*Antimatter Dimensions* + *Tasty Planet* + *Cookie Clicker* sentezi).
+- **Temel Felsefe:** "Taktil oburluk, kuantum inişi, mikro-karadelik doğuşu, kozmik dalgalanmalar ve evrensel kütle açlığı."
 - **Sütunlar:** 
-  1. *Antimatter Dimensions:* D1-D8 Boyutları (Kedi Videolarından Saf Beyin Çürümesine), Algoritma Frekansı (Hz), Otomatik Kaydırma Botları (Autobuyers).
-  2. *Cookie Clicker:* Taktil doyum, rastgele Gece Krizleri (Gece 3 Çılgınlığı 7x, Başparmak Histerisi 777x), Vicdan Azapları (Wrinklers: "1 video daha" = 1.2x prim), 4 büyük mini-oyun (Algoritma Lab, Kriz Yönetimi, Gece Kuşları Panteonu, Reklam Borsası).
-  3. *Synergism:* Gece Ekipmanları soketleme, Otonom İzleme Botları (Ant Colony & Toplu Uyku), 12 sürgülü Uyku Baskısı Matrisi (Corruptions).
-  4. *Trimps & Paperclips:* Taktiksel duruş (Yorgan Altı, Çılgın Kaydırma, Düşük Parlaklık) ve evrimsel çağ sıçramaları (Yatak -> Kolektif Nöbet -> Evrensel Doomscroll).
-- **Hedef:** 4 büyük prestij katmanı (Yatak & Telefon $\to$ Sabah 06:00 Çöküşü & Kuş Sesleri $\to$ Kolektif Gece Nöbeti $\to$ Evrensel Doomscroll).
+  1. *Antimatter Dimensions:* D1-D8 Boyutları (Moleküler Bağlardan Samanyolu Galaksisi'ne), Çekim Hızı (Hz), Otomatik Çekim Botları (Autobuyers).
+  2. *Cookie Clicker:* Taktil doyum, rastgele Kozmik Dalgalanmalar (Süpernova Patlaması 7x, Kütle Patlaması 777x, Hawking Işıması), Kozmik Parazitler (Wrinklers: kütle emer, %120 primle patlar).
+  3. *Synergism:* Planck Baskı Matrisi (Corruptions), Otonom Çekim Botları (Ant Colony / Toplu Çöküş).
+  4. *Trimps:* Taktiksel duruş (Kuantum Odak, Obur Çekim, Vakum Kalkanı).
+- **Hedef:** Faz 0 ($0 \to 1.79 \times 10^{308}\text{ g}$ arasındaki ilk büyük koşu ve Kozmik Çöküş).
 
 ---
 

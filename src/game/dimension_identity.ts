@@ -30,74 +30,74 @@ export const FORMAT_UNLOCK_BUFF_MULT = 1.25
 export const TIER_IDENTITIES: TierIdentity[] = [
   {
     tier: 1,
-    label: 'Masum Kedi',
+    label: 'Moleküler Bağlar',
     passive: {
       kind: 'clickSyncCapBonus',
       value: 0.005,
-      desc: 'CPS→tıklama senkron tavanına +0.5%'
+      desc: 'Çekim senkron tavanına +0.5%'
     }
   },
   {
     tier: 2,
-    label: 'Gece 3 Lezzet',
+    label: 'Elektron Orbitalleri',
     passive: {
       kind: 'productionMult',
       value: 1.03,
-      desc: 'Bu formatın üretim çarpanı ×1.03'
+      desc: 'Bu katmanın çekim çarpanı ×1.03'
     }
   },
   {
     tier: 3,
-    label: 'ASMR Hipnoz',
+    label: 'Nükleer Çekirdek',
     passive: {
       kind: 'slackerLeechMult',
       value: 0.97,
-      desc: 'Vicdan emilimi ×0.97'
+      desc: 'Parazit kütle kaçağı ×0.97'
     }
   },
   {
     tier: 4,
-    label: 'Bölünmüş Dikkat',
+    label: 'Kuark Çorbası',
     passive: {
       kind: 'anomalyRateMult',
       value: 1.08,
-      desc: 'Gece krizi spawn hızı ×1.08 (max stack sınırlı)'
+      desc: 'Kozmik dalgalanma spawn hızı ×1.08'
     }
   },
   {
     tier: 5,
-    label: 'Sigma Grindset',
+    label: 'Laboratuvar & Şehir',
     passive: {
       kind: 'shiftReqMult',
       value: 0.97,
-      desc: 'Akış sıçraması miktar gereksinimi ×0.97'
+      desc: 'Ölçek sıçraması miktar gereksinimi ×0.97'
     }
   },
   {
     tier: 6,
-    label: 'Hint Cliffhanger',
+    label: 'Gezegenler & Dünya',
     passive: {
       kind: 'offlineSimMult',
       value: 1.02,
-      desc: 'Çevrimdışı simülasyon üretimi ×1.02'
+      desc: 'Çevrimdışı çekim simülasyonu ×1.02'
     }
   },
   {
     tier: 7,
-    label: 'Varoluş Vakti',
+    label: 'Yıldızlar & Güneş',
     passive: {
       kind: 'productionMult',
       value: 1.04,
-      desc: 'Bu formatın üretim çarpanı ×1.04'
+      desc: 'Bu katmanın çekim çarpanı ×1.04'
     }
   },
   {
     tier: 8,
-    label: 'Brainrot Singularity',
+    label: 'Samanyolu & Karadelik',
     passive: {
       kind: 'productionMult',
       value: 1.06,
-      desc: 'D8 üretim çarpanı ×1.06'
+      desc: 'D8 kozmik çekim çarpanı ×1.06'
     }
   }
 ]

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore, COMBO_THRESHOLDS, COMBO_DECAY_MS } from '../stores/game'
-import { format, formatParts } from '../core/format'
+import { format, getMassScaleBadge } from '../core/format'
 import type { StanceType } from '../models/types'
 import {
   Moon,
@@ -71,28 +71,18 @@ function nextTrack() {
   store.nextMusicTrack()
 }
 
-const formattedDopamine = computed(() => format(displayedMatter.value, 2, store.settings.notation))
-// Okunabilirlik: sonek (M/B/e45) ruloya girmez, ayrı rozet gibi çizilir.
-const dopaParts = computed(() => formatParts(displayedMatter.value, 2, store.settings.notation))
+const formattedDopamine = computed(() => format(store.matter, 2, store.settings.notation))
+const massScaleBadge = computed(() => getMassScaleBadge(store.matter))
 const formattedPerSec = computed(() => format(store.matterPerSecond, 2, store.settings.notation))
 const formattedClickPower = computed(() => format(store.manualClickPower, 2, store.settings.notation))
 const tickspeedCost = computed(() => format(store.tickspeedCost, 2, store.settings.notation))
 const tickspeedMultiplier = computed(() => format(store.tickspeedMultiplier, 2, store.settings.notation))
 const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
 
-// Sütun 5 v2: rAF yumuşatma — görüntü değeri hedefe üstel yaklaşır, basamak şeritleri GPU'da kayar.
-// Kesikli pencere yerine sürekli akış; büyük sıçramada (log fark > 2) anında yapışır.
-const displayedMatter = ref<Decimal>(store.matter)
 const decadeFlash = ref(false)
 let smoothRaf = 0
-let lastFrame = 0
 let decadeTimer: number | null = null
 let lastDecade = 0
-
-const REEL_DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-function isDigitChar(ch: string): boolean {
-  return ch >= '0' && ch <= '9'
-}
 
 function currentDecade(): number {
   try {
@@ -206,9 +196,6 @@ const counterHeatClass = computed(() => {
   }
 })
 
-// Odometre: format çıktısının ANA gövdesi karakterlere bölünür, değişen basamak
-// key değişimiyle rulo animasyonu alır. Sonek (M/B/e45) ayrı ve sabittir.
-const dopaChars = computed(() => dopaParts.value.main.split(''))
 
 function checkDecade() {
   const dec = currentDecade()
@@ -256,57 +243,15 @@ function checkDecade() {
   }
 }
 
-// Her karede görüntü değerini hedefe yaklaştır (üstel yumuşatma, ~6/sn hız sabiti).
 function tickSmooth(frameT: number) {
   if (smoothRaf === 0) return
-  const dt = Math.min(0.1, Math.max(0, (frameT - lastFrame) / 1000 || 0))
-  lastFrame = frameT
-  const target = store.matter
-  if (motionOff.value) {
-    if (!displayedMatter.value.eq(target)) displayedMatter.value = target
-  } else {
-    const shown = displayedMatter.value
-    if (!shown.eq(target)) {
-      try {
-        if (
-          target.isNan() || Number.isNaN(target.mag) ||
-          shown.isNan() || Number.isNaN(shown.mag) ||
-          !target.isFinite() || !shown.isFinite() ||
-          shown.lte(0) || target.lte(0)
-        ) {
-          displayedMatter.value = target
-        } else {
-          const logDiff = Math.abs(target.log10().toNumber() - shown.log10().toNumber())
-          if (!Number.isFinite(logDiff) || logDiff > 2) {
-            displayedMatter.value = target
-          } else {
-            const relGap = target.minus(shown).abs().div(target).toNumber()
-            if (Number.isFinite(relGap) && relGap < 1e-9) {
-              displayedMatter.value = target
-            } else {
-              const k = 1 - Math.exp(-6 * dt)
-              const next = shown.plus(target.minus(shown).times(k))
-              displayedMatter.value = target.gt(shown)
-                ? (next.gt(target) ? target : next)
-                : (next.lt(target) ? target : next)
-            }
-          }
-        }
-      } catch {
-        displayedMatter.value = target
-      }
-    }
-  }
   checkDecade()
   updateTrend(frameT)
   smoothRaf = requestAnimationFrame(tickSmooth)
 }
 
 function handleCounterVisibility() {
-  // Arka planda rAF durur; dönüşte eski kareden dev yumuşatma yerine anında yapış.
   if (!document.hidden) {
-    lastFrame = performance.now()
-    displayedMatter.value = store.matter
     lastDecade = currentDecade()
   }
 }
@@ -361,7 +306,7 @@ const challengeRewardShort = computed(() =>
 const challengeTip = computed(() => {
   const def = store.activeChallengeDef
   if (!def) return ''
-  return `Meydan Okuma: ${def.name} — ${def.ruleDesc} Hedef: 1.79e308 Dopamin. Ödül: ${def.rewardDesc}.`
+  return `Meydan Okuma: ${def.name} — ${def.ruleDesc} Hedef: 1.79e308 g Kütle. Ödül: ${def.rewardDesc}.`
 })
 const challengeProgressPct = computed(() => Math.round(store.challengeProgress01 * 100))
 
@@ -374,14 +319,35 @@ function requestChallengeExit() {
   showChallengeExitConfirm.value = true
 }
 
-// Gece saati — Şafak ilerlemesiyle senkron (02:47 → 06:00 arası)
+// Gece saati — Şafak ilerlemesiyle senkron (02:47 → 06:15 arası, 208 dk gece)
+// Dopamin log10/308.25 ilerlemesi gece yarısı saatine birebir bağlanır:
+// erken koşu = derin gece, tekillik eşiği = şafak. Faz 1 fantasisi sayaçla buluşur.
+const nightProgress = computed(() => {
+  try {
+    const m = store.matter
+    if (m.isNan() || Number.isNaN(m.mag)) return 0
+    if (!m.isFinite() || m.lt(10)) return 0
+    const logVal = Math.max(0, m.log10().toNumber())
+    if (!Number.isFinite(logVal)) return 0
+    return Math.min(1, Math.max(0, logVal / 308.25))
+  } catch {
+    return 0
+  }
+})
 const nightClock = computed(() => {
-  const logVal = store.matter.lt(10) ? 0 : Math.max(0, store.matter.log10().toNumber())
-  const progress = Math.min(1, Math.max(0, logVal / 308.25))
-  const totalMinutes = Math.round(167 + progress * 193)
+  const totalMinutes = Math.round(167 + nightProgress.value * 208)
   const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
   const mm = String(totalMinutes % 60).padStart(2, '0')
   return `${hh}:${mm}`
+})
+// Gece fazı — saat rozeti + nokta rengi tek kaynaktan (Header + ScreenOverlay aynı dil)
+const nightPhase = computed(() => {
+  const p = nightProgress.value
+  if (p >= 1) return { label: 'Şafak 06:15', dot: 'bg-amber-300', text: 'text-amber-200' }
+  if (p >= 0.8) return { label: 'Kuş Vakti', dot: 'bg-orange-300', text: 'text-orange-200' }
+  if (p >= 0.55) return { label: 'Cızırtı', dot: 'bg-purple-300', text: 'text-purple-200' }
+  if (p >= 0.25) return { label: 'Derin Gece', dot: 'bg-cyan-300', text: 'text-cyan-200' }
+  return { label: 'Yorgan Altı', dot: 'bg-rose-500', text: 'text-slate-200' }
 })
 
 // 0-state onboarding: ilk format hiç alınmamışsa oyuncuya tek bir eylem çizilir
@@ -587,8 +553,6 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('doomscroll:production-bump', onProductionBump as EventListener)
   lastDecade = currentDecade()
-  displayedMatter.value = store.matter
-  lastFrame = performance.now()
   smoothRaf = requestAnimationFrame(tickSmooth)
   document.addEventListener('visibilitychange', handleCounterVisibility)
   visualizerInterval = window.setInterval(() => {
@@ -637,9 +601,23 @@ onUnmounted(() => {
     <!-- 1. ÜST STATUS BAR (Minimalist Akıllı Telefon Çubuğu + Lo-Fi Radyo) -->
     <div class="flex items-center justify-between text-xs font-mono border-b border-white/[0.06] pb-2.5 mb-4 text-slate-400 select-none flex-wrap gap-2">
       <!-- Sol: Zaman & Durum (Şafak ilerlemesiyle senkron) -->
-      <div class="flex items-center gap-2">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-        <span class="font-bold text-slate-200 tracking-wider tabular-nums">{{ nightClock }}</span>
+      <div
+        class="flex items-center gap-2 min-w-0"
+        v-tip="`Telemetri ${nightClock} — ${nightPhase.label}. Kütle arttıkça tekillik yoğunlaşır, 1.79e308 g kütlede kozmik çöküş hazır olur.`"
+      >
+        <span class="inline-block w-1.5 h-1.5 rounded-full animate-pulse shrink-0" :class="nightPhase.dot"></span>
+        <span class="font-bold tracking-wider tabular-nums" :class="nightPhase.text">{{ nightClock }}</span>
+        <span class="text-[10px] text-slate-500 truncate hidden sm:inline">{{ nightPhase.label }}</span>
+        <!-- Gece → şafak ince gökyüzü şeridi -->
+        <span class="hidden md:inline-block w-16 h-1 rounded-full overflow-hidden bg-black/50 border border-white/[0.06] shrink-0" aria-hidden="true">
+          <span
+            class="block h-full rounded-full transition-all duration-500"
+            :style="{
+              width: `${Math.round(nightProgress * 100)}%`,
+              background: 'linear-gradient(to right, #312e81, #a855f7, #fb7185, #fbbf24)'
+            }"
+          ></span>
+        </span>
       </div>
 
       <!-- Orta: Gece Lo-Fi Radyo Mini Oynatıcı (U1: mobilde gizli — ilk bakışta sayaç + hedef tek odak) -->
@@ -705,66 +683,31 @@ onUnmounted(() => {
       </div>
     </div>
 
-      <!-- 2. MERKEZİ DOPAMİN ÇEKİRDEĞİ — tek odak: sayı + hız, gerisi ikincil -->
+      <!-- 2. MERKEZİ KÜTLE ÇEKİRDEĞİ — tek odak: sayı + hız, gerisi ikincil -->
     <div class="flex flex-col items-center justify-center text-center my-4 py-1 relative z-10">
       <span class="text-xs font-bold text-slate-400 flex items-center gap-1.5 mb-0.5">
         <Zap class="w-3.5 h-3.5 text-purple-400" />
-        <span>Dopamin</span>
+        <span>Yutulan Kütle</span>
+        <span class="text-[10px] font-mono tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 ml-1">{{ massScaleBadge }}</span>
       </span>
 
-      <!-- Premium sayaç tablası: piksel font şeritleri + ısıya göre renklenen plaka -->
-      <!-- Sütun 5 v2: şerit konuma sabitlenir, sadece translateY kayar — pürüzsüz slot rulosu -->
-      <!-- Çerçevesiz sayaç: pop hedefi olan sade sarmalayıcı, görsel plaka yok -->
-      <div class="dopa-wrap">
-        <div
-          ref="counterRef"
-          aria-live="polite"
-          :aria-label="`Dopamin: ${formattedDopamine}`"
-          class="dopa-reels text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
-          :class="[
-            flameOn
-              ? 'flame-text'
-              : singularityReady
-                ? 'text-amber-200 counter-gold'
-                : 'text-white counter-glow',
-            flameOn ? '' : counterHeatClass,
-            decadeFlash ? 'decade-flash' : ''
-          ]"
-        >
-          <template
-            v-for="(ch, i) in dopaChars"
-            :key="i"
-          >
-            <span
-              v-if="isDigitChar(ch)"
-              class="reel"
-              aria-hidden="true"
-            >
-              <span
-                class="reel-strip"
-                :style="{ transform: `translateY(-${ch}em)` }"
-              ><span
-                v-for="d in REEL_DIGITS"
-                :key="d"
-                class="reel-cell"
-              >{{ d }}</span></span>
-            </span>
-            <span
-              v-else
-              :key="`s-${i}-${ch}`"
-              class="reel-static"
-              aria-hidden="true"
-            >{{ ch }}</span>
-          </template>
-          <span
-            v-if="dopaParts.suffix"
-            :key="`suf-${dopaParts.suffix}`"
-            class="reel-suffix"
-            :class="dopaParts.kind === 'exponent' ? 'reel-suffix-exp' : 'reel-suffix-std'"
-            aria-hidden="true"
-          >{{ dopaParts.suffix }}</span>
-          <span class="sr-only">{{ formattedDopamine }}</span>
-        </div>
+      <!-- Sayıların zıplamaması ve taşmaması için tabular-nums; imza tipografi: Chakra Petch -->
+      <div
+        ref="counterRef"
+        aria-live="polite"
+        :aria-label="`Yutulan Kütle: ${formattedDopamine}`"
+        class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
+        :class="[
+          flameOn
+            ? 'flame-text'
+            : singularityReady
+              ? 'text-amber-200 counter-gold'
+              : 'text-white counter-glow',
+          flameOn ? '' : counterHeatClass,
+          decadeFlash ? 'decade-flash' : ''
+        ]"
+      >
+        {{ formattedDopamine }}
       </div>
 
       <div class="text-xs font-mono text-purple-300/80 flex items-center gap-2 mt-1">
@@ -822,7 +765,7 @@ onUnmounted(() => {
         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/[0.07] border border-purple-500/25 text-[11px] font-mono font-semibold text-purple-200"
       >
         <ArrowUp class="w-3.5 h-3.5 text-purple-400 arrow-nudge" />
-        <span>Başparmağı hazırla — ilk video için <span class="font-bold">Kaydır</span>'a bas</span>
+        <span>İlk parçacığı vakumlamak için <span class="font-bold">YUT</span>'a bas</span>
       </div>
       </div>
     </div>
@@ -840,10 +783,10 @@ onUnmounted(() => {
           :class="store.currentStance === 'trend'
             ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 border border-transparent'"
-          v-tip="'Yorgan Altı: Pasif üretime 2× odak'"
+          v-tip="'Kuantum Odak: Pasif çekim akışına 2× odak'"
         >
           <Moon class="w-3.5 h-3.5 text-purple-400" />
-          <span>Yorgan (2×)</span>
+          <span>Kuantum (2×)</span>
         </button>
 
         <button
@@ -855,11 +798,11 @@ onUnmounted(() => {
             : store.currentStance === 'spam'
               ? 'bg-rose-500/15 text-rose-200 border border-rose-500/40 shadow-sm cursor-pointer'
               : 'text-slate-500 hover:text-slate-200 border border-transparent cursor-pointer opacity-90'"
-          v-tip="stanceSpamLock ? `Kilitli — ${stanceSpamLock.hint} (${stanceSpamLock.progress})` : 'Çılgın Kaydırma: Kaydırmaya 4× güç ve %50 daha sık kriz'"
+          v-tip="stanceSpamLock ? `Kilitli — ${stanceSpamLock.hint} (${stanceSpamLock.progress})` : 'Obur Çekim: Manuel çekime 4× güç ve %50 daha sık kozmik dalgalanma'"
         >
           <Lock v-if="stanceSpamLock" class="w-3.5 h-3.5 text-slate-600" />
           <Flame v-else class="w-3.5 h-3.5 text-rose-400" />
-          <span>Çılgın (4×)</span>
+          <span>Obur (4×)</span>
         </button>
 
         <button
@@ -871,23 +814,21 @@ onUnmounted(() => {
             : store.currentStance === 'private_mode'
               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm cursor-pointer'
               : 'text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer'"
-          v-tip="stancePrivateLock ? `Kilitli — ${stancePrivateLock.hint} (${stancePrivateLock.progress})` : 'Düşük Parlaklık: Frekans alımlarında %15 indirim'"
+          v-tip="stancePrivateLock ? `Kilitli — ${stancePrivateLock.hint} (${stancePrivateLock.progress})` : 'Vakum Kalkanı: Çekim Hızı yükseltmelerinde %15 indirim'"
         >
           <Lock v-if="stancePrivateLock" class="w-3.5 h-3.5 text-slate-600" />
           <EyeOff v-else class="w-3.5 h-3.5 text-cyan-400" />
-          <span>Karanlık</span>
+          <span>Kalkan</span>
         </button>
       </div>
 
       <!-- Sağ: TAKTİL BUTONLAR (Kayıp/zıplama yapmayan sabit yükseklikli ve sarmasız buton grubu) -->
-      <!-- ADR-0029: no-scrollbar kaldırıldı. Kaydırılabilir olduğu görünmeyen bir
-           alan "bulunamaz" alandır; tarayıcı çubuğu yatay kaydırmayı belli eder. -->
       <div class="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full">
         <!-- Hipnotik Seri rozeti: seri ≥2 iken Kaydır butonunun solunda belirir, geri sayım çubuğu 1.5 sn'de boşalır -->
         <div
           v-if="comboActive"
           class="h-11 px-2 rounded-xl bg-rose-500/15 border border-rose-500/40 flex flex-col items-center justify-center gap-1 min-w-[54px] shrink-0"
-          v-tip="`Hipnotik Seri: ${comboCount} üst üste kaydırma — seri 1.5 sn içinde söner, devam et!`"
+          v-tip="`Hipnotik Çekim Serisi: ${comboCount} üst üste yutma — seri 1.5 sn içinde söner, devam et!`"
         >
           <span class="text-xs font-mono font-black text-rose-300 tabular-nums leading-none">{{ comboBadgeText }}</span>
           <div class="w-full h-1 rounded-full bg-black/50 overflow-hidden">
@@ -898,7 +839,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 1. Manuel Yukarı Kaydır (Space / Swipe Up) — birincil aksiyon: en büyük, en parlak -->
+        <!-- 1. Manuel Yut (Space / Consume) — birincil aksiyon: en büyük, en parlak -->
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
@@ -909,7 +850,7 @@ onUnmounted(() => {
           <ArrowUp class="w-4 h-4 text-purple-400 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
-              <span>Kaydır</span>
+              <span>YUT!</span>
               <kbd class="hidden sm:inline-block px-1 py-0.2 rounded bg-black/40 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
             </div>
             <span class="text-[10px] text-purple-300/80 font-mono font-normal tabular-nums truncate max-w-[65px] sm:max-w-[90px]">
@@ -918,7 +859,7 @@ onUnmounted(() => {
           </div>
         </button>
 
-        <!-- 2. Algoritma Frekansı (Tickspeed) — ikincil üretim, mor sözlük (amber yalnızca Şafak/prestijde) -->
+        <!-- 2. Çekim Hızı (Tickspeed) — ikincil üretim -->
         <button
           @click="buyTickspeed"
           v-hold="buyTickspeed"
@@ -928,7 +869,7 @@ onUnmounted(() => {
             ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 border-purple-500/30 cursor-pointer affordance-pulse'
             : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-50'"
           :style="canAffordTickspeed ? { '--pulse-c1': 'rgba(168, 85, 247, 0.3)', '--pulse-c2': 'rgba(168, 85, 247, 0.7)' } : undefined"
-          v-tip="'Algoritma Frekansını (Hz) yükseltir'"
+          v-tip="'Çekim Hızını (Hz) yükseltir'"
         >
           <Cpu class="w-4 h-4 text-purple-300 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
@@ -1030,9 +971,9 @@ onUnmounted(() => {
     <!-- QoL: tekillik onay diyaloğu (native confirm yerine) -->
     <ConfirmModal
       v-if="showSingularityConfirm"
-      title="Sabah 06:00 Çöküşü"
-      message="Dopamin ve istasyonların sıfırlanacak; karşılığında kalıcı Uykusuzluk Puanı (SP) kazanacaksın. Hazır mısın?"
-      confirm-label="Güneşi Karşıla"
+      title="Kozmik Çöküş"
+      message="Yutulan kütle ve tüm katmanlar sıfırlanacak; karşılığında kalıcı Tekillik Puanı (SP) kazanacaksın. Hazır mısın?"
+      confirm-label="Çöküşü Başlat"
       :danger="false"
       @confirm="store.singularityReset(); showSingularityConfirm = false"
       @cancel="showSingularityConfirm = false"
@@ -1042,7 +983,7 @@ onUnmounted(() => {
     <ConfirmModal
       v-if="showCompleteConfirm && store.activeChallengeDef"
       title="Meydan Okumayı Tamamla"
-      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 Dopamin). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
+      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 g Kütle). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
       confirm-label="Ödülü Al"
       :danger="false"
       @confirm="store.completeChallenge(); showCompleteConfirm = false"

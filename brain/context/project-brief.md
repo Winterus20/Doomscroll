@@ -1,29 +1,28 @@
-# Project Brief: Doomscroll (The Endless Reels)
+# Project Brief: UROBOROS (The Cosmic Feast)
 
 ## 1. Vizyon ve İronik Konu
-*Doomscroll: The Endless Reels*, gece 02:47'de yatağa girip "sadece 2 dakika Reels izleyip uyuyacağım" diyen masum bir insanın; başparmağının hipnotik olarak yukarı kaymasıyla sabahın 06:15'ine, kuş seslerine, göz kanlanmasına ve nihayetinde tüm evreni içine çeken sonsuz bir dopamin tekilliğine (The Dopamine Singularity) sürüklenmesini konu alan hiciv dolu bir hibrit incremental/idle oyunudur.
+*UROBOROS*, laboratuvarda çevre kirliliğini ve karbon salınımını sıfırlamak isteyen masum bir bilim insanının atomaltı parçacıkları ayrıştıran mikroskobik bir kuantum filtresi tasarlamasıyla başlayan; ancak Planck ölçeğinde ($10^{-35}$ m) uzay-zaman dokusunun yırtılarak mikro-karadelik oluşması ve odadaki nesneleri, şehri, Dünya'yı, Güneş'i ve nihayetinde tüm Samanyolu Galaksisi'ni yutan sonsuz bir kozmik tekilliğe (Uroboros) dönüşmesini konu alan hibrit bir incremental/idle oyunudur.
 
 ## 2. Neden Kusursuz Bir Tema?
-- Herkesin her gece birebir yaşadığı o meşhur döngü: Kedi videolarıyla başlarsın, tereyağlı sokak yemekleri, sabun kesme ASMR'ı, Subway Surfers eşliğinde Reddit hikayeleri derken sabah ezanı okunur!
-- Ana Kaynak: **DOPAMİN (Dopamine)** ve **+X Dopamin / sn**.
-- Manuel Tıklama Butonu: **👆 YUKARI KAYDIR! (Swipe Up / Scroll!)** (ve Space tuşu).
+- **Atomaltından Galaksiye:** İnsan beyninde en büyük dopamini salgılatan "büyüme ve oburluk" döngüsü (Tasty Planet + Katamari + Antimatter Dimensions sentezi).
+- **Ana Kaynak:** **YUTULAN KÜTLE (Consumed Mass - g)** ve **+X Kütle / sn**.
+- **Manuel Tıklama Butonu:** **🌌 YUT! / HAM YAP! (CONSUME!)** (ve Space tuşu).
+- **Çekim Hızı:** **Çekim Hızı (Hz)** (Tickspeed).
 
 ## 3. Tür Devlerinin Hibrit Sentezi (Dört Temel Sütun)
-1. **Matematik & Boyut Motoru (*Antimatter Dimensions*):** 1-8 dereceli Reels basamakları (Kedi Videolarından Saf Beyin Çürümesine), Algoritma Frekansı (Hz), üstel büyüme ve otomatik kaydırma botları.
+1. **Matematik & Boyut Motoru (*Antimatter Dimensions*):** 
+   - $D_1 - D_4$: Kuantum İnişi (Moleküler Bağlar $\to$ Elektron Orbitalleri $\to$ Nükleer Çekirdek $\to$ Kuark Çorbası).
+   - *[Planck Yırtılması: Mikro Karadelik Doğuşu]*
+   - $D_5 - D_8$: Kozmik Yutuş (Laboratuvar & Şehir $\to$ Gezegenler & Dünya $\to$ Yıldızlar & Güneş $\to$ Samanyolu & Karadelikler).
 2. **Taktil Doyum, Kombolar & Mini-Oyunlar (*Cookie Clicker*):**
-   - Ekranda yüzen rastgele **"Gece Krizleri" (Gece 3 Çılgınlığı 7x, Başparmak Histerisi 777x, 50 Milyonluk Viral Video)**.
-   - Eşzamanlı **Rezonans Komboları** (Gece 3 üretimi 7×, Başparmak Histerisi manuel kaydırmayı 777× güçlendirir).
-   - Tesis tabanlı **4 Büyük Mini-Oyun**: Algoritma Lab (Garden), Gece Yarısı Kriz Yönetimi (Grimoire), Gece Kuşları Panteonu (Pantheon), Sahte Kripto Reklamları (Market).
-   - **Vicdan Azabı & Göz Batması (Wrinklers)**: Ekrana dadanıp "Yarın iş var!" diyerek dopamini emen, "Sadece 1 Video Daha!" diyerek kovulunca 1.2x prim iade eden vicdan sesleri.
+   - Ekranda süzülen rastgele **"Kozmik Dalgalanmalar"** (Hawking Işıması 7x, Kütle Patlaması 777x, Süpernova Şoku).
+   - Eşzamanlı **Rezonans Komboları**.
+   - **Kozmik Parazitler (Wrinklers)**: Tekilliğin olay ufkuna dadanıp kütle emen, tıklandığında %120 primle geri dönen enerji kaçakları.
 3. **Çapraz Sinerji, Tılsımlar & Bozulmalar (*Synergism*):**
-   - **Gece Ekipmanları (Talismans):** Mavi Işık Gözlüğü, Telefon Tutacağı, Şarj Kablosu vb. donanım dizilimleri.
-   - **Otonom İzleme Botları (Ant Colony & Sacrifice):** Kendi kendine video tüketen nöral alt-rutinler; "Toplu Uyku/Reset" ile ana çarpanı katlama.
-   - **Uyku Baskısı & Telif Matrisi (Corruptions):** 12 sürgülü uykusuzluk ve algoritma kısıtlamaları.
+   - Kuantum ekipmanları, otonom çekim botları, Planck baskı matrisi.
 4. **Taktiksel Çalışma Duruşları (*Trimps Stance*):**
-   - *Yorgan Altı Modu (2x Pasif)*, *Çılgın Kaydırma (4x Kaydır + %50 Anomali)*, *Düşük Parlaklık (Göz yakmaz, %15 indirim)*.
+   - *Kuantum Odak (2x Pasif)*, *Obur Çekim (4x Manuel + %50 Anomali)*, *Vakum Kalkanı (%15 indirim)*.
 
 ## 4. İlerleme Kademeleri ve Büyük Faz Sıçramaları
-- **Faz 0: Yatak & Telefon (0 - 1e308 Dopamin):** Yorgan altında Reels kaydırma.
-- **Faz 1: Sabah 06:00 Çöküşü (Tekillik / Singularity - 1e308 - 1e4000):** Dışarıdan kuş sesleri gelmeye başlar. Güneş doğmuştur ama başparmak durmaz! İlk çöküş ve **Uykusuzluk Puanı (Sleep Deprivation Points - SP)**.
-- **Faz 2: Kolektif Gece Nöbeti (1e4000 - 1e100000):** Tüm insanlık aynı anda yatakta ekrana kilitlenir.
-- **Faz 3: Evrensel Doomscroll (1e100000+):** Uzay-zaman 9:16 dikey formata gerilir; tüm galaksiler yukarı kaydırılarak tüketilir!
+- **Faz 0: Kuantumdan Galaksiye (0 - 1.79e308 g):** Su damlasındaki bağlardan başlayıp tüm Samanyolu'nu yutan ilk büyük koşu.
+- **Faz 1: Kozmik Çöküş (Big Crunch / 1.79e308 g):** Yutulan kütlenin tek noktaya çöküp bir üst fraktal boyutta yeniden doğması ve **Tekillik Puanı (Singularity Points - SP)** kazanımı.

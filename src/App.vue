@@ -8,6 +8,9 @@ import { musicEngine } from './core/music-engine'
 import AlgorithmicSwirl from './components/AlgorithmicSwirl.vue'
 import JuiceLayer from './components/JuiceLayer.vue'
 import SequentialStrikeLayer from './components/SequentialStrikeLayer.vue'
+import HeartBurstLayer from './components/HeartBurstLayer.vue'
+import CommentTicker from './components/CommentTicker.vue'
+import FloatingThumbBar from './components/FloatingThumbBar.vue'
 import ScreenOverlay from './components/ScreenOverlay.vue'
 import Header from './components/Header.vue'
 import DimensionsTab from './components/DimensionsTab.vue'
@@ -348,6 +351,9 @@ onUnmounted(() => {
     <!-- Balatro Sütun 2: Sıralı Reels Vuruşu ve Makro Sıçrama Katmanı -->
     <SequentialStrikeLayer />
 
+    <!-- Çift Dokunuş Kalp Patlaması Katmanı -->
+    <HeartBurstLayer />
+
     <!-- Gece Krizleri Overlay'i -->
     <AnomalyOverlay />
 
@@ -366,6 +372,9 @@ onUnmounted(() => {
         @open-settings="showSettings = true"
         @open-auth="authStore.openAuthModal()"
       />
+
+      <!-- Gece Kuşları Sahte Canlı Yorum Akışı -->
+      <CommentTicker />
 
       <!-- ADR-0032: Dekad Merdiveni — koşunun tamamı ve sıradaki açılış -->
       <div
@@ -401,11 +410,11 @@ onUnmounted(() => {
         class="ds-nav-scroll p-1 rounded-xl mb-4 flex items-center gap-1 overflow-x-auto w-full border border-white/[0.06] bg-black/60 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-30 max-md:mb-0 max-md:rounded-b-none max-md:rounded-t-2xl max-md:px-2 max-md:py-1.5 max-md:bg-black/85 max-md:border-white/[0.1] max-md:pb-[max(0.375rem,env(safe-area-inset-bottom))]"
         aria-label="Ana sekmeler"
       >
-        <!-- Reels Akışı Sekmesi -->
+        <!-- Kütle / Katmanlar Sekmesi -->
         <button @click="switchTab('dimensions')" :aria-current="activeTab === 'dimensions' ? 'page' : undefined" :class="[NAV_BTN, navClass(activeTab === 'dimensions')]">
           <Layers class="w-3.5 h-3.5 text-purple-400" />
-          <span>Reels</span>
-          <span v-if="store.canShift" class="tab-dot tab-dot-purple" v-tip="'Akış Sıçraması hazır'"></span>
+          <span>Katmanlar</span>
+          <span v-if="store.canShift" class="tab-dot tab-dot-purple" v-tip="'Ölçek Sıçraması hazır'"></span>
         </button>
 
         <!-- Algoritma Laboratuvarı Sekmesi -->
@@ -433,14 +442,14 @@ onUnmounted(() => {
         <button v-if="store.colonyUnlocked" @click="switchTab('colony')" :aria-current="activeTab === 'colony' ? 'page' : undefined" :class="[NAV_BTN, navClass(activeTab === 'colony')]">
           <Network class="w-3.5 h-3.5 text-violet-400" />
           <span>Koloni</span>
-          <span v-if="store.canPowerNap" class="tab-dot tab-dot-violet" v-tip="'Toplu Uyku hazır'"></span>
+          <span v-if="store.canPowerNap" class="tab-dot tab-dot-violet" v-tip="'Toplu Çöküş hazır'"></span>
         </button>
 
-        <!-- Sabah 06:00 Dükkanı Sekmesi -->
+        <!-- Kozmik Çöküş / Tekillik Sekmesi -->
         <button v-if="store.singularityUnlocked" @click="switchTab('singularity')" :aria-current="activeTab === 'singularity' ? 'page' : undefined" :class="[NAV_BTN, navClass(activeTab === 'singularity')]">
           <Sunrise class="w-3.5 h-3.5 text-amber-400" />
-          <span>Şafak (06:00)</span>
-          <span v-if="store.canSingularity" class="tab-dot tab-dot-amber" v-tip="'Tekillik hazır'"></span>
+          <span>Tekillik</span>
+          <span v-if="store.canSingularity" class="tab-dot tab-dot-amber" v-tip="'Kozmik Çöküş hazır'"></span>
           <span v-else-if="store.hasAffordableNeuralNode" class="tab-dot tab-dot-amber" v-tip="'Alınabilir Nöral Ağaç düğümü var'"></span>
         </button>
 
@@ -466,8 +475,8 @@ onUnmounted(() => {
 
         </nav>
 
-      <!-- Aktif Sekme İçeriği (tek ritim: space-y-3; mobilde alt dock payı eklenir) -->
-      <main class="w-full pb-8 max-md:pb-28">
+      <!-- Aktif Sekme İçeriği (tek ritim: space-y-3; mobilde alt dock + floating bar payı eklenir) -->
+      <main class="w-full pb-8 max-md:pb-36">
         <DimensionsTab v-if="activeTab === 'dimensions'" />
         <LabTab v-else-if="activeTab === 'lab' && store.labUnlocked" />
         <CrisisTab v-else-if="activeTab === 'crisis' && store.crisisUnlocked" />
@@ -478,6 +487,9 @@ onUnmounted(() => {
         <AchievementsTab v-else-if="activeTab === 'achievements'" />
         <StatsTab v-else-if="activeTab === 'stats'" />
       </main>
+
+      <!-- Mobilde (< 768px) Başparmak Hızlı Aksiyon Alanı -->
+      <FloatingThumbBar />
 
       <!-- Ayarlar Modalı -->
       <SettingsModal

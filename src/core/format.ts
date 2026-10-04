@@ -120,3 +120,20 @@ export function formatTime(seconds: number): string {
   const remHours = hours % 24
   return `${days} gün ${remHours} sa`
 }
+
+export function getMassScaleBadge(value: DecimalSource): string {
+  const dec = D(value)
+  if (dec.isNan() || Number.isNaN(dec.mag)) return 'Bilinmeyen Ölçek'
+  if (dec.lt(1e-6)) return 'Moleküler Kırıntı'
+  if (dec.lt(1e0)) return 'Atomaltı Parçacık'
+  if (dec.lt(1e6)) return 'Fiziksel Madde'
+  if (dec.lt(1e12)) return 'Gökdelen Ölçeği'
+  if (dec.lt(1e18)) return 'Everest Dağı'
+  if (dec.lt(1e24)) return 'Ay & Okyanuslar'
+  if (dec.lt(1e30)) return 'Dünya Gezegeni'
+  if (dec.lt(1e36)) return 'Güneş Kütlesi'
+  if (dec.lt(1e48)) return 'Samanyolu Galaksisi'
+  if (dec.lt(1e56)) return 'Gözlemlenebilir Evren'
+  return 'Kozmik Tekillik'
+}
+

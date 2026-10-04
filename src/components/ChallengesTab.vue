@@ -93,10 +93,10 @@ function confirmExit() {
     <TabHero
       :icon="Swords"
       icon-class="text-rose-400"
-      title="Gece Kriz Meydan Okumaları"
+      title="Kozmik Kriz Meydan Okumaları"
       :badge="`${doneCount}/${totalCount}`"
       badge-class="ds-badge-rose"
-      subtitle="Özel kısıtlamalarla 1.79e308 Dopamine ulaş: her tamamlanan meydan okuma kalıcı ödül verir. Giriş mevcut koşuyu sıfırlar, çıkış her zaman serbest ve cezasızdır."
+      subtitle="Özel kısıtlamalarla 1.79e308 g Kütleye ulaş: her tamamlanan meydan okuma kalıcı ödül verir. Giriş mevcut koşuyu sıfırlar, çıkış her zaman serbest ve cezasızdır."
       accent="rose"
     >
       <template #stats>
@@ -166,7 +166,7 @@ function confirmExit() {
           {{ def.ruleDesc }}
         </div>
         <div class="text-[11px] leading-snug text-slate-400">
-          🎯 1.79e308 Dopamin · 🏆 {{ def.rewardDesc }}
+          🎯 1.79e308 g Kütle · 🏆 {{ def.rewardDesc }}
         </div>
         <div v-if="isLocked(def)" class="text-[11px] font-mono text-slate-500 tabular-nums">
           {{ lockInfo(def).hint }} · {{ lockInfo(def).progress }}
@@ -243,7 +243,7 @@ function confirmExit() {
     <ConfirmModal
       v-if="pendingEnter"
       :title="`${pendingEnter.icon} ${pendingEnter.name}`"
-      :message="`Mevcut koşu sıfırlanacak ve “${pendingEnter.name}” kısıtlamasıyla yeni bir koşu başlayacak. Hedef: 1.79e308 Dopamin. Ödül: ${pendingEnter.rewardDesc}. Emin misin?`"
+      :message="`Mevcut koşu sıfırlanacak ve “${pendingEnter.name}” kısıtlamasıyla yeni bir koşu başlayacak. Hedef: 1.79e308 g Kütle. Ödül: ${pendingEnter.rewardDesc}. Emin misin?`"
       confirm-label="Meydan Okumaya Başla"
       :danger="true"
       @confirm="confirmEnter"

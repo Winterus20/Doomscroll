@@ -49,7 +49,7 @@ function addDopamine() {
   if (store.matter.gt(store.stats.highestMatter)) {
     store.stats.highestMatter = store.matter
   }
-  flash(`+${customAmount.value} Dopamin eklendi`)
+  flash(`+${customAmount.value} Kütle eklendi`)
 }
 
 function setDopamine() {
@@ -59,7 +59,7 @@ function setDopamine() {
     return
   }
   store.matter = d
-  flash(`Dopamin = ${customAmount.value}`)
+  flash(`Kütle = ${customAmount.value}`)
 }
 
 function giveDopaminePreset(preset: string) {
@@ -69,12 +69,12 @@ function giveDopaminePreset(preset: string) {
   if (store.matter.gt(store.stats.highestMatter)) {
     store.stats.highestMatter = store.matter
   }
-  flash(`+${preset} Dopamin`)
+  flash(`+${preset} Kütle`)
 }
 
 function resetDopamine() {
   store.matter = new Decimal(10)
-  flash('Dopamin sıfırlandı (10)')
+  flash('Kütle sıfırlandı (10)')
 }
 
 function addSp() {
@@ -139,24 +139,24 @@ function giveFyp() {
   store.activeBuffs.push({
     id: `buff-admin-fyp-${Date.now()}`,
     type: 'fyp',
-    name: '🔥 Gece 3 Çılgınlığı (7× Dopamin)',
+    name: '🔥 Süpernova Patlaması (7× Kütle)',
     duration: 300,
     remaining: 300,
     multiplier: 7
   })
-  flash('Gece 3 buffı verildi (5 dk)')
+  flash('Süpernova buffı verildi (5 dk)')
 }
 
 function giveFrenzy() {
   store.activeBuffs.push({
     id: `buff-admin-frenzy-${Date.now()}`,
     type: 'heart_frenzy',
-    name: '👆 Başparmak Histerisi (300× Kaydır)',
+    name: '🌌 Kütle Patlaması (300× Çekim)',
     duration: 300,
     remaining: 300,
     multiplier: 300
   })
-  flash('Histeri buffı verildi (5 dk)')
+  flash('Kütle Patlaması buffı verildi (5 dk)')
 }
 
 function giveCombo() {

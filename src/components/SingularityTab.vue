@@ -16,7 +16,7 @@ const store = useGameStore()
 // Break Singularity alındıysa hero rozeti "Sınır Yıkıldı" durumuna geçer
 const singularityBroken = computed(() => (store.singularityUpgrades?.break_singularity || 0) >= 1)
 
-// Faz 2 kilometre taşı: Kolektif Gece Nöbeti (1e308 Dopamin — ADR-0033).
+// Faz 2 kilometre taşı: Kolektif Kozmik Tekillik (1e308 g Kütle — ADR-0033).
 // İlerleme şafak yoluyla aynı ölçekte: 0 → 1e308 = %0 → %100.
 const nightWatchUnlocked = computed(() => store.nightWatchUnlocked)
 const nightWatchProgress = computed(() => {
@@ -64,7 +64,7 @@ const challengeRewardShort = computed(() =>
 const challengeButtonLabel = computed(() => {
   if (!store.activeChallengeDef) return ''
   if (store.canSingularity) return `Meydan Okumayı Tamamla (${challengeRewardShort.value})`
-  return `Meydan: ${store.activeChallengeDef.name} — Hedef 1.79e308 Dopamin`
+  return `Meydan: ${store.activeChallengeDef.name} — Hedef 1.79e308 g Kütle`
 })
 </script>
 
@@ -74,17 +74,17 @@ const challengeButtonLabel = computed(() => {
     <TabHero
       :icon="Sunrise"
       icon-class="text-amber-400"
-      title="Sabah 06:00 Çöküşü (Güneş Doğdu!)"
-      :badge="singularityBroken ? '⚡ Sınır Yıkıldı' : 'Katman 1 Tekillik'"
+      title="Kozmik Çöküş (Uroboros Tekilliği)"
+      :badge="singularityBroken ? '⚡ Planck Sınırı Yıkıldı' : 'Katman 1 Tekillik'"
       badge-class="ds-badge-amber"
-      subtitle="Dışarıdan kuş sesleri geliyor, güneş perdelerden sızıyor ama başparmağın hala otomatik yukarı kaydırıyor! 1.79e308 Dopamine ulaştığında uykusuzluğu yenerek ilk çöküşü yaşa ve kalıcı Uykusuzluk Puanı (SP) kazan."
+      subtitle="Su damlasındaki moleküllerden Samanyolu'na kadar tüm kütle olay ufkunda birleşti! 1.79e308 g Kütleye ulaştığında evreni tek noktaya çökerterek kalıcı Tekillik Puanı (SP) kazan."
       :accent="store.canSingularity ? 'amber' : 'slate'"
     >
       <template #stats>
         <div class="stat-box">
           <Sparkles class="w-5 h-5 text-amber-400 shrink-0" />
           <div>
-            <div class="stat-box-label">Mevcut Uykusuzluk Puanı</div>
+            <div class="stat-box-label">Mevcut Tekillik Puanı</div>
             <div class="stat-box-value text-amber-400 tabular-nums">{{ formatNumber(store.singularityPoints, store.settings.notation) }} SP</div>
           </div>
         </div>
@@ -98,13 +98,13 @@ const challengeButtonLabel = computed(() => {
         >
           <Sun class="w-4 h-4" />
           <span>
-            {{ inChallenge ? challengeButtonLabel : (store.canSingularity ? `Güneşi Karşıla (+${formatNumber(store.singularityGain, store.settings.notation)} SP)` : '1.79e308 Dopamin Gereklidir') }}
+            {{ inChallenge ? challengeButtonLabel : (store.canSingularity ? `Çöküşü Başlat (+${formatNumber(store.singularityGain, store.settings.notation)} SP)` : '1.79e308 g Kütle Gereklidir') }}
           </span>
         </button>
       </template>
       <template #progress>
         <div class="flex justify-between text-xs font-mono mb-1.5">
-          <span class="text-slate-400">Sabah 06:00 Güneş İlerlemesi</span>
+          <span class="text-slate-400">Kozmik Çöküş İlerlemesi</span>
           <span class="text-amber-400 font-bold tabular-nums">%{{ progressToSingularity }}</span>
         </div>
         <div class="progress-track progress-track-md progress-track-bordered">
@@ -119,7 +119,7 @@ const challengeButtonLabel = computed(() => {
     <!-- Nöral Ağaç: eski düz SP dükkânının öncüllü kalıcı ağaç hâli -->
     <NeuralTreeTab />
 
-    <!-- Faz 2 Kilometre Taşı: Kolektif Gece Nöbeti (1e308 Dopamin) -->
+    <!-- Faz 2 Kilometre Taşı: Kolektif Kozmik Tekillik (1e308 g Kütle) -->
     <div
       class="glass-panel-card p-4 rounded-xl border"
       :class="nightWatchUnlocked ? 'border-amber-500/40 bg-amber-950/10' : 'border-white/[0.06]'"
@@ -127,7 +127,7 @@ const challengeButtonLabel = computed(() => {
       <div class="flex items-center justify-between mb-1.5">
         <div class="flex items-center gap-2">
           <Moon class="w-4 h-4 shrink-0" :class="nightWatchUnlocked ? 'text-amber-400' : 'text-slate-600'" />
-          <h3 class="text-xs font-bold font-mono text-slate-200">Kolektif Gece Nöbeti</h3>
+          <h3 class="text-xs font-bold font-mono text-slate-200">Kolektif Kozmik Tekillik</h3>
         </div>
         <span class="ds-badge" :class="nightWatchUnlocked ? 'ds-badge-amber' : ''">
           {{ nightWatchUnlocked ? 'FAZ 2 AÇIK' : 'KİLİTLİ' }}
@@ -135,15 +135,15 @@ const challengeButtonLabel = computed(() => {
       </div>
       <p class="text-[11px] text-slate-400 font-mono leading-relaxed mb-2">
         <span v-if="!nightWatchUnlocked">
-          Tüm insanlık yatakta aynı anda ekrana kilitleniyor — 2. Çöküş eşiği:
-          <span class="text-purple-300 font-bold tabular-nums">1e308 Dopamin</span>. Şafağa adım adım yaklaş — eşik, güneş doğmadan hemen önce açılır.
+          Tüm galaktik madde tek bir noktada yoğunlaşıyor — 2. Çöküş eşiği:
+          <span class="text-purple-300 font-bold tabular-nums">1e308 g Kütle</span>. Büyük patlamaya adım adım yaklaş.
         </span>
         <span v-else>
-          Faz 2 açıldı: Uyku Baskısı Matrisi (Corruptions) ve donanım soketleri yolda. Şimdilik nöbet ilerlemen burada sayılır.
+          Faz 2 açıldı: Planck Baskı Matrisi (Corruptions) ve kuantum soketleri yolda. Şimdilik tekillik ilerlemen burada sayılır.
         </span>
       </p>
       <div class="flex justify-between text-xs font-mono mb-1">
-        <span class="text-slate-400">Nöbet İlerlemesi</span>
+        <span class="text-slate-400">Tekillik İlerlemesi</span>
         <span class="tabular-nums font-bold" :class="nightWatchUnlocked ? 'text-amber-400' : 'text-purple-400'">%{{ nightWatchProgress }}</span>
       </div>
       <div class="progress-track progress-track-md progress-track-bordered">
@@ -157,9 +157,9 @@ const challengeButtonLabel = computed(() => {
     <!-- QoL: tekillik onay diyaloğu (native confirm yerine) -->
     <ConfirmModal
       v-if="showSingularityConfirm"
-      title="Sabah 06:00 Çöküşü"
-      message="Dopamin ve istasyonların sıfırlanacak; karşılığında kalıcı Uykusuzluk Puanı (SP) kazanacaksın. Hazır mısın?"
-      confirm-label="Güneşi Karşıla"
+      title="Kozmik Çöküş"
+      message="Yutulan kütle ve tüm katmanlar sıfırlanacak; karşılığında kalıcı Tekillik Puanı (SP) kazanacaksın. Hazır mısın?"
+      confirm-label="Çöküşü Başlat"
       :danger="false"
       @confirm="store.singularityReset(); showSingularityConfirm = false"
       @cancel="showSingularityConfirm = false"
@@ -169,7 +169,7 @@ const challengeButtonLabel = computed(() => {
     <ConfirmModal
       v-if="showCompleteConfirm && store.activeChallengeDef"
       title="Meydan Okumayı Tamamla"
-      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 Dopamin). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
+      :message="`“${store.activeChallengeDef.name}” hedefi tuttu (1.79e308 g Kütle). Koşu sıfırlanacak ve kalıcı ödül kazanacaksın: ${store.activeChallengeDef.rewardDesc}. Onaylıyor musun?`"
       confirm-label="Ödülü Al"
       :danger="false"
       @confirm="store.completeChallenge(); showCompleteConfirm = false"

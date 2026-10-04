@@ -263,6 +263,29 @@ function getTargetParams(): SwirlParams {
     }
   }
 
+  // 3.5 Şafak öncesi (gece %75+): zemin şafağa ısınır — tekillik altını değil, uykusuz şafak
+  // Header saati + ScreenOverlay ufkuyla aynı ilerleme (log10/308.25).
+  try {
+    const m = store.matter
+    if (m && !m.isNan() && m.isFinite() && m.gte(10)) {
+      const logVal = m.log10().toNumber()
+      if (Number.isFinite(logVal)) {
+        const p = Math.min(1, Math.max(0, logVal / 308.25))
+        if (p >= 0.75) {
+          const k = (p - 0.75) / 0.25
+          return {
+            c1: [0.04 + k * 0.05, 0.05 + k * 0.02, 0.09, 1.0],
+            c2: [0.3 + k * 0.35, 0.11 + k * 0.25, 0.58 - k * 0.3, 1.0],
+            c3: [0.02 + k * 0.03, 0.02, 0.03, 1.0],
+            speed: 0.9 + k * 0.3,
+            contrast: 2.6 + k * 0.5,
+            lighting: 0.35 + k * 0.1
+          }
+        }
+      }
+    }
+  } catch { /* yoksay — dingin geceye düş */ }
+
   // 4. Normal Dingin Gece (Algoritma Frekansı / Hz ile ivmelenir)
   let hzLog = 0
   try {

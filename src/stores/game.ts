@@ -102,23 +102,23 @@ function isValidStanceType(value: unknown): value is StanceType {
 }
 
 export const MIRROR_PAIRS: Record<number, { partnerTier: number; label: string }> = {
-  1: { partnerTier: 8, label: 'Saf Beyin Çürümesi (D8)' },
-  2: { partnerTier: 7, label: 'Varoluşsal Kriz (D7)' },
-  3: { partnerTier: 6, label: 'Hint Dizisi (D6)' },
-  4: { partnerTier: 5, label: 'Sigma Tavsiyesi (D5)' },
-  5: { partnerTier: 4, label: 'Subway Surfers (D4)' },
-  6: { partnerTier: 3, label: 'ASMR Sabun (D3)' },
-  7: { partnerTier: 2, label: 'Sokak Lezzeti (D2)' },
-  8: { partnerTier: 1, label: 'Kedi Videoları (D1)' }
+  1: { partnerTier: 8, label: 'Samanyolu & Karadelik (D8)' },
+  2: { partnerTier: 7, label: 'Yıldızlar & Güneş (D7)' },
+  3: { partnerTier: 6, label: 'Gezegenler & Dünya (D6)' },
+  4: { partnerTier: 5, label: 'Laboratuvar & Şehir (D5)' },
+  5: { partnerTier: 4, label: 'Kuark Çorbası (D4)' },
+  6: { partnerTier: 3, label: 'Nükleer Çekirdek (D3)' },
+  7: { partnerTier: 2, label: 'Elektron Orbitalleri (D2)' },
+  8: { partnerTier: 1, label: 'Moleküler Bağlar (D1)' }
 }
 
 export const RESOLUTION_MILESTONES: ResolutionMilestone[] = [
-  { count: 50, name: '360p Mobil Veri', shortName: '360p', mult: 2, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', desc: '2× Çarpan' },
-  { count: 100, name: '720p HD Kalite', shortName: '720p HD', mult: 3, colorClass: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', desc: '3× Çarpan' },
-  { count: 200, name: '1080p 60 FPS', shortName: '1080p 60fps', mult: 4, colorClass: 'text-purple-400 bg-purple-500/10 border-purple-500/30', desc: '4× Çarpan + %1 Tıklama Payı' },
-  { count: 250, name: '4K HDR Dolby', shortName: '4K HDR', mult: 8, colorClass: 'text-amber-400 bg-amber-500/10 border-amber-500/30', desc: '8× Çarpan' },
-  { count: 500, name: 'Nöro-Link Akışı', shortName: 'Nöro-Link', mult: 16, colorClass: 'text-rose-400 bg-rose-500/10 border-rose-500/30', desc: '16× Çarpan' },
-  { count: 1000, name: 'Kozmik Tekillik', shortName: 'Kozmik', mult: 32, colorClass: 'text-white bg-white/20 border-white/40', desc: '32× Çarpan' }
+  { count: 50, name: 'Kovalent Rezonans', shortName: 'Rezonans', mult: 2, colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', desc: '2× Çarpan' },
+  { count: 100, name: 'Bohr Yarıçapı', shortName: 'Bohr', mult: 3, colorClass: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30', desc: '3× Çarpan' },
+  { count: 200, name: 'Kuantum Tünelleme', shortName: 'Tünelleme', mult: 4, colorClass: 'text-purple-400 bg-purple-500/10 border-purple-500/30', desc: '4× Çarpan + %1 Çekim Payı' },
+  { count: 250, name: 'Olay Ufku Yoğunluğu', shortName: 'Olay Ufku', mult: 8, colorClass: 'text-amber-400 bg-amber-500/10 border-amber-500/30', desc: '8× Çarpan' },
+  { count: 500, name: 'Tekillik Çekirdeği', shortName: 'Tekillik', mult: 16, colorClass: 'text-rose-400 bg-rose-500/10 border-rose-500/30', desc: '16× Çarpan' },
+  { count: 1000, name: 'Uroboros Çöküşü', shortName: 'Uroboros', mult: 32, colorClass: 'text-white bg-white/20 border-white/40', desc: '32× Çarpan' }
 ]
 
 const BASE_COSTS = [
@@ -241,92 +241,92 @@ export const LAB_SEEDS = [
     type: 'cat_audio' as LabSeedType,
     name: 'Kedi Miyavlaması',
     icon: '🐱',
-    desc: 'Hızlı ısınır. Komşularına +%15 rezonans yayar ve pasif dopamini artırır.',
+    desc: 'Hızlı ısınır. Komşularına +%15 rezonans yayar ve pasif kütle çekimini artırır.',
     cost: new Decimal(500),
     growthSeconds: 15,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+20% Pasif Dopamin & Komşulara +%15',
-    harvestRewardDesc: '10 sn Dopamin'
+    matureBoostDesc: '+20% Pasif Kütle & Komşulara +%15',
+    harvestRewardDesc: '10 sn Kütle'
   },
   {
     type: 'cheese_sizzle' as LabSeedType,
     name: 'Eritme Kaşar Cızırtısı',
     icon: '🧀',
-    desc: 'Gece 3 açlığını tetikler. Yoğun pasif dopamin akışı sağlar.',
+    desc: 'Kozmik açlığı tetikler. Yoğun pasif kütle çekim akışı sağlar.',
     cost: new Decimal(50000),
     growthSeconds: 25,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+35% Pasif Dopamin (Yemekle +%76)',
-    harvestRewardDesc: '20 sn Dopamin'
+    matureBoostDesc: '+35% Pasif Kütle (Yemekle +%76)',
+    harvestRewardDesc: '20 sn Kütle'
   },
   {
     type: 'subway_beat' as LabSeedType,
     name: 'Subway Surfers Beat',
     icon: '🛹',
-    desc: 'Hipnotik arka plan ritmi. Manuel kaydırma reflekslerini kamçılar.',
+    desc: 'Hipnotik arka plan ritmi. Manuel yutma reflekslerini kamçılar.',
     cost: new Decimal(5e6),
     growthSeconds: 35,
     lifeSeconds: Infinity,
-    matureBoostDesc: '×2.0 Yukarı Kaydırma Gücü',
-    harvestRewardDesc: '30 sn Dopamin'
+    matureBoostDesc: '×2.0 Manuel Yutma Gücü',
+    harvestRewardDesc: '30 sn Kütle'
   },
   {
     type: 'sigma_phonk' as LabSeedType,
     name: 'Gece 4 Sigma Phonk',
     icon: '🗿',
-    desc: 'Ağır baslar uykuyu kaçırır. Gece Krizleri daha sık gelir ve Bas Şoku yayar.',
+    desc: 'Ağır baslar uykuyu kaçırır. Kozmik Krizler daha sık gelir ve Bas Şoku yayar.',
     cost: new Decimal(1e9),
     growthSeconds: 45,
     lifeSeconds: Infinity,
     matureBoostDesc: '+50% Kriz Sıklığı & Komşulara ×1.25',
-    harvestRewardDesc: '40 sn Dopamin'
+    harvestRewardDesc: '40 sn Kütle'
   },
   {
     type: 'mukbang_drama' as LabSeedType,
     name: 'Gece 3 Mukbang & Drama',
     icon: '🍜',
-    desc: 'Kaşar + Subway sentezi. Hem pasif üretimi hem kaydırma gücünü harmanlar.',
+    desc: 'Kaşar + Subway sentezi. Hem pasif üretimi hem yutma gücünü harmanlar.',
     cost: new Decimal(1e11),
     growthSeconds: 50,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+50% Pasif & ×1.5 Kaydırma',
-    harvestRewardDesc: '50 sn Dopamin',
+    matureBoostDesc: '+50% Pasif & ×1.5 Yutma',
+    harvestRewardDesc: '50 sn Kütle',
     isMutationOnly: true
   },
   {
     type: 'cat_burger' as LabSeedType,
     name: 'Cheeseburger Kedi',
     icon: '🍔',
-    desc: 'Kedi + Kaşar sentezi. Sevimliliğiyle Vicdan Azaplarının emişini hafifletir.',
+    desc: 'Kedi + Kaşar sentezi. Sevimliliğiyle Kozmik Parazitlerin emişini hafifletir.',
     cost: new Decimal(1e12),
     growthSeconds: 50,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+40% Pasif & Azap Emişi -%25',
-    harvestRewardDesc: '1 dk Dopamin',
+    matureBoostDesc: '+40% Pasif & Parazit Emişi -%25',
+    harvestRewardDesc: '1 dk Kütle',
     isMutationOnly: true
   },
   {
     type: 'drift_tok' as LabSeedType,
     name: 'Tokyo Drift Dublajı',
     icon: '🏎️',
-    desc: 'Phonk + Subway sentezi. Yüksek ritimle kaydırma gücünü ikiye katlar.',
+    desc: 'Phonk + Subway sentezi. Yüksek ritimle yutma gücünü ikiye katlar.',
     cost: new Decimal(1e13),
     growthSeconds: 60,
     lifeSeconds: Infinity,
-    matureBoostDesc: '×2.0 Kaydırma & +%30 Kriz',
-    harvestRewardDesc: '1,5 dk Dopamin',
+    matureBoostDesc: '×2.0 Yutma & +%30 Kriz',
+    harvestRewardDesc: '1,5 dk Kütle',
     isMutationOnly: true
   },
   {
     type: 'brainrot_remix' as LabSeedType,
     name: 'Saf Nöron Çürütücü',
     icon: '🧠',
-    desc: 'Kedi + Phonk efsanevi rezonansı. Algoritmayı tekillik boyutuna taşır!',
+    desc: 'Kedi + Phonk efsanevi rezonansı. Kütle çekimini tekillik boyutuna taşır!',
     cost: new Decimal(1e15),
     growthSeconds: 75,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+200% (×3) Tüm Küresel Dopamin!',
-    harvestRewardDesc: '2 dk Dopamin',
+    matureBoostDesc: '+200% (×3) Tüm Küresel Kütle!',
+    harvestRewardDesc: '2 dk Kütle',
     isMutationOnly: true
   }
 ]
@@ -376,118 +376,118 @@ export const LAB_RECIPES: LabRecipe[] = [
     name: 'Saf Nöron Çürütücü',
     icon: '🧠',
     hint: 'Kedi Miyavlaması (🐱) ve Sigma Phonk (🗿) komşuluğu ile sentezlenir.',
-    desc: 'Algoritma tekilliği: Tüm küresel dopamin üretimini kalıcı olarak üçe katlar!'
+    desc: 'Kozmik tekillik: Tüm küresel kütle üretimini kalıcı olarak üçe katlar!'
   }
 ]
 
 export const CRISIS_SPELLS = [
   {
     id: 'fast_charge' as CrisisSpellType,
-    name: 'Telefonu Hızlı Şarja Tak',
+    name: 'Kuantum Alan Uyarımı',
     icon: '⚡',
-    desc: 'Anında ekrana 1 adet ışıltılı Gece Krizi (Altın Anomali) fırlatır.',
+    desc: 'Anında ekrana 1 adet ışıltılı Kozmik Dalgalanma (Altın Anomali) fırlatır.',
     energyCost: 30,
     backfireChance: 0.15,
-    backfireDesc: '%15 Risk: Şarj kablosu temassızlık yaptı! (15 sn %50 hız kaybı)'
+    backfireDesc: '%15 Risk: Manyetik dalgalanma! (15 sn %50 hız kaybı)'
   },
   {
     id: 'espresso_shot' as CrisisSpellType,
-    name: 'Çift Espresso Shot',
+    name: 'Aşırı Yüklü Plazma Akışı',
     icon: '☕',
-    desc: 'Beyni şoka sokar; 30 saniye boyunca Algoritma Frekansını 3× katlar.',
+    desc: 'Çekirdeği aşırı yükler; 30 saniye boyunca Çekim Hızını (Hz) 3× katlar.',
     energyCost: 45,
     backfireChance: 0.1,
-    backfireDesc: '%10 Risk: Kalp çarpıntısı! Enerji barı sıfırlanır.'
+    backfireDesc: '%10 Risk: Rezonans aşırı yüklenmesi! Enerji barı sıfırlanır.'
   },
   {
     id: 'noise_cancelling' as CrisisSpellType,
-    name: 'Gürültü Önleyici Kulaklık',
+    name: 'Manyetik Koruma Kalkanı',
     icon: '🎧',
-    desc: 'Mevcut tüm Vicdan Azaplarını (Wrinklers) anında susturur ve %150 primle bozdurur.',
+    desc: 'Mevcut tüm Kozmik Parazitleri (Wrinklers) anında temizler ve %150 primle bozdurur.',
     energyCost: 35,
     backfireChance: 0.0,
     backfireDesc: 'Risk yok! Tam sessizlik ve odaklanma.'
   },
   {
     id: 'sleep_denial' as CrisisSpellType,
-    name: "'Yarın Erken Kalkmam Gerekmiyor' Yalanı",
+    name: 'Kararsız Bozon İnfüzyonu',
     icon: '🛌',
-    desc: 'Vicdanı tamamen uyutur; anında 1 dakikalık Dopamin patlaması verir.',
+    desc: 'Olay ufkunu anında besler; 1 dakikalık Kütle Patlaması verir.',
     energyCost: 60,
     backfireChance: 0.2,
-    backfireDesc: '%20 Risk: Gerçekle yüzleşme! Ekrana anında 3 yeni Vicdan Azabı dadanır.'
+    backfireDesc: '%20 Risk: Kuantum dengesizliği! Olay ufkuna 3 yeni Kozmik Parazit dadanır.'
   }
 ]
 
 export const SINGULARITY_UPGRADES = [
   {
     id: 'eye_drops',
-    name: 'Göz Damlası',
+    name: 'Optik Soğutucu',
     icon: '💧',
-    desc: 'Kuruyan gözleri rahatlatır. İstasyon üretimlerini her seviye 2× çarpar.',
+    desc: 'Lazer odaklama lenslerini soğutur. Kademe üretimlerini her seviye 2× çarpar.',
     baseCost: 1,
     costMult: 2,
     maxLevel: 10
   },
   {
     id: 'muted_alerts',
-    name: 'Sessize Alınmış Bildirimler',
+    name: 'Kozmik Parazit Filtresi',
     icon: '🔕',
-    desc: 'Gereksiz aramaları susturur. Gece Krizlerinin geliş aralığını her seviye %12 kısaltır.',
+    desc: 'Arka plan gürültüsünü filtreler. Kozmik Dalgalanmaların geliş aralığını her seviye %12 kısaltır.',
     baseCost: 2,
     costMult: 2.5,
     maxLevel: 5
   },
   {
     id: 'fast_charger',
-    name: 'GaN 120W Hızlı Adaptör',
+    name: 'Kuantum Güç Kaynağı',
     icon: '🔌',
-    desc: 'Pil hiç bitmez. Algoritma Frekansı (Hz) taban indirimini güçlendirir.',
+    desc: 'Enerji hiç bitmez. Çekim Hızı (Hz) taban indirimini güçlendirir.',
     baseCost: 3,
     costMult: 3,
     maxLevel: 5
   },
   {
     id: 'caffeine_drip',
-    name: 'Damardan Kafein Serumu',
+    name: 'Taktil Çekim Katalizörü',
     icon: '🧪',
-    desc: 'Yukarı Kaydır (Manuel Tıklama) gücüne saniyelik üretimin her seviye %5\'ini ekler!',
+    desc: 'Manuel Yutma gücüne saniyelik üretimin her seviye %5\'ini ekler!',
     baseCost: 5,
     costMult: 3,
     maxLevel: 5
   },
   {
     id: 'neural_chip',
-    name: 'Otonom Kaydırma Çipi',
+    name: 'Otonom Çekim Çipi',
     icon: '🤖',
-    desc: 'Tüm Otomatik Kaydırma Botlarının çalışma frekansını her seviye 1.5× hızlandırır.',
+    desc: 'Tüm Otomatik Çekim Botlarının çalışma frekansını her seviye 1.5× hızlandırır.',
     baseCost: 4,
     costMult: 2.5,
     maxLevel: 5
   },
   {
     id: 'neural_nest',
-    name: 'Nöral Yuva',
+    name: 'Rezonans Yuvası',
     icon: '🐜',
-    desc: 'Nöral izleme kolonisinin üreme hızını her seviye %10 artırır.',
+    desc: 'Kuantum rezonatör kolonisinin üreme hızını her seviye %10 artırır.',
     baseCost: 6,
     costMult: 3,
     maxLevel: 5
   },
   {
     id: 'guilt_immunity',
-    name: 'Vicdan Uyuşturucu',
+    name: 'Parazit Kalkanı',
     icon: '🛡️',
-    desc: 'Vicdan azaplarının emdiği pay %50 azalır, susturulduklarında %150 prim verir.',
+    desc: 'Kozmik parazitlerin emdiği kütle %50 azalır, temizlendiklerinde %150 prim verir.',
     baseCost: 3,
     costMult: 4,
     maxLevel: 3
   },
   {
     id: 'break_singularity',
-    name: 'Uyku Sınırını Yıkma',
+    name: 'Planck Duvarını Yıkma',
     icon: '⚡',
-    desc: 'Dopamin 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
+    desc: 'Kütle 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
     baseCost: 4,
     costMult: 1,
     maxLevel: 1
@@ -589,7 +589,7 @@ export const NEURAL_TREE: NeuralNode[] = [
     id: 'prod_echo',
     name: 'Yankılanan Üretim',
     icon: '📈',
-    desc: 'Uyku düzeni oturur: tüm dopamin üretimi her seviye +%25 kalıcı artar.',
+    desc: 'Rezonans kararlılaşır: tüm kütle üretimi her seviye +%25 kalıcı artar.',
     branch: 'passive',
     cost: 5,
     maxLevel: 5,
@@ -601,7 +601,7 @@ export const NEURAL_TREE: NeuralNode[] = [
     id: 'dawn_harbinger',
     name: 'Şafak Habercisi',
     icon: '🌅',
-    desc: '06:00\'ya yaklaşmayı hızlandırır: Tekillik (Şafak) kazancını 2× katlar.',
+    desc: 'Kozmik Çöküşe yaklaşmayı hızlandırır: Tekillik kazancını 2× katlar.',
     branch: 'passive',
     cost: 8,
     requires: ['prod_echo'],
@@ -609,9 +609,9 @@ export const NEURAL_TREE: NeuralNode[] = [
   },
   {
     id: 'break_singularity',
-    name: 'Uyku Sınırını Yıkma',
+    name: 'Planck Duvarını Yıkma',
     icon: '⚡',
-    desc: 'Dopamin 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
+    desc: 'Kütle 1.79e308 üstüne çıkabilir. Tekillikte Shift/Galaxy botları beklemeyi bırakır, sınırın ötesinde normal çalışır.',
     branch: 'hybrid',
     cost: 4,
     requires: ['eye_drops'], // Denge: taban 3 SP ile 2. koşudan sonra hemen açılabilir (4 SP)
@@ -765,9 +765,9 @@ export const NEURAL_TREE: NeuralNode[] = [
   },
   {
     id: 'apex_doomscroll',
-    name: 'Apex Doomscroll',
+    name: 'Apex Uroboros',
     icon: '🌀',
-    desc: 'Ağacın zirvesi: dopamin tekilliği — tüm üretim kalıcı 10× katlanır.',
+    desc: 'Ağacın zirvesi: evrensel kütle tekilliği — tüm üretim kalıcı 10× katlanır.',
     branch: 'hybrid',
     cost: 20,
     requires: ['prod_echo', 'caffeine_drip'],
@@ -1901,38 +1901,38 @@ export const useGameStore = defineStore('game', {
       const mentalBattery = Math.max(5, Math.min(100, Math.round(100 - (lostHours * 9.5))))
       const bluePhotons = new Decimal(playtime).times(1.25e15)
 
-      let milestoneHint = 'Henüz başındasın — parmak yeni ısınıyor.'
+      let milestoneHint = 'Henüz başındasın — olay ufku yeni ısınıyor.'
       if (meters >= 8848) {
-        milestoneHint = 'Everest Dağı Zirvesi (8,848 m) aşıldı! Atmosfer tükendi ama Reels bitmedi.'
+        milestoneHint = 'Everest Dağı Zirvesi (8,848 m) aşıldı! Atmosferik gazlar tekilliğe çekiliyor.'
       } else if (meters >= 3776) {
-        milestoneHint = 'Fuji Dağı (3,776 m) seviyesi! Başparmağın maraton koşucusu oldu.'
+        milestoneHint = 'Fuji Dağı (3,776 m) seviyesi! Kütleçekimsel dalga boyu genişliyor.'
       } else if (meters >= 828) {
-        milestoneHint = 'Burç Halife (828 m) tırmanıldı! Dünyanın en yüksek binasını kaydırdın.'
+        milestoneHint = 'Burç Halife (828 m) aşıldı! Tekillik gökdelen ölçeğini yutuyor.'
       } else if (meters >= 330) {
-        milestoneHint = 'Eyfel Kulesi (330 m) aşıldı! Paris bile bu kadar yukarı kaymadı.'
+        milestoneHint = 'Eyfel Kulesi (330 m) aşıldı! Metalik kafes bağları parçalandı.'
       } else if (meters >= 67) {
-        milestoneHint = 'Galata Kulesi (67 m) aşıldı! İstanbul gecesinde ilk tepe noktası.'
+        milestoneHint = 'Galata Kulesi (67 m) aşıldı! Laboratuvar çevresi tekilliğe gömülüyor.'
       } else if (meters >= 10) {
-        milestoneHint = '3 katlı apartman boyu yukarı kaydırıldı.'
+        milestoneHint = '3 katlı laboratuvar binası ölçeği tekilliğe çekildi.'
       }
 
-      let rank = 'Masum Kaydırıcı'
+      let rank = 'Moleküler Ayrıştırıcı'
       let rankColor = 'text-emerald-400'
       const singularities = state.singularities || 0
       if (singularities >= 50 || clicks >= 50000) {
-        rank = 'Dopamin Tekilliği (Gözü Kanlı)'
+        rank = 'UROBOROS (Kozmik Tekillik)'
         rankColor = 'text-rose-400 font-extrabold animate-pulse'
       } else if (singularities >= 15 || clicks >= 20000) {
-        rank = 'Nöral Algoritma Zombisi'
+        rank = 'Olay Ufku Mühendisi'
         rankColor = 'text-purple-400 font-bold'
       } else if (singularities >= 5 || clicks >= 7500) {
-        rank = 'Kuş Sesleri Mağduru'
+        rank = 'Kuantum Karadelik Mimarı'
         rankColor = 'text-amber-400 font-bold'
       } else if (singularities >= 1 || clicks >= 2500) {
-        rank = 'Gece 3 Müptelası'
+        rank = 'Mikro-Karadelik Tetikleyicisi'
         rankColor = 'text-cyan-400'
       } else if (clicks >= 500) {
-        rank = 'Yorgan Altı Hayaleti'
+        rank = 'Laboratuvar Asistanı'
         rankColor = 'text-blue-400'
       }
 
@@ -3854,18 +3854,18 @@ export const useGameStore = defineStore('game', {
       let desc = ''
       let lifetime = 14
       if (chosenType === 'fyp') {
-        title = 'Gece 3 Çılgınlığı!'
-        desc = '60 saniyeliğine tüm dopamin akışını 7× katlar!'
+        title = 'Süpernova Patlaması!'
+        desc = '60 saniyeliğine tüm kütle çekimini 7× katlar!'
       } else if (chosenType === 'heart_frenzy') {
-        title = 'Başparmak Histerisi!'
-        desc = '15 saniyeliğine Yukarı Kaydırma gücünü 300× fırlatır!'
+        title = 'Kütle Patlaması!'
+        desc = '15 saniyeliğine Manuel Yutma gücünü 300× fırlatır!'
       } else if (chosenType === 'void') {
-        title = 'Void Reel Tekilliği!'
+        title = 'Kozmik Tekillik Dalgalanması!'
         desc = 'Garanti kombo: 30sn 7× + 15sn 300× aynı anda!'
         lifetime = 9
       } else {
-        title = '50 Milyonluk Viral Video!'
-        desc = 'Anında 2 dakikalık saf dopamin doğrudan beyne akar!'
+        title = 'Hawking Işıması Zirvesi!'
+        desc = 'Anında 2 dakikalık saf kütle tekilliğe akar!'
       }
 
       // Mobil güvenli spawn: dar ekranda kart (max 86vw) taşmasın
@@ -3925,7 +3925,7 @@ export const useGameStore = defineStore('game', {
           this.activeBuffs.push({
             id: `buff-fyp-${Date.now()}`,
             type: 'fyp',
-            name: '🔥 Gece 3 Çılgınlığı (7× Dopamin)',
+            name: '🔥 Süpernova Patlaması (7× Kütle)',
             duration: Math.floor(60 * durMult),
             remaining: Math.floor(60 * durMult),
             multiplier: 7
@@ -3939,14 +3939,14 @@ export const useGameStore = defineStore('game', {
           this.activeBuffs.push({
             id: `buff-frenzy-${Date.now()}`,
             type: 'heart_frenzy',
-            name: '👆 Başparmak Histerisi (300× Kaydır)',
+            name: '🌌 Kütle Patlaması (300× Çekim)',
             duration: Math.floor(15 * durMult),
             remaining: Math.floor(15 * durMult),
             multiplier: 300
           })
         }
       } else if (anomaly.type === 'void') {
-        // Void Reel: garanti kombo — 30sn 7× üretim + 15sn 300× kaydırma
+        // Void Tekillik: garanti kombo — 30sn 7× üretim + 15sn 300× çekim
         const fyp = this.activeBuffs.find((b) => b.type === 'fyp')
         if (fyp) {
           fyp.remaining += 30 * durMult
@@ -3954,7 +3954,7 @@ export const useGameStore = defineStore('game', {
           this.activeBuffs.push({
             id: `buff-fyp-void-${Date.now()}`,
             type: 'fyp',
-            name: '🔥 Gece 3 Çılgınlığı (7× Dopamin)',
+            name: '🔥 Süpernova Patlaması (7× Kütle)',
             duration: Math.floor(30 * durMult),
             remaining: Math.floor(30 * durMult),
             multiplier: 7

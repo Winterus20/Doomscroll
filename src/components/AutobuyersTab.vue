@@ -195,7 +195,7 @@ function onMinGainInput(event: Event, key: string): void {
               Tetiklenme: <span class="text-slate-300 font-bold tabular-nums">{{ (bot.interval / speedMultiplierRaw).toFixed(2) }} sn</span>
             </span>
             <span v-else>
-              Açılış Maliyeti: <span class="text-blue-300 font-bold tabular-nums">{{ formatNumber(AUTOBUYER_COSTS[key], store.settings.notation) }} Dopamin</span>
+              Açılış Maliyeti: <span class="text-blue-300 font-bold tabular-nums">{{ formatNumber(AUTOBUYER_COSTS[key], store.settings.notation) }} g Kütle</span>
               <span v-if="requirementText(String(key))" class="block text-[10px] mt-0.5" :class="requirementMet(String(key)) ? 'text-emerald-400' : 'text-amber-400'">İster: {{ requirementText(String(key)) }}</span>
               <span class="block text-[10px] text-slate-500 mt-0.5">×1 modda başlar (8-20sn'de 1 adet)</span>
             </span>
@@ -275,7 +275,7 @@ function onMinGainInput(event: Event, key: string): void {
               : 'bg-black/30 text-slate-600 border-white/[0.05]'"
           >
             <Unlock class="w-3.5 h-3.5" />
-            <span>{{ !requirementMet(String(key)) ? 'Kilitli: ' + requirementText(String(key)) : canUnlock(String(key)) ? 'Botu Satın Al' : 'Yetersiz Dopamin' }}</span>
+            <span>{{ !requirementMet(String(key)) ? 'Kilitli: ' + requirementText(String(key)) : canUnlock(String(key)) ? 'Botu Satın Al' : 'Yetersiz Kütle' }}</span>
           </button>
         </div>
       </div>

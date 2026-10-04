@@ -94,13 +94,13 @@ const { dialogRef } = useFocusTrap(
 
             <div class="space-y-3 mt-4 text-xs">
               <div class="flex justify-between items-center">
-                <span class="text-slate-400">Dopamin:</span>
+                <span class="text-slate-400">Kütle:</span>
                 <span class="font-mono font-bold text-cyan-300 text-sm">
                   {{ formatMatter(conflict.localMeta.matter) }}
                 </span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-slate-400">Şafak (06:00):</span>
+                <span class="text-slate-400">Kozmik Çöküş:</span>
                 <span class="font-mono text-amber-300">
                   {{ conflict.localMeta.singularities }} kez
                 </span>
@@ -153,13 +153,13 @@ const { dialogRef } = useFocusTrap(
 
             <div class="space-y-3 mt-4 text-xs">
               <div class="flex justify-between items-center">
-                <span class="text-slate-400">Dopamin:</span>
+                <span class="text-slate-400">Kütle:</span>
                 <span class="font-mono font-bold text-emerald-300 text-sm">
                   {{ formatMatter(conflict.cloudMeta.matter) }}
                 </span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-slate-400">Şafak (06:00):</span>
+                <span class="text-slate-400">Kozmik Çöküş:</span>
                 <span class="font-mono text-amber-300">
                   {{ conflict.cloudMeta.singularities }} kez
                 </span>

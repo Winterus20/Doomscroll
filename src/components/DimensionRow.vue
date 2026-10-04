@@ -4,7 +4,7 @@ import { useGameStore } from '../stores/game'
 import { format } from '../core/format'
 import { Decimal, D_0 } from '../core/math'
 import type { DimensionData } from '../models/types'
-import { Play } from 'lucide-vue-next'
+import { Sparkles } from 'lucide-vue-next'
 
 const props = defineProps<{
   dimension: DimensionData
@@ -35,43 +35,43 @@ interface FormatMeta {
 const formatConfigs: Record<number, FormatMeta> = {
   1: {
     tier: 1,
-    shortName: 'Kedi Videoları',
-    subtitle: 'Gece 02:47 — "Sadece 1 video izleyip uyuyacağım"'
+    shortName: 'Moleküler Bağlar',
+    subtitle: 'Nanometre — Su damlasındaki kovalent bağları ayrıştırma'
   },
   2: {
     tier: 2,
-    shortName: 'Sokak Lezzetleri',
-    subtitle: 'Gece 03:15 — Cızırdayan tereyağı ve eriyen kaşar hipnozu'
+    shortName: 'Elektron Orbitalleri',
+    subtitle: 'Pikometre — Elektron bulutlarını ve spinleri vakumlama'
   },
   3: {
     tier: 3,
-    shortName: 'ASMR Sabun',
-    subtitle: 'Gece 03:42 — Kusursuz kareler ve mikro rahatlama'
+    shortName: 'Nükleer Çekirdek',
+    subtitle: 'Femtometre — Proton ve nötronları birbirine bağlayan güçlü nükleer kuvvet'
   },
   4: {
     tier: 4,
-    shortName: 'Subway Surfers + Reddit',
-    subtitle: 'Gece 04:10 — Alt ekranda tren rayları, üstte aile dramı'
+    shortName: 'Kuark Çorbası',
+    subtitle: 'Attometre — Renk yükleri, gluonlar ve kuantum dalgalanması'
   },
   5: {
     tier: 5,
-    shortName: 'Sigma Tavsiyeleri',
-    subtitle: 'Gece 04:45 — "Günde 2 saat uyu, soğuk duş al ve kripto kovula"'
+    shortName: 'Laboratuvar & Şehir',
+    subtitle: 'Planck Yırtılması! — Olay ufkuna çekilen mikroskop masası ve binalar'
   },
   6: {
     tier: 6,
-    shortName: 'Hint Dizisi (1/12)',
-    subtitle: 'Gece 05:15 — 360 derece dramatik şok zoom'
+    shortName: 'Gezegenler & Dünya',
+    subtitle: 'Kozmik Yutuş — Ay, Mars ve Dünya\'nın olay ufkuna kapılışı'
   },
   7: {
     tier: 7,
-    shortName: 'Varoluşsal Kriz',
-    subtitle: 'Gece 05:40 — Evrenin ısı ölümü ve kozmik hiçlik'
+    shortName: 'Yıldızlar & Güneş',
+    subtitle: 'Stellar Oburluk — Güneş sistemleri ve dev plazma küreleri'
   },
   8: {
     tier: 8,
-    shortName: 'Beyin Çürümesi',
-    subtitle: 'Gece 06:05 — Skibidi tekilliği ve dopamin çöküşü'
+    shortName: 'Samanyolu & Karadelik',
+    subtitle: 'Kozmik Tekillik — Süper kütleli galaktik merkez tabakta!'
   }
 }
 
@@ -125,12 +125,12 @@ const completesPack = computed(() => packProgress.value + affordableUnits.value 
 
 const flowRate = computed(() => {
   if (props.dimension.tier === 1) {
-    return { suffix: '/s', value: store.matterPerSecond, hint: 'Toplam pasif Dopamin akışı' }
+    return { suffix: '/s', value: store.matterPerSecond, hint: 'Toplam pasif Kütle çekim akışı' }
   }
   return {
     suffix: `/s →D${props.dimension.tier - 1}`,
     value: store.getDimensionChainFeedPerSecond(props.dimension.tier),
-    hint: 'Alt formata saniyelik besleme — artınca zincir hızlanır'
+    hint: 'Alt katmana saniyelik besleme — artınca çekim hızlanır'
   }
 })
 
@@ -162,6 +162,18 @@ const TIER_TEXT_COLORS: Record<number, string> = {
   8: 'text-slate-100'
 }
 const tierTextColor = computed(() => TIER_TEXT_COLORS[props.dimension.tier] || 'text-purple-400')
+
+const TIER_MOODS: Record<number, { emoji: string; poster: string; row: string }> = {
+  1: { emoji: '💧', poster: 'border-purple-500/20 bg-black/60', row: '' },
+  2: { emoji: '⚛️', poster: 'border-orange-400/25 bg-orange-950/20', row: '' },
+  3: { emoji: '🔬', poster: 'border-cyan-400/25 bg-cyan-950/20', row: '' },
+  4: { emoji: '💥', poster: 'border-blue-500/25 bg-blue-950/20', row: 'decay-static' },
+  5: { emoji: '🏙️', poster: 'border-pink-400/30 bg-pink-950/20', row: 'decay-static' },
+  6: { emoji: '🌍', poster: 'border-amber-400/30 bg-amber-950/20', row: 'decay-flicker' },
+  7: { emoji: '☀️', poster: 'border-rose-500/35 bg-rose-950/25', row: 'decay-flicker' },
+  8: { emoji: '🕳️', poster: 'border-white/30 bg-white/[0.04]', row: 'decay-glitch' }
+}
+const tierMood = computed(() => TIER_MOODS[props.dimension.tier] || TIER_MOODS[1])
 
 const milestoneEdition = computed(() => {
   const m = milestoneInfo.value.current
@@ -236,6 +248,7 @@ function buy(e?: MouseEvent) {
     class="card-tilt-surface tilt-card glass-panel-card relative pl-4 pr-3 py-2 rounded-xl flex items-center justify-between gap-2.5 sm:gap-3 border border-white/[0.06] hover:border-white/[0.14] transition-colors overflow-hidden"
     :class="[
       rowEditionClass,
+      tierMood.row,
       formatDiscoverGlow ? 'ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.25)]' : '',
       comboRowGlow ? 'ring-1 ring-amber-400/40' : ''
     ]"
@@ -244,12 +257,14 @@ function buy(e?: MouseEvent) {
     <span class="absolute left-0 top-0 bottom-0 w-1 shrink-0" :class="tierAccent"></span>
     <!-- Sol: Tier + 9:16 Video Posteri + Başlık + Altyazı -->
     <div class="flex items-center gap-2.5 min-w-0 flex-1">
-      <!-- 9:16 Mikro Video Posteri -->
+      <!-- 9:16 Mikro Video Posteri — tier ruhu: emoji + mini ilerleme -->
       <div
-        class="w-6 h-8 sm:w-7 sm:h-9 rounded-md bg-black/60 border border-white/[0.08] flex flex-col items-center justify-center relative overflow-hidden shrink-0 select-none shadow-xs"
+        class="w-6 h-8 sm:w-7 sm:h-9 rounded-md border flex flex-col items-center justify-center relative overflow-hidden shrink-0 select-none shadow-xs"
+        :class="tierMood.poster"
         v-tip="`${tierConfig.shortName}: ${tierConfig.subtitle}`"
       >
-        <Play class="w-3 h-3 fill-current opacity-85" :class="tierTextColor" />
+        <span class="text-[13px] sm:text-sm leading-none select-none" aria-hidden="true">{{ tierMood.emoji }}</span>
+        <Sparkles class="w-2 h-2 fill-current opacity-60 absolute bottom-1 right-1" :class="tierTextColor" />
         <!-- Mini alt oynatma çubuğu (progress line) -->
         <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
           <div
@@ -333,7 +348,7 @@ function buy(e?: MouseEvent) {
         :class="canAfford
           ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse btn-sheen'
           : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
-        v-tip="canAfford ? `+${affordableUnits} adet için ${format(displayCost, 2, store.settings.notation)} (bu alımla ${packProgress + affordableUnits} adet olur)` : 'Yetersiz Dopamin'"
+        v-tip="canAfford ? `+${affordableUnits} adet için ${format(displayCost, 2, store.settings.notation)} (bu alımla ${packProgress + affordableUnits} adet olur)` : 'Yetersiz Kütle'"
       >
         <!-- 1. Katman: Satın Alım Önizleme Dolgusu (Bu tıkla nereye kadar dolacağını gösterir) -->
         <span

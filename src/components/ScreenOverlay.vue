@@ -4,6 +4,28 @@ import { useGameStore } from '../stores/game'
 
 const store = useGameStore()
 
+// Yatak odası + şafak ambiyansı — Header gece saatiyle aynı ilerleme (log10/308.25)
+// 0 = 02:47 yorgan altı, 1 = 06:15 şafak. Efekt kapalıyken veya pil tasarrufunda yok.
+const nightProgress = computed(() => {
+  try {
+    const m = store.matter
+    if (m.isNan() || Number.isNaN(m.mag)) return 0
+    if (!m.isFinite() || m.lt(10)) return 0
+    const logVal = Math.max(0, m.log10().toNumber())
+    if (!Number.isFinite(logVal)) return 0
+    return Math.min(1, Math.max(0, logVal / 308.25))
+  } catch {
+    return 0
+  }
+})
+const dawnOpacity = computed(() => {
+  if (!isEnabled.value) return 0
+  const p = nightProgress.value
+  if (p <= 0.6) return 0
+  return Math.min(0.85, ((p - 0.6) / 0.4) * 0.85)
+})
+const showBedroomGlow = computed(() => isEnabled.value)
+
 // Başparmak izi reaktif darbe durumu
 const smudgePulse = ref(false)
 let pulseTimeout: ReturnType<typeof setTimeout> | null = null
@@ -88,6 +110,19 @@ onUnmounted(() => {
     class="pointer-events-none fixed inset-0 z-40 overflow-hidden select-none"
     aria-hidden="true"
   >
+    <!-- 0. YATAK ODASI IŞIĞI + ŞAFAK UFUKU (gece ilerlemesiyle senkron) -->
+    <div
+      v-if="showBedroomGlow"
+      class="bedroom-vignette absolute inset-0 pointer-events-none"
+      aria-hidden="true"
+    ></div>
+    <div
+      v-if="dawnOpacity > 0"
+      class="dawn-horizon absolute inset-x-0 bottom-0 h-56 pointer-events-none transition-opacity duration-700"
+      :style="{ opacity: dawnOpacity }"
+      aria-hidden="true"
+    ></div>
+
     <!-- 1. YAĞLI BAŞPARMAK İZİ LEKESİ (Sağ Alt Scroll Bölgesi) -->
     <div
       class="smudge-container absolute bottom-4 right-4 sm:bottom-8 sm:right-10 w-44 h-56 sm:w-56 sm:h-72 transition-opacity duration-300 pointer-events-none"

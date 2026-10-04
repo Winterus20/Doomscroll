@@ -1,5 +1,68 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-04] — UROBOROS: The Cosmic Feast Tematik Dönüşümü ve Kalite Kapısı Onayı (v0.32.0)
+
+### Kullanıcı talebi:
+- *"uroboros yapalım buna karar verdim"*
+- *"o zaman bununla devam edelim ve her kısımdaki temayı değiştir sonra subagentla kontrol ettir yaptığını"*
+
+### Mimari ve Felsefi Vizyon:
+- Oyun "Doomscroll: The Endless Reels" (gece yatakta reels kaydırma) temasından çıkarılarak, bir su damlasındaki kovalent moleküler bağları ayrıştırmakla başlayıp Planck duvarını delen, şehri, Dünya'yı, Güneş'i ve tüm Samanyolu Galaksisi'ni yutan iki fazlı kuantum-kozmik obur tekillik döngüsü olan **"UROBOROS: The Cosmic Feast"** evrenine geçirildi.
+- Faz 0 ($0 \to 1.79 \times 10^{308}\text{ g}$ arasındaki ilk koşu) kapsam sınırına sadık kalındı.
+
+### Kapsam ve İcra Edilen Değişiklikler:
+1. **Mimari & Yaşayan Hafıza:**
+   - [`brain/decisions/0039-thematic-pivot-to-uroboros.md`](file:///c:/Users/Yigit/Documents/Incremental/brain/decisions/0039-thematic-pivot-to-uroboros.md): Kapsamlı ADR mimari karar belgesi oluşturuldu.
+   - [`brain/context/project-brief.md`](file:///c:/Users/Yigit/Documents/Incremental/brain/context/project-brief.md): UROBOROS vizyonu ve döngüsüyle güncellendi.
+   - [`GAME_DESIGN.md`](file:///c:/Users/Yigit/Documents/Incremental/GAME_DESIGN.md) & [`AGENTS.md`](file:///c:/Users/Yigit/Documents/Incremental/AGENTS.md): UROBOROS GDD ve operasyon kuralları olarak baştan yazıldı.
+   - [`index.html`](file:///c:/Users/Yigit/Documents/Incremental/index.html) & [`package.json`](file:///c:/Users/Yigit/Documents/Incremental/package.json): Paket adı `uroboros-cosmic-feast`, sayfa başlığı `UROBOROS` yapıldı.
+2. **Kuantum-Kozmik Boyut Kimlikleri (D1–D8):**
+   - [`src/game/dimension_identity.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/game/dimension_identity.ts): Moleküler Bağlar 💧 $\to$ Elektron Orbitalleri ⚛️ $\to$ Nükleer Çekirdek 🔬 $\to$ Kuark Çorbası 💥 $\to$ Laboratuvar & Şehir 🏙️ $\to$ Gezegenler & Dünya 🌍 $\to$ Yıldızlar & Güneş ☀️ $\to$ Samanyolu & Karadelik 🕳️ olarak güncellendi.
+   - [`src/components/DimensionRow.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionRow.vue): Rozetler, ikonlar, tooltip'ler ve kademe ruh halleri UROBOROS'a uyarlandı.
+3. **Merkezi Sayaç, Hız ve Taktil Kontroller:**
+   - [`src/core/format.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/format.ts): `getMassScaleBadge()` eklendi (Kovalent Kırıntı $\to$ Samanyolu Tekilliği).
+   - [`src/components/Header.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/Header.vue): Sayaç "Yutulan Kütle", Hız "Çekim Hızı (Hz)", buton "YUT!", duruşlar "Kuantum Odak / Obur Çekim / Vakum Kalkanı" yapıldı.
+   - [`src/components/FloatingThumbBar.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/FloatingThumbBar.vue): Mobil aksiyon butonu "YUT! 🕳️" ve "Çekim Hızı Hz" ile senkronize edildi.
+4. **Tüm Sekmeler ve Modallar:**
+   - [`src/components/DimensionsTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue): "Ölçek Sıçraması", "Kozmik Çöküş", "Kozmik Parazit", "Tekillik Besle (Sacrifice)".
+   - [`src/components/StatsTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/StatsTab.vue): "Son 10 Çöküş", "Tekillik Telemetrisi", "Manuel Yutma", çarpanlar ve kriz telemetrisi uyarlandı.
+   - [`src/components/SettingsModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/SettingsModal.vue): Save dosya adı (`uroboros-save`), dokular ve açıklamalar UROBOROS diline çevrildi.
+   - [`src/components/AutobuyersTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/AutobuyersTab.vue), [`ChallengesTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/ChallengesTab.vue), [`ColonyTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/ColonyTab.vue), [`SingularityTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/SingularityTab.vue), [`AuthModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/AuthModal.vue), [`CloudConflictModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/CloudConflictModal.vue), [`AdminPanel.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/AdminPanel.vue), [`WelcomeBackModal.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/WelcomeBackModal.vue): Bakiye birimleri "g Kütle", krizler "Kozmik Kriz", koloniler "Kuantum Rezonatör", tekillik "Kozmik Çöküş" olarak uyarlandı.
+   - [`src/components/CommentTicker.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/CommentTicker.vue): 20 absürt bilimkurgu/kuantum canlı haber metni yazıldı.
+   - [`src/stores/game.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts): Biyometrik unvanlar, kriz büyüleri, laboratuvar tohumları, tekillik yükseltmeleri ve çözünürlük kilometre taşları baştan aşağı UROBOROS kozmolojisine geçirildi.
+5. **Bağımsız Subagent Kalite Kapısı (Evaluator-Optimizer):**
+   - Subagent `Quality Gate Evaluator` (`10e47fea-2002-4c51-adbf-b663ab9d0a3f`) iki tur adversarial denetim gerçekleştirdi.
+   - Tüm UI string'leri, lore ve kod bütünlüğü incelendi ve resmi olarak `<evaluation>PASS</evaluation>` onayı verildi.
+6. **Doğrulama:** `npm test` 162/162 yeşil, `npm run build` (vite v6.4.3, vue-tsc) 0 hata, 1701 modül.
+
+## [2026-10-04] — SOTA UI/UX Faz 1 Paketi: Çift Tık Kalp + Canlı Yorum + Mobil Başparmak Barı (v0.31.0)
+
+### Kullanıcı talebi:
+- *"ui ux için neler yapılabilir detaylı ve derin araştırma başlat subagentlarla beraber"*
+- *"paralel şekilde birbirleriyle çakışmayacak şekilde oluyorsa subagentları çalıştır olmuyorsa kendin yap"*
+
+### Kapsam ve İcra Edilen Yenilikler:
+1. **Derin Filo Araştırması:** 3 uzman alt ajan (UI Codebase Auditor, Game Feel Specialist, Design System Ergonomist) ile mimari denetim, Balatro/Cookie Clicker taktil sentezi ve 2026 Bento Grid 2.0 tasarımı.
+2. **`HeartBurstLayer.vue`:** Instagram/TikTok kas hafızasını tetikleyen küresel çift dokunuş (double-tap) kalp patlaması. 3D yaylanma animasyonu, neon pembe ışıltı, psikoakustik ses ve anlık dopamin vuruş ödülü.
+3. **`CommentTicker.vue`:** Cookie Clicker haber bandının TikTok canlı yayın sohbetine uyarlanması. Gece saatine göre değişen 20+ absürt hiciv yorumu, tıklanabilir kalp butonu (`❤️`) ve dopamin primi.
+4. **`FloatingThumbBar.vue`:** Mobilde (`<768px`) başparmak erişim tersliğini çözen alt sabit hızlı aksiyon alanı. Tek elle rahatça basılabilen büyük "KAYDIR! 👆" butonu, kombo/debuff rozeti, Tümü (Max All) ve Tickspeed Hz butonları.
+5. **`DimensionsTab.vue`:** Format satırları aralığı `space-y-2 sm:space-y-1.5` yapılarak mobilde 44px'lik dokunma alanlarının dikey çakışması (overlap) ortadan kaldırıldı.
+6. **`App.vue`:** Yeni bileşenler monte edildi, mobil alt boşluğu `max-md:pb-36` ile ferahlatıldı.
+7. **Doğrulama:** `npm run build` 0 hata (1701 modül), `npm test` 162/162 yeşil, Playwright canlı web testi (masaüstü & 390x844 iPhone görünümü) başarıyla tamamlandı.
+
+## [2026-10-04] — Gece Teması UI Paketi: Saat + Yozlaşma + Yatak Odası (v0.30.0)
+
+### Kullanıcı talebi:
+- *"ui ve görünüm kısmı için detaylı araştırma yap"* → *"en iyi şekilde yap"*
+
+### Kapsam (5 dosya, cerrahi):
+- `Header.vue`: gece saati 02:47→06:15 (208 dk, log10/308.25), faz rozeti (Yorgan Altı/Derin Gece/Cızırtı/Kuş Vakti/Şafak), ince gökyüzü şeridi.
+- `DimensionRow.vue`: D1→D8 yozlaşma dili — emoji poster (🐱→☠️) + satır dokusu (static/flicker/glitch).
+- `ScreenOverlay.vue`: yatak odası vinyeti (sabit) + şafak ufku (ilerleme %60 sonrası, max 0.85 opaklık).
+- `AlgorithmicSwirl.vue`: şafak öncesi ısınma (%75+ koşuda zemini turuncuya kaydırır, tekillik altını ayrı kalır).
+- `style.css`: bedroom/dawn/decay stilleri + reduced-motion ve battery-saver koruması.
+- Doğrulama: `npm run build` 0 hata (1692 modül), `npm test` 162/162 yeşil.
+
 ## [2026-10-04] — Reset Tuşu Kök Neden Düzeltmesi
 
 ### Kullanıcı talebi:

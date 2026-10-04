@@ -272,7 +272,7 @@ function downloadSaveFile(saveStr: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `doomscroll-save-slot${store.settings.activeSlot}-${new Date().toISOString().slice(0, 10)}.txt`
+  a.download = `uroboros-save-slot${store.settings.activeSlot}-${new Date().toISOString().slice(0, 10)}.txt`
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
   downloadFeedback.value = true
@@ -620,7 +620,7 @@ function executeHardReset() {
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
               <div class="text-xs font-mono font-semibold text-slate-200">Çevrimdışı İlerleme Bildirimi</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">Oyuna dönüldüğünde kazanılan dopamin raporunu aç</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Oyuna dönüldüğünde kazanılan kütle raporunu aç</div>
             </div>
             <button
               @click="toggleOfflineProgressModal"
@@ -760,10 +760,10 @@ function executeHardReset() {
             </div>
           </div>
 
-          <!-- Gece 3 CRT Scanline -->
+          <!-- Kozmik CRT Scanline -->
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
-              <div class="text-xs font-mono font-semibold text-slate-200">Gece 3 CRT Scanline &amp; Vinyet</div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Kozmik CRT Scanline &amp; Vinyet</div>
               <div class="text-[10px] text-slate-400 mt-0.5">Eski tüplü televizyon ve retro cyberpunk dokusu</div>
             </div>
             <button
@@ -790,10 +790,10 @@ function executeHardReset() {
             </button>
           </div>
 
-          <!-- Doomscroll Ekran Dokuları -->
+          <!-- Laboratuvar Ekran Dokuları -->
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
-              <div class="text-xs font-mono font-semibold text-slate-200">Gece Ekran Dokuları (Parmak İzi / Çatlak)</div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Laboratuvar Ekran Dokuları (Optik / Çatlak)</div>
               <div class="text-[10px] text-slate-400 mt-0.5">Taktil başparmak izi lekesi ve kriz anlarında cam çatlağı</div>
             </div>
             <button
@@ -805,11 +805,11 @@ function executeHardReset() {
             </button>
           </div>
 
-          <!-- Balatro Sütun 2: Sıralı Reels Vuruşu -->
+          <!-- Balatro Sütun 2: Sıralı Çekim Vuruşu -->
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
-              <div class="text-xs font-mono font-semibold text-slate-200">Sıralı Reels Vuruşu (Balatro Pop-Chain)</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">Kaydırmada çarpanların sırayla patladığı görsel kaskad ve yükselen ses arpeji</div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Sıralı Çekim Vuruşu (Balatro Pop-Chain)</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Kütle yutmada çarpanların sırayla patladığı görsel kaskad ve yükselen ses arpeji</div>
             </div>
             <button
               @click="toggleSequentialStrike"
@@ -823,8 +823,8 @@ function executeHardReset() {
           <!-- Uçan Yazılar & Efektler -->
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
-              <div class="text-xs font-mono font-semibold text-slate-200">Uçan Hasar / Dopamin Sayıları</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">Kaydırma ve kriz tıklamalarında beliren +Dopamin yazılarını göster</div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Uçan Kütle / Kazanç Sayıları</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Yutma ve kriz tıklamalarında beliren +Kütle yazılarını göster</div>
             </div>
             <button
               @click="toggleFloatingTexts"
@@ -838,8 +838,8 @@ function executeHardReset() {
           <!-- Haber Bandı (News Ticker) -->
           <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
             <div>
-              <div class="text-xs font-mono font-semibold text-slate-200">Satirik Reels Haber Bandı</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">Üstte akan gece 3 haber ve bildirim bandı</div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Kozmik Telemetri Haber Bandı</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Üstte akan laboratuvar ve kozmik haber bandı</div>
             </div>
             <button
               @click="toggleNewsTicker"
@@ -930,10 +930,10 @@ function executeHardReset() {
               </div>
             </div>
 
-            <!-- Gece Sıcaklığı (Filtre Cutoff) -->
+            <!-- Kozmik Rezonans Sıcaklığı (Filtre Cutoff) -->
             <div class="mb-3">
               <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
-                <span class="flex items-center gap-1"><MoonStar class="w-3 h-3 text-purple-400" /> Gece Sıcaklığı (Filtre Yoğunluğu)</span>
+                <span class="flex items-center gap-1"><MoonStar class="w-3 h-3 text-purple-400" /> Kozmik Rezonans Sıcaklığı (Filtre Yoğunluğu)</span>
                 <span class="text-purple-300 font-bold tabular-nums">%{{ Math.round(store.settings.musicIntensity * 100) }}</span>
               </div>
               <input
@@ -946,7 +946,7 @@ function executeHardReset() {
                 :disabled="!store.settings.musicEnabled"
                 class="w-full accent-purple-400 cursor-pointer h-1.5 bg-black/40 rounded-lg"
               />
-              <p class="text-[10px] text-slate-500 mt-1">Daha boğuk ve sıcak gece tonu için frekansı yumuşatır.</p>
+              <p class="text-[10px] text-slate-500 mt-1">Daha boğuk ve derin kozmik ton için frekansı yumuşatır.</p>
             </div>
 
             <!-- Uyku Zamanlayıcısı -->
@@ -1016,7 +1016,7 @@ function executeHardReset() {
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-xs font-mono font-medium text-slate-300">Pencerede Yağmur</div>
-                  <div class="text-[10px] text-slate-500">Gece yağmur damlalarının dinlendirici beyaz gürültüsü</div>
+                  <div class="text-[10px] text-slate-500">Kozmik arka plan ışıması ve kuantum beyaz gürültüsü</div>
                 </div>
                 <button
                   @click="toggleRain"
@@ -1047,7 +1047,7 @@ function executeHardReset() {
                 <Disc class="w-4 h-4 text-amber-400/80" />
                 <div>
                   <div class="text-xs font-mono font-medium text-slate-300">Analog Vinil / Kaset Cızırtısı</div>
-                  <div class="text-[10px] text-slate-500">Nostaljik gece sıcaklığı için pembe gürültü ve çıtırtı</div>
+                  <div class="text-[10px] text-slate-500">Kozmik sıcaklık için pembe gürültü ve analog çıtırtı</div>
                 </div>
               </div>
               <button
@@ -1109,7 +1109,7 @@ function executeHardReset() {
               <div class="text-[11px] text-slate-400 font-mono">
                 Buluttaki Son Kayıt:
                 <span class="text-slate-200 font-semibold">
-                  {{ authStore.cloudMeta ? format(new Decimal(authStore.cloudMeta.matter), 2, store.settings.notation) + ' Dopamin' : 'Henüz yok' }}
+                  {{ authStore.cloudMeta ? format(new Decimal(authStore.cloudMeta.matter), 2, store.settings.notation) + ' g Kütle' : 'Henüz yok' }}
                 </span>
               </div>
               <div class="flex items-center gap-2">
@@ -1178,7 +1178,7 @@ function executeHardReset() {
 
                   <div v-if="slotsMeta[s - 1]?.exists" class="space-y-0.5 text-[10px] font-mono text-slate-400">
                     <div class="text-slate-200 font-semibold truncate">
-                      Dopamin: {{ format(slotsMeta[s - 1].matter || '0', 2, store.settings.notation) }}
+                      Kütle: {{ format(slotsMeta[s - 1].matter || '0', 2, store.settings.notation) }}
                     </div>
                     <div>Çöküş: {{ slotsMeta[s - 1].singularities || 0 }}</div>
                     <div>Süre: {{ formatTime(slotsMeta[s - 1].playtime || 0) }}</div>
@@ -1279,7 +1279,7 @@ function executeHardReset() {
                 Geçerli Kayıt Doğrulandı
               </div>
               <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-300">
-                <div>Dopamin: <span class="text-white font-bold">{{ format(importInspection.summary.matter, 2, store.settings.notation) }}</span></div>
+                <div>Kütle: <span class="text-white font-bold">{{ format(importInspection.summary.matter, 2, store.settings.notation) }}</span></div>
                 <div>Çöküş: <span class="text-white font-bold">{{ importInspection.summary.singularities }}</span></div>
                 <div>Süre: <span class="text-white font-bold">{{ formatTime(importInspection.summary.playtime) }}</span></div>
                 <div>Sürüm: <span class="text-white font-bold">v{{ importInspection.summary.version }}</span></div>
@@ -1368,15 +1368,15 @@ function executeHardReset() {
             <div class="divide-y divide-white/[0.06] text-xs font-mono">
               <div class="py-2 flex items-center justify-between">
                 <span class="text-slate-400">1 - 9 Tuşları</span>
-                <span class="text-white font-bold bg-white/[0.06] px-2 py-0.5 rounded-md">Sekme Değiştir (Reels, Lab, Kriz...)</span>
+                <span class="text-white font-bold bg-white/[0.06] px-2 py-0.5 rounded-md">Sekme Değiştir (Katmanlar, Lab, Kriz...)</span>
               </div>
               <div class="py-2 flex items-center justify-between">
                 <span class="text-slate-400">M Tuşu</span>
-                <span class="text-cyan-300 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">Tüm İstasyonları Satın Al (Max All)</span>
+                <span class="text-cyan-300 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">Tüm Kademeleri Satın Al (Max All)</span>
               </div>
               <div class="py-2 flex items-center justify-between">
                 <span class="text-slate-400">Space (Boşluk)</span>
-                <span class="text-purple-300 font-bold bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">Yukarı Kaydır (Reels Swipe)</span>
+                <span class="text-purple-300 font-bold bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">Kütle Yut (Taktil Çekim)</span>
               </div>
               <div class="py-2 flex items-center justify-between">
                 <span class="text-slate-400">Esc (Escape)</span>
@@ -1393,13 +1393,13 @@ function executeHardReset() {
           <div class="glass-panel-card p-3.5 rounded-xl space-y-2">
             <div class="flex items-center gap-2 text-xs font-mono font-bold text-slate-200">
               <Info class="w-4 h-4 text-purple-400" />
-              Doomscroll: The Endless Reels
+              UROBOROS: The Cosmic Feast
             </div>
             <p class="text-[11px] text-slate-400 leading-relaxed font-sans">
-              Gece 02:47'de yatağa girip "sadece 2 dakika Reels izleyeceğim" dedikten sonra sabah 06:15'e ve kuş seslerine sürüklenen bir zihnin dopamin simülasyonu. Antimatter Dimensions, Cookie Clicker ve Synergism mekanikleri sentezlenerek geliştirilmiştir.
+              Bir su damlasındaki moleküler bağları ayrıştırmakla başlayıp Planck duvarını delen, Dünya'yı ve tüm Samanyolu Galaksisi'ni yutan sonsuz bir kuantum-kozmik tekillik döngüsü. Antimatter Dimensions, Tasty Planet ve Cookie Clicker mekanikleri sentezlenerek geliştirilmiştir.
             </p>
             <div class="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-slate-500">
-              <span>Sürüm: v0.22.0 (Endless Reels)</span>
+              <span>Sürüm: v0.23.0 (UROBOROS)</span>
               <span>Vue 3 · Pinia · Vite 6 · Web Audio API</span>
             </div>
           </div>

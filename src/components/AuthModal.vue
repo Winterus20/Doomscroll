@@ -233,13 +233,13 @@ const { dialogRef } = useFocusTrap(
 
             <div class="grid grid-cols-2 gap-3 text-xs">
               <div class="p-2.5 rounded-lg bg-dark-900 border border-slate-800">
-                <span class="text-slate-500 text-[10px] block">BULUTTAKİ DOPAMİN</span>
+                <span class="text-slate-500 text-[10px] block">BULUTTAKİ KÜTLE</span>
                 <span class="font-mono font-bold text-slate-200 text-sm">
                   {{ formattedCloudMatter }}
                 </span>
               </div>
               <div class="p-2.5 rounded-lg bg-dark-900 border border-slate-800">
-                <span class="text-slate-500 text-[10px] block">ŞAFAK (06:00)</span>
+                <span class="text-slate-500 text-[10px] block">KOZMİK ÇÖKÜŞ</span>
                 <span class="font-mono font-bold text-amber-300 text-sm">
                   {{ authStore.cloudMeta ? authStore.cloudMeta.singularities + ' kez' : '-' }}
                 </span>

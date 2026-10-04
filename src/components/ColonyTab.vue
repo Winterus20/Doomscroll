@@ -59,22 +59,22 @@ const showNapConfirm = ref(false)
     <TabHero
       :icon="Network"
       icon-class="text-violet-400"
-      title="Nöral İzleme Kolonisi"
+      title="Kuantum Rezonatör Kolonisi"
       badge="Synergism"
       badge-class="ds-badge-violet"
-      subtitle="Sen uyurken kendi kendini üreyen nöral alt-botlar. Toplu Uyku ile feda et, kalıcı kök dopamin çarpanını katla."
+      subtitle="Mikro-tekillik etrafında kendiliğinden örgütlenen kuantum alt-parçacıkları. Toplu Çöküş ile feda et, kalıcı kök kütle çarpanını katla."
       accent="violet"
     >
       <template #stats>
         <div class="stat-box">
-          <div class="stat-box-label">Nöral Bot</div>
+          <div class="stat-box-label">Kuantum Rezonatör</div>
           <div class="stat-box-value text-violet-300 flex items-center gap-1">
             <Brain class="w-3.5 h-3.5 text-violet-400" />
             <span class="tabular-nums">{{ formatNumber(store.neuralBots) }}</span>
           </div>
         </div>
         <div class="stat-box">
-          <div class="stat-box-label">Kalıcı Toplu Uyku Çarpanı</div>
+          <div class="stat-box-label">Kalıcı Toplu Çöküş Çarpanı</div>
           <div class="stat-box-value text-amber-300 flex items-center gap-1">
             <Moon class="w-3.5 h-3.5 text-amber-400" />
             <span class="tabular-nums">×{{ formatNumber(store.napMultiplier) }}</span>
@@ -87,10 +87,10 @@ const showNapConfirm = ref(false)
     <div v-if="store.neuralBots.lte(0)" class="glass-panel-card p-4 rounded-xl border-violet-500/30 bg-violet-950/10">
       <div class="flex items-center gap-2 mb-1">
         <Lock class="w-4 h-4 text-violet-400" />
-        <div class="text-xs font-bold font-mono text-violet-300">NÖRAL ÇEKİRDEK</div>
+        <div class="text-xs font-bold font-mono text-violet-300">KUANTUM ÇEKİRDEĞİ</div>
       </div>
       <div class="text-[11px] text-slate-400 leading-relaxed mb-3">
-        Telefonun bir köşesinde kendi kendini üreyen ilk alt-rutini uyanıştır. Bir kerelik aktivasyon; sonrası koloni kendisi büyür.
+        Laboratuvarda kendi kendine rezonansa giren ilk kuantum çekirdeğini ateşle. Bir kerelik aktivasyon; sonrası koloni kendisi büyür.
       </div>
       <button
         @click="hatch"
@@ -99,7 +99,7 @@ const showNapConfirm = ref(false)
         :class="canAffordCore ? '' : 'opacity-40 cursor-not-allowed'"
       >
         <Brain class="w-4 h-4" />
-        <span>Çekirdek Aktif Et — {{ formatNumber(COLONY_CORE_COST) }} Dopamin</span>
+        <span>Çekirdek Aktif Et — {{ formatNumber(COLONY_CORE_COST) }} g Kütle</span>
       </button>
     </div>
 
@@ -144,18 +144,18 @@ const showNapConfirm = ref(false)
       </button>
 
       <div class="text-[10px] text-slate-500 leading-relaxed border-t border-white/[0.05] pt-2">
-        Toplu Uyku: koloninin tamamı aynı anda uykuya dalar — nöral bağlar yeniden bağlanır ve
-        <span class="text-amber-300/90">kalıcı kök dopamin çarpanı</span> katlanır.
-        Çekirdek korunur; koloni sıfırdan ürer. Çarpan sabah 06:00 çöküşünden bile sağ kalır.
+        Toplu Çöküş: kuantum alt-parçacıkları tekillik merkezinde birleşir ve
+        <span class="text-amber-300/90">kalıcı kök kütle çarpanı</span> katlanır.
+        Çekirdek korunur; koloni sıfırdan ürer. Çarpan kozmik çöküşten bile sağ kalır.
       </div>
     </div>
 
     <!-- QoL: Toplu Uyku onay diyaloğu -->
     <ConfirmModal
       v-if="showNapConfirm"
-      title="Toplu Uyku"
-      message="Koloni sıfırdan üremeye başlar; karşılığında kalıcı kök dopamin çarpanı katlanır. Çekirdek korunur. Onaylıyor musun?"
-      confirm-label="Uykuya Dal"
+      title="Toplu Çöküş"
+      message="Koloni sıfırdan üremeye başlar; karşılığında kalıcı kök kütle çarpanı katlanır. Çekirdek korunur. Onaylıyor musun?"
+      confirm-label="Toplu Çöküşü Başlat"
       :danger="false"
       @confirm="showNapConfirm = false; doNap()"
       @cancel="showNapConfirm = false"

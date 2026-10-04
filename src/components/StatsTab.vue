@@ -40,36 +40,36 @@ const activeSubTab = ref<SubTabId>('overview')
 const subTabs = [
   { id: 'overview' as const, label: 'Genel Bakış', icon: Activity },
   { id: 'multipliers' as const, label: 'Çarpan Laboratuvarı', icon: Gauge },
-  { id: 'past10' as const, label: 'Son 10 Gece', icon: History },
+  { id: 'past10' as const, label: 'Son 10 Çöküş', icon: History },
   { id: 'challenges' as const, label: 'Kriz & Rekorlar', icon: Swords },
-  { id: 'biometrics' as const, label: 'Gece Biyometrisi', icon: Moon }
+  { id: 'biometrics' as const, label: 'Tekillik Telemetrisi', icon: Moon }
 ]
 
 // ---- 1. GENEL BAKIŞ VERİLERİ ----
 const kpiOverview = computed(() => [
   {
-    label: 'Uykusuz Geçen Süre',
+    label: 'Kozmik Simülasyon Süresi',
     value: formatTime(store.stats.totalPlaytime),
     icon: Moon,
     color: 'text-purple-400',
-    subtext: 'İlk başparmak hareketinden bu yana'
+    subtext: 'İlk kuantum uyarımından bu yana'
   },
   {
     label: 'Bu Koşuda Geçen Süre',
     value: formatTime(store.currentRunSeconds),
     icon: Clock,
     color: 'text-cyan-400',
-    subtext: 'Son Sabah 06:00 çöküşünden beri'
+    subtext: 'Son Kozmik Çöküşten beri'
   },
   {
-    label: 'En Yüksek Dopamin Zirvesi',
+    label: 'En Yüksek Kütle Zirvesi',
     value: format(store.stats.highestMatter, 2, store.settings.notation),
     icon: Award,
     color: 'text-amber-400',
-    subtext: 'Tüm zamanların anlık dopamin tepesi'
+    subtext: 'Tüm zamanların anlık kütle tepesi'
   },
   {
-    label: 'Zirve Üretim Hızı',
+    label: 'Zirve Çekim Hızı',
     value: `${format(store.stats.highestDps, 2, store.settings.notation)} / sn`,
     icon: Zap,
     color: 'text-pink-400',
@@ -82,14 +82,14 @@ const kpiOverview = computed(() => [
       : 'Henüz Yok',
     icon: Sun,
     color: 'text-amber-300',
-    subtext: `${store.stats.singularityCount} Sabah 06:00 Çöküşü içinden`
+    subtext: `${store.stats.singularityCount} Kozmik Çöküş içinden`
   },
   {
-    label: 'Yukarı Kaydırma (Tıklama)',
+    label: 'Manuel Yutma (Çekim)',
     value: store.stats.manualClicks.toLocaleString('tr-TR'),
     icon: MousePointerClick,
     color: 'text-blue-400',
-    subtext: `${format(store.stats.totalManualDopamine, 2, store.settings.notation)} Dopamin parmaktan`
+    subtext: `${format(store.stats.totalManualDopamine, 2, store.settings.notation)} Kütle manuel çekimden`
   }
 ])
 
@@ -154,27 +154,27 @@ const hoverDpsText = computed(() => {
 
 // ---- 2. ÇARPAN LABORATUVARI ----
 const DIM_NAMES: Record<number, string> = {
-  1: 'Kedi Videoları',
-  2: 'Sokak Lezzetleri',
-  3: 'ASMR Sabun',
-  4: 'Subway Surfers + Reddit',
-  5: 'Sigma Tavsiyeleri',
-  6: 'Hint Dizisi (1/12)',
-  7: 'Varoluşsal Kriz',
-  8: 'Beyin Çürümesi'
+  1: 'Moleküler Bağlar',
+  2: 'Elektron Orbitalleri',
+  3: 'Nükleer Çekirdek',
+  4: 'Kuark Çorbası',
+  5: 'Laboratuvar & Şehir',
+  6: 'Gezegenler & Dünya',
+  7: 'Yıldızlar & Güneş',
+  8: 'Samanyolu & Karadelik'
 }
 
 const dimensionSummary = computed(() => {
   return store.dimensions.map((d) => ({
     tier: d.tier,
-    name: DIM_NAMES[d.tier] || `${d.tier}. İstasyon`,
+    name: DIM_NAMES[d.tier] || `${d.tier}. Katman`,
     amount: d.amount,
     bought: d.bought,
     mult: store.getDimensionMultiplier(d.tier)
   }))
 })
 
-// ---- 3. SON 10 GECE GÜNLÜĞÜ (PAST 10) ----
+// ---- 3. SON 10 KOZMİK ÇÖKÜŞ GÜNLÜĞÜ (PAST 10) ----
 const pastRuns = computed(() => store.pastSingularities)
 const pastAverages = computed(() => store.pastSingularitiesAverage)
 
@@ -193,7 +193,7 @@ const challengeList = computed(() => {
   })
 })
 
-// ---- 5. GECE BİYOMETRİSİ & PAYLAŞIM ----
+// ---- 5. TEKİLLİK TELEMETRİSİ & PAYLAŞIM ----
 const bio = computed(() => store.biometrics)
 const copied = ref(false)
 
@@ -204,17 +204,17 @@ async function copyReport() {
     : '—'
 
   const text = [
-    '📱 DOOMSCROLL: THE ENDLESS REELS — GECE NÖBETİ RAPORU',
+    '🌌 UROBOROS: THE COSMIC FEAST — KOZMİK ÇÖKÜŞ RAPORU',
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-    `⏱️ Uykusuzluk Süresi: ${formatTime(store.stats.totalPlaytime)}`,
-    `👆 Yukarı Kaydırma: ${store.stats.manualClicks.toLocaleString('tr-TR')} (${b.thumbDistanceMeters.toFixed(1)} m)`,
-    `⚡ Zirve Üretim: ${format(store.stats.highestDps, 2, store.settings.notation)} Dopamin / sn`,
-    `🌅 Sabah 06:00 Çöküş: ${store.stats.singularityCount} kez (Rekor: ${fastestStr})`,
-    `👁️ Gece Teşhisi: ${b.zombieRank}`,
-    `🔋 Zihinsel Pil: %${b.mentalBatteryPct}`,
-    `🌌 Retinal Mavi Foton: ${format(b.blueLightPhotons, 2, store.settings.notation)}`,
+    `⏱️ Toplam Çekim Süresi: ${formatTime(store.stats.totalPlaytime)}`,
+    `🌌 Manuel Yutma: ${store.stats.manualClicks.toLocaleString('tr-TR')} kez`,
+    `⚡ Zirve Çekim Hızı: ${format(store.stats.highestDps, 2, store.settings.notation)} / sn`,
+    `🌀 Kozmik Çöküş: ${store.stats.singularityCount} kez (Rekor: ${fastestStr})`,
+    `👁️ Tekillik Teşhisi: ${b.zombieRank}`,
+    `🔋 Kozmik Yoğunluk: %${b.mentalBatteryPct}`,
+    `🌌 Ayrıştırılan Foton: ${format(b.blueLightPhotons, 2, store.settings.notation)}`,
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-    '#DoomscrollTheEndlessReels #Gece3Reels'
+    '#Uroboros #TheCosmicFeast #Incremental'
   ].join('\n')
 
   try {
@@ -246,9 +246,9 @@ async function copyReport() {
     <TabHero
       :icon="BarChart3"
       icon-class="text-slate-300"
-      title="Gece Nöbeti & Dopamin Telemetrisi"
+      title="Kozmik Çekim & Kütle Telemetrisi"
       badge="Rapor"
-      subtitle="Antimatter Dimensions ve Cookie Clicker hibrit teşhis merkezi: çarpanlar, son 10 gece günlüğü, hız rekorları ve gece biyometrisi."
+      subtitle="Kuantum ve kozmik tekillik teşhis merkezi: çarpanlar, son 10 çöküş günlüğü, hız rekorları ve tekillik biyometrisi."
       accent="slate"
     >
       <template #stats>
@@ -343,7 +343,7 @@ async function copyReport() {
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <TrendingUp class="w-4 h-4 text-purple-400" />
-            <span class="text-xs font-bold text-slate-200">Dopamin Akış Kaynağı Dağılımı</span>
+            <span class="text-xs font-bold text-slate-200">Kütle Çekim Kaynağı Dağılımı</span>
           </div>
           <span class="text-[11px] font-mono text-slate-400">
             Toplam: {{ format(store.stats.totalMatterProduced, 2, store.settings.notation) }}
@@ -354,23 +354,23 @@ async function copyReport() {
           <div
             class="h-full bg-gradient-to-r from-pink-500 to-rose-500 transition-all duration-300"
             :style="{ width: `${ratio.manualPct}%` }"
-            v-tip="`Başparmak Kaydırması: %${ratio.manualPct}`"
+            v-tip="`Manuel Yutma: %${ratio.manualPct}`"
           ></div>
           <div
             class="h-full bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-300"
             :style="{ width: `${ratio.passivePct}%` }"
-            v-tip="`Otonom Algoritma Akışı: %${ratio.passivePct}`"
+            v-tip="`Otonom Çekim Akışı: %${ratio.passivePct}`"
           ></div>
         </div>
 
         <div class="flex items-center justify-between text-[11px] font-mono mt-2">
           <span class="text-pink-300 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-pink-400 inline-block"></span>
-            👆 Başparmak Kaydırması: %{{ ratio.manualPct }}
+            🌌 Manuel Yutma: %{{ ratio.manualPct }}
           </span>
           <span class="text-cyan-300 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>
-            ⚡ Otonom Algoritma: %{{ ratio.passivePct }}
+            ⚡ Otonom Çekim: %{{ ratio.passivePct }}
           </span>
         </div>
       </div>
@@ -454,7 +454,7 @@ async function copyReport() {
     <!-- 2. ÇARPAN LABORATUVARI (MULTIPLIERS BREAKDOWN)                             -->
     <!-- ========================================================================= -->
     <div v-else-if="activeSubTab === 'multipliers'" class="space-y-3">
-      <!-- 2.1 Pasif Dopamin Akışı Çarpanları -->
+      <!-- 2.1 Pasif Kütle Çekim Çarpanları -->
       <div class="glass-panel-card p-3.5 rounded-xl border border-white/[0.06]">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
@@ -487,12 +487,12 @@ async function copyReport() {
         </div>
       </div>
 
-      <!-- 2.2 Manuel Kaydırma Gücü (Click Power) Kırılımı -->
+      <!-- 2.2 Manuel Yutma Gücü (Click Power) Kırılımı -->
       <div class="glass-panel-card p-3.5 rounded-xl border border-white/[0.06]">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <MousePointerClick class="w-4 h-4 text-pink-400" />
-            <span class="text-xs font-bold text-slate-200">Manuel Kaydırma Gücü Kırılımı</span>
+            <span class="text-xs font-bold text-slate-200">Manuel Yutma Gücü (Taktil Çekim) Kırılımı</span>
           </div>
           <span class="text-xs font-mono font-bold text-pink-300 tabular-nums">
             {{ format(store.manualClickPower, 2, store.settings.notation) }} / Dokunuş
@@ -582,7 +582,7 @@ async function copyReport() {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 3. SON 10 GECE GÜNLÜĞÜ (PAST 10 SINGULARITIES)                            -->
+    <!-- 3. SON 10 KOZMİK ÇÖKÜŞ GÜNLÜĞÜ (PAST 10 SINGULARITIES)                    -->
     <!-- ========================================================================= -->
     <div v-else-if="activeSubTab === 'past10'" class="space-y-3">
       <!-- Boş Durum (Henüz prestij yoksa) -->
@@ -591,10 +591,10 @@ async function copyReport() {
         class="glass-panel-card p-8 rounded-xl border border-white/[0.06] text-center space-y-2"
       >
         <Moon class="w-10 h-10 text-purple-400 mx-auto opacity-60" />
-        <h3 class="text-sm font-bold text-white">Henüz Sabah 06:00 Çöküşü Yaşanmadı</h3>
+        <h3 class="text-sm font-bold text-white">Henüz Kozmik Çöküş Yaşanmadı</h3>
         <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-          1.79e308 Dopamin tekilliğine ulaşıp ilk çöküşünü gerçekleştirdiğinde veya bir Gece Krizini
-          tamamladığında; son 10 gecenin süre, SP kazancı ve <b>SP / Dakika verimi</b> burada listelenecektir.
+          1.79e308 g Kütle tekilliğine ulaşıp ilk çöküşünü gerçekleştirdiğinde veya bir Kozmik Krizi
+          tamamladığında; son 10 çöküşün süre, SP kazancı ve <b>SP / Dakika verimi</b> burada listelenecektir.
         </p>
       </div>
 
@@ -624,10 +624,10 @@ async function copyReport() {
           </div>
         </div>
 
-        <!-- Son 10 Gece Tablosu -->
+        <!-- Son 10 Çöküş Tablosu -->
         <div class="glass-panel-card rounded-xl border border-white/[0.06] overflow-hidden">
           <div class="p-3 border-b border-white/[0.06] flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-200">Son 10 Sabah 06:00 Çöküşünün Telemetrisi</span>
+            <span class="text-xs font-bold text-slate-200">Son 10 Kozmik Çöküşün Telemetrisi</span>
             <span class="text-[10px] text-slate-500 font-mono">En Yeni → Eski</span>
           </div>
 
@@ -658,7 +658,7 @@ async function copyReport() {
                     </span>
                   </div>
                   <div class="text-[10px] text-slate-500 font-mono">
-                    Zirve: {{ format(run.peakMatter, 2, store.settings.notation) }} Dopamin
+                    Zirve: {{ format(run.peakMatter, 2, store.settings.notation) }} g Kütle
                   </div>
                 </div>
               </div>
@@ -692,7 +692,7 @@ async function copyReport() {
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <Swords class="w-4 h-4 text-amber-400" />
-            <span class="text-xs font-bold text-slate-200">Gece Kriz Meydan Okumaları Rekorları (C1–C8)</span>
+            <span class="text-xs font-bold text-slate-200">Kozmik Kriz Meydan Okumaları Rekorları (C1–C8)</span>
           </div>
           <span class="text-[11px] font-mono text-amber-300">
             Tamamlanan: {{ store.completedChallenges.length }} / 8
@@ -735,7 +735,7 @@ async function copyReport() {
         <div class="glass-panel-card p-3 rounded-xl border border-white/[0.06] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <Sparkles class="w-4 h-4 text-amber-300" />
-            <span class="text-xs text-slate-300 font-medium">Tıklanan Gece Krizleri</span>
+            <span class="text-xs text-slate-300 font-medium">Tıklanan Kozmik Dalgalanmalar</span>
           </div>
           <span class="text-sm font-mono font-bold text-white tabular-nums">
             {{ store.stats.anomaliesClicked.toLocaleString('tr-TR') }}
@@ -755,7 +755,7 @@ async function copyReport() {
         <div class="glass-panel-card p-3 rounded-xl border border-cyan-400/20 flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <Sparkles class="w-4 h-4 text-cyan-300" />
-            <span class="text-xs text-slate-300 font-medium">Yakalanan Void Reel</span>
+            <span class="text-xs text-slate-300 font-medium">Kozmik Tekillik Yakalamaları</span>
           </div>
           <span class="text-sm font-mono font-bold text-cyan-200 tabular-nums">
             {{ (store.stats.mythicsClicked || 0).toLocaleString('tr-TR') }}
@@ -765,7 +765,7 @@ async function copyReport() {
         <div class="glass-panel-card p-3 rounded-xl border border-white/[0.06] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <EyeOff class="w-4 h-4 text-rose-400" />
-            <span class="text-xs text-slate-300 font-medium">Susturulan Vicdan Azapları</span>
+            <span class="text-xs text-slate-300 font-medium">Etkisizleştirilen Kozmik Parazitler</span>
           </div>
           <span class="text-sm font-mono font-bold text-rose-300 tabular-nums">
             {{ store.stats.slackersFired.toLocaleString('tr-TR') }}
@@ -775,7 +775,7 @@ async function copyReport() {
         <div class="glass-panel-card p-3 rounded-xl border border-white/[0.06] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <FlaskConical class="w-4 h-4 text-emerald-400" />
-            <span class="text-xs text-slate-300 font-medium">Algoritma Lab Hasatları</span>
+            <span class="text-xs text-slate-300 font-medium">Kuantum Lab Hasatları</span>
           </div>
           <span class="text-sm font-mono font-bold text-emerald-300 tabular-nums">
             {{ (store.stats.labHarvests || 0).toLocaleString('tr-TR') }}
@@ -785,7 +785,7 @@ async function copyReport() {
         <div class="glass-panel-card p-3 rounded-xl border border-white/[0.06] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <Zap class="w-4 h-4 text-cyan-400" />
-            <span class="text-xs text-slate-300 font-medium">Gece Kriz Kararları (Büyü)</span>
+            <span class="text-xs text-slate-300 font-medium">Kozmik Müdahale Kararları</span>
           </div>
           <span class="text-sm font-mono font-bold text-cyan-300 tabular-nums">
             {{ (store.stats.spellsCast || 0).toLocaleString('tr-TR') }}
@@ -805,17 +805,17 @@ async function copyReport() {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 5. GECE BİYOMETRİSİ & HİCİV (BIOMETRICS & THEME)                          -->
+    <!-- 5. TEKİLLİK TELEMETRİSİ & LORE (TELEMETRY & LORE)                          -->
     <!-- ========================================================================= -->
     <div v-else-if="activeSubTab === 'biometrics'" class="space-y-3">
-      <!-- 5.1 Başparmak Kilometresi & İllüstratif Kıyaslama -->
+      <!-- 5.1 Kütle Çekim Mesafesi & İllüstratif Kıyaslama -->
       <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <Compass class="w-5 h-5 text-pink-400" />
             <div>
-              <h3 class="text-xs font-bold text-slate-100">Fiziksel Başparmak Mesafesi</h3>
-              <p class="text-[10px] text-slate-400">Her yukarı kaydırma ortalama 5 cm kabul edilir</p>
+              <h3 class="text-xs font-bold text-slate-100">Fiziksel Kütle Çekim Mesafesi</h3>
+              <p class="text-[10px] text-slate-400">Her taktil çekim ortalama 5 cm olay ufku etkisi üretir</p>
             </div>
           </div>
           <div class="text-right">
@@ -834,18 +834,18 @@ async function copyReport() {
         </div>
       </div>
 
-      <!-- 5.2 Feda Edilen Uyku & Zihinsel Pil -->
+      <!-- 5.2 Kozmik Ayrışma & Kararlılık -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-2">
           <div class="flex items-center gap-2">
             <Moon class="w-4 h-4 text-purple-400" />
-            <h4 class="text-xs font-bold text-slate-200">Feda Edilen Kaliteli Uyku</h4>
+            <h4 class="text-xs font-bold text-slate-200">Kozmik Ayrışma Süresi</h4>
           </div>
           <div class="text-xl font-mono font-extrabold text-purple-300 tabular-nums">
             {{ Math.floor(bio.lostSleepHours) }} sa {{ Math.round((bio.lostSleepHours % 1) * 60) }} dk
           </div>
           <p class="text-[10px] text-slate-400 leading-relaxed">
-            "Sadece 2 dakika bakıp uyuyacaktın." Biyolojik saatin seni sabah ezanıyla selamlamak üzere.
+            "Sadece laboratuvarda moleküler bağları ayrıştıracaktık." Planck duvarı yırtıldı; mikro-karadelik doymak bilmiyor.
           </p>
         </div>
 
@@ -853,7 +853,7 @@ async function copyReport() {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <BatteryMedium class="w-4 h-4 text-emerald-400" />
-              <h4 class="text-xs font-bold text-slate-200">Tahmini Zihinsel Pil Şarjı</h4>
+              <h4 class="text-xs font-bold text-slate-200">Kozmik Kararlılık (Kritik Kütle)</h4>
             </div>
             <span class="text-xs font-mono font-bold text-emerald-300 tabular-nums">
               %{{ bio.mentalBatteryPct }}
@@ -874,7 +874,7 @@ async function copyReport() {
             ></div>
           </div>
           <p class="text-[10px] text-slate-400">
-            Sabah toplantısında veya ilk derste zihinsel performans bu seviyede olacaktır.
+            Tekillik genişledikçe çevresel uzay-zaman bükülme yoğunluğu.
           </p>
         </div>
       </div>
@@ -884,39 +884,39 @@ async function copyReport() {
         <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-1">
           <div class="flex items-center gap-2">
             <Crosshair class="w-4 h-4 text-cyan-400" />
-            <h4 class="text-xs font-bold text-slate-200">Retinaya Çarpan Mavi Işık Fotonu</h4>
+            <h4 class="text-xs font-bold text-slate-200">Yutulan Radyasyon &amp; Hawking Işıması</h4>
           </div>
           <div class="text-lg font-mono font-extrabold text-cyan-300 tabular-nums">
             {{ format(bio.blueLightPhotons, 2, store.settings.notation) }} Foton
           </div>
           <p class="text-[10px] text-slate-400">
-            Melatonin hormonların tamamen buharlaştı; beyin şu an saat 14:00 sanıyor.
+            Olay ufkuna çarpan parçacıkların saçtığı enerjik fotonlar ve kuantum ışıma.
           </p>
         </div>
 
         <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-1">
           <div class="flex items-center gap-2">
             <Sun class="w-4 h-4 text-amber-400" />
-            <h4 class="text-xs font-bold text-slate-200">Gece Nöbeti Bağımlılık Teşhisi</h4>
+            <h4 class="text-xs font-bold text-slate-200">Kozmik Tekillik Teşhisi</h4>
           </div>
           <div class="text-sm font-mono mt-1" :class="bio.zombieRankColor">
             {{ bio.zombieRank }}
           </div>
           <p class="text-[10px] text-slate-400">
-            Oynama süresi, kaydırma sayısı ve çöküş eşiklerine göre dinamik gece rütben.
+            Kütle çekim süresi ve çöküş eşiklerine göre evrensel oburluk rütben.
           </p>
         </div>
       </div>
 
-      <!-- 5.4 Gece Raporunu Kopyala (Share Card) -->
+      <!-- 5.4 Tekillik Raporunu Kopyala (Share Card) -->
       <div class="glass-panel-card p-4 rounded-xl border border-purple-500/20 bg-purple-950/10 flex flex-col md:flex-row items-center justify-between gap-3">
         <div>
           <h4 class="text-xs font-bold text-purple-200 flex items-center gap-1.5">
             <Share2 class="w-4 h-4 text-purple-400" />
-            Gece Nöbeti Karnesini Paylaş
+            Tekillik Karnesini Paylaş
           </h4>
           <p class="text-[10px] text-slate-400">
-            Discord, WhatsApp veya Reddit'te arkadaşlarına gece 3 uykusuzluk bilançonla hava at.
+            Discord, WhatsApp veya Reddit'te arkadaşlarına evreni ne kadar yuttuğunu göster.
           </p>
         </div>
 

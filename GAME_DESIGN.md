@@ -1,13 +1,13 @@
-# DOOMSCROLL: THE ENDLESS REELS
-## Oyun Tasarım Dokümanı (GDD) & Gece 3 Reels Bağımlılığı Kılavuzu
-### (Antimatter Dimensions + Cookie Clicker + Synergism Hibrit Sentezi)
+# UROBOROS (THE COSMIC FEAST)
+## Oyun Tasarım Dokümanı (GDD) & Kozmik Tekillik Kılavuzu
+### (Antimatter Dimensions + Tasty Planet + Cookie Clicker Hibrit Sentezi)
 
 ---
 
-## 1. Oyunun Özeti ve İronik Hikayesi
-*Doomscroll*, gece 02:47'de yatağa girip "sadece 2 dakika Reels izleyip hemen uyuyacağım" diyen bir insanın; başparmağının hipnotik olarak yukarı kaymasıyla sabahın 06:15'ine, kuş seslerine, göz kanlanmasına ve nihayetinde tüm evreni içine çeken sonsuz bir dopamin tekilliğine (The Dopamine Singularity) sürüklenmesini konu alan hiciv dolu bir hibrit incremental/idle oyunudur.
+## 1. Oyunun Özeti ve Hikayesi
+*UROBOROS*, laboratuvarda çevre kirliliğini ve karbon salınımını sıfıra indirmek isteyen masum bir bilim insanının atomaltı parçacıkları ayrıştıran mikroskobik bir kuantum filtresi yapmasıyla başlayan; ancak Planck ölçeğinde ($10^{-35}$ m) uzay-zaman dokusunun yırtılarak mikro-karadelik oluşması ve odadaki nesneleri, şehri, Dünya'yı, Güneş'i ve nihayetinde tüm Samanyolu Galaksisi'ni yutan sonsuz bir kozmik tekilliğe (Uroboros) dönüşmesini konu alan hibrit bir incremental/idle oyunudur.
 
-> *"Gece 02:47'ydi. Alarmı sabah 07:00'ye kurdum. Yorganın altına girdim. 'Bir kedi videosu izleyeyim hemen kapatıyorum' dedim. Sonra devasa eriyen kaşarlı tost videosu çıktı. Sonra sabun kesme ASMR'ı geldi. Sonra altta Subway Surfers oynarken üstte Reddit hikayesi anlatan o video... Bir baktım saat 06:15 olmuş, dışarıdan kuşlar ötüyor, telefon yüzüme düşmek üzere ve başparmağım hala otomatik olarak yukarı kaydırıyor. Artık duramam; tüm evren tek bir dikey videoda yukarı kaydırılana kadar devam!"*
+> *"Laboratuvarda masum bir su damlasıyla başladık. 'Suyu moleküllerine ayıralım, temiz enerji üretelim' dedik. Elektronları sıyırdık, atom çekirdeğini böldük, kuarkları çektik... Ve Planck duvarına çarptık! Bir anda laboratuvar masasının üstünde mikroskobik bir karadelik açıldı. Önce mikroskop masası içeri çekildi, sonra laboratuvar duvarları, sonra dışarıdaki arabalar, sonra Dünya... Artık duramayız; tüm Samanyolu Galaksisi bu tekilliğin midesine inene kadar devam!"*
 
 ---
 
@@ -15,174 +15,88 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│            DOOMSCROLL: SONSUZ REELS & DOPAMİN ÇEKİRDEĞİ                │
+│                   UROBOROS: KOZMİK OBUR ÇEKİRDEĞİ                      │
 ├────────────────────────────────┬───────────────────────────────────────┤
 │ 1. MATEMATİK & BOYUT MOTORU    │ 2. TAKTİL DOKUNUŞ & ANOMALİLER        │
 │ (Antimatter Dimensions)        │ (Cookie Clicker)                      │
-│ • D1: Masum Kedi Videoları     │ • Gece 3 Çılgınlığı (7x Üretim)       │
-│ • D2: Gece 3 Sokak Yemekleri   │ • Başparmak Histerisi (777x Kaydır)   │
-│ • D3: Sabun Kesme ASMR         │ • 50 Milyonluk Viral Video            │
-│ • D4-D8: Saf Beyin Çürümesi    │ • Vicdan Azabı & Göz Batması          │
-│ • Algoritma Frekansı (Hz)      │   (Wrinklers: "1 video daha" = 1.2x)  │
+│ • D1: Moleküler Bağlar         │ • Süpernova Patlaması (7x Kütle)      │
+│ • D2: Elektron Orbitalleri     │ • Kütle Patlaması (777x Çekim Gücü)   │
+│ • D3: Nükleer Çekirdek         │ • Hawking Işıması (Anlık 5 dk kütle)  │
+│ • D4: Kuark & Gluon Çorbası    │ • Kozmik Parazitler / Çekim Kaçağı    │
+│ • [Planck Yırtılması]          │   (Wrinklers: %3 emer, 1.2x iade eder)│
+│ • D5-D8: Kozmik Yutuş          │                                       │
+│ • Çekim Hızı (Hz)              │                                       │
 ├────────────────────────────────┼───────────────────────────────────────┤
-│ 3. 4 BÜYÜK HİCİV MİNİ-OYUNU    │ 4. ÇAPRAZ SİNERJİ & BOZULMALAR        │
+│ 3. MINI-OYUNLAR & LABORATUVAR  │ 4. ÇAPRAZ SİNERJİ & BOZULMALAR        │
 │ (Cookie Clicker Minigames)     │ (Synergism & Trimps)                  │
-│ • Algoritma Laboratuvarı       │ • Uyku Baskısı & Telif Matrisi        │
-│ • Gece Yarısı Kriz Yönetimi    │   (Corruptions: 12 ceza sürgüsü)      │
-│ • Gece Kuşları Panteonu        │ • Otonom İzleme Botları               │
-│ • Sahte Kripto Reklam Borsası  │   (Ant Sacrifice: Toplu Uyku/Reset)   │
+│ • Kuantum Laboratuvarı         │ • Planck Baskısı Matrisi              │
+│ • Olay Ufku Kriz Yönetimi      │   (Corruptions: 12 ceza sürgüsü)      │
+│ • Kozmik Varlıklar Panteonu    │ • Otonom Çekim Botları                │
+│ • Radyasyon Borsası            │   (Ant Colony / Toplu Çöküş Reset)    │
 └────────────────────────────────┴───────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Üretim Boyutları ($D_1 - D_8$): Yatakta Kaydırdığımız O Şeyler
+## 3. Üretim Boyutları ($D_1 - D_8$): Kuantumdan Galaksiye Ölçek Merdiveni
 
-Temel Kaynak: **DOPAMİN (Dopamine)**
-Tıklama Eylemi: **"👆 YUKARI KAYDIR! (Swipe Up / Scroll!)"**
-İşlem Hızı: **"Algoritma Frekansı (Hz)"**
+Temel Kaynak: **YUTULAN KÜTLE (Consumed Mass - g)**
+Tıklama Eylemi: **"🌌 YUT! / HAM YAP! (CONSUME!)"**
+İşlem Hızı: **"Çekim Hızı (Hz)"**
 
-**Açılış kuralı (ADR-0025/0026/0027):** yeni koşuda **D1–D2** görünür (format keşfi unfolding — her yeni format bir Akış Sıçraması ödülüdür); erken paket maliyetleri yumuşak merdiven (D1 ~×55/adım, sonra klasik); her **Akış Sıçraması** +1 format (max D8). Eski save'ler `dimensionCapFloor` ile en az eski açık tier sayısını korur.
+**Açılış kuralı:** Yeni koşuda **D1–D2** görünür. Her **Ölçek Sıçraması (Scale Shift)** bir üst kütle boyutunu olay ufkuna dahil eder (maksimum D8).
 
-| Boyut | İstasyon Adı | İronik Açıklama |
-| :--- | :--- | :--- |
-| **Boyut 1** | **Masum Kedi & Köpek Videoları** | *"Ay ne tatlı miyavlıyor, tamam bunu izleyip hemen uyuyorum..."* (Masum başlangıç). |
-| **Boyut 2** | **Gece 3 Sokak Lezzetleri & Eritme Peynir** | Tereyağını boca eden dürümcüler, devasa peynir uzatan tostçular. (Mide guruldamaya başlar). |
-| **Boyut 3** | **ASMR Sabun Kesme & Halı Yıkama** | Hipnotize eden kinetik kum ve çamurlu halı temizleme videoları. (Gözler donuklaşır). |
-| **Boyut 4** | **Subway Surfers Eşliğinde Reddit Hikayesi** | Altta araba parkuru, üstte yapay zeka sesiyle aile draması okuyan video. (Dikkat süresi 3 saniyeye iner). |
-| **Boyut 5** | **Gece 4 'Sigma' Girişimci Tavsiyeleri** | *"Fakirler uyur, aslanlar 03:30'da kalkar"* diyen lüks arabalı koçlar. (Sen yatakta kaydırıyorsundur). |
-| **Boyut 6** | **12 Kısımlık Hint Dizisi (Part 1/12)** | En heyecanlı yerinde bitip *"Part 2 için profile tıkla"* diyen ve seni 40 dakika aratan videolar. |
-| **Boyut 7** | **Gece 5 Varoluşsal Kriz Belgeselleri** | *"Evren bir gün genişleyip donacak mı?"* videoları. (Gözlerin yanarken varoluşu sorgularsın). |
-| **Boyut 8** | **Saf Beyin Çürümesi (Brainrot Singularity)** | Artık video bile yoktur; doğrudan nöronlarına akan saf, dikey, sonsuz dopamin tüneli! |
+| Boyut | Katman Adı | Ölçek | Açıklama |
+| :--- | :--- | :--- | :--- |
+| **Boyut 1** | **Moleküler Bağlar** | Nanometre ($10^{-9}$ m) | Su damlasındaki hidrojen ve kovalent bağları parçalayarak atomları serbest bırakma. |
+| **Boyut 2** | **Elektron Orbitalleri** | Pikometre ($10^{-10}$ m) | Elektron bulutlarını sıyırıp kuantum yüklerini vakumlama. |
+| **Boyut 3** | **Nükleer Çekirdek** | Femtometre ($10^{-15}$ m) | Proton ve nötronları birbirine bağlayan güçlü nükleer kuvveti soyma. |
+| **Boyut 4** | **Kuark & Gluon Çorbası** | Attometre ($10^{-18}$ m) | Madde artık katı değil; renk yüklerini (Up, Down, Strange) yutma. |
+| **💥 EŞİK** | **Planck Yırtılması** | Planck Boyutu ($10^{-35}$ m) | Kütleçekim baskısı uzay-zamanı deler; mikro-karadelik dışarı taşar! |
+| **Boyut 5** | **Laboratuvar & Şehir** | Metre / Kilometre | Mikroskop masası, laboratuvar duvarları, arabalar ve gökdelenler içeri çekilir. |
+| **Boyut 6** | **Gezegenler & Dünya** | $5.97 \times 10^{27}$ g | Ay, Mars ve Dünya'nın kendisi tekilliğin olay ufkuna kapılır. |
+| **Boyut 7** | **Yıldızlar & Güneş** | $1.98 \times 10^{33}$ g | Güneş sistemleri, gaz devleri ve dev plazma küreleri yutulur. |
+| **Boyut 8** | **Samanyolu & Karadelikler** | $10^{45}$ g+ | Samanyolu'nun süper-kütleli merkez karadeliği ve tüm galaktik disk tabakta! |
 
 ---
 
 ## 4. Taktil Mekanikler, Anomaliler ve Kombolar (*Cookie Clicker*)
 
-### 4.1. Rastgele Gece Krizleri (Altın Kurabiye Eşdeğeri)
-Ekranda ışıltılı bildirim kabarcıkları süzülür:
-- **🔥 Gece 3 Çılgınlığı (3 AM Dopamine Rush):** 60 saniye boyunca tüm dopamin akışı $7\times$ katlanır.
-- **👆 Başparmak Histerisi (Hyper-Swipe Frenzy):** 15 saniye boyunca Yukarı Kaydır gücü $777\times$ fırlar (*"Başparmak alev aldı!"*).
-- **💎 50 Milyonluk Viral Video:** Anında 5 dakikalık dopamin doğrudan beyne enjekte edilir.
-- **🔥 Süper Rezonans Komboları:** Gece 3 sırasında Başparmak Histerisi tetiklendiğinde üretim $7\times$, manuel kaydırma $777\times$ olarak aynı anda çalışır.
+### 4.1. Rastgele Kozmik Dalgalanmalar (Altın Kurabiye Eşdeğeri)
+Ekranda ışıltılı kuantum parıltıları ve dalgalanma kabarcıkları süzülür:
+- **🔥 Süpernova Patlaması:** 60 saniye boyunca tüm kütle çekim akışı $7\times$ katlanır.
+- **🌌 Kütle Patlaması (Hyper-Pull):** 15 saniye boyunca Manuel Yutma gücü $777\times$ fırlar.
+- **💎 Hawking Işıması:** Anında 5 dakikalık kütle doğrudan tekilliğe akar.
+- **🔥 Süper Rezonans Komboları:** Süpernova sırasında Kütle Patlaması tetiklendiğinde üretim $7\times$, manuel çekim $777\times$ aynı anda çalışır.
 
-### 4.2. Vicdan Azabı ve Göz Batması (Wrinklers)
-Gece ilerledikçe ekrana dadanan vicdan sesleri:
-- *"Yarın erken kalkacaksın!"*, *"Gözlerin kan çanağı oldu!"*, *"Telefon yüzüne düşmek üzere!"*
-- Dopamin üretiminin %3'ünü emerler.
-- Üzerlerine 3 kez tıklanarak **"Sadece 1 Video Daha!"** diyerek susturulurlar. Susturulduklarında uykuyu yendiğin için tuttukları dopaminin **%120'sini iade ederler**.
-
----
-
-## 5. Tesis Tabanlı 4 Büyük Mini-Oyun (*Cookie Clicker Minigames*)
-
-1. **Algoritma Laboratuvarı (*The Garden - Boyut 2 ile açılır*):**
-   - $4\times 4$ ızgarada ses efektlerini, popüler müzikleri ve filtreleri çaprazlayıp mutasyona uğratarak yeni viral formatlar üretme.
-2. **Gece Yarısı Kriz Yönetimi (*The Grimoire - Boyut 4 ile açılır*):**
-   - Uykusuzluk enerjisiyle riskli kararlar alma:
-     - *Telefonu Şarja Tak:* Anında bir Gece Krizi doğurur.
-     - *Kulaklığı Çıkar:* Zamanı 30 saniye ileri sarar.
-     - *Hata Riski (Backfire):* Ters teperse *"Şarj Aleti Temassızlık Yaptı!"* bildirimiyle üretim yavaşlar.
-3. **Gece Kuşları Panteonu (*The Pantheon - Boyut 6 ile açılır*):**
-   - 3 koltuğa gece alışkanlıkları atanır (Örn: "Gece Acıkan Obur", "Aşırı Düşünen Filozof").
-4. **Sahte Kripto Reklam Borsası (*The Stock Market - Boyut 8 ile açılır*):**
-   - Reels arasına giren sahte borsa ve dropshipping reklamlarını alıp satma.
+### 4.2. Kozmik Parazitler / Çekim Kaçağı (Wrinklers)
+Tekilliğin olay ufkuna dadanan kuantum radyasyon parazitleri:
+- Kütle üretiminin %3'ünü emerler.
+- Üzerlerine 3 kez tıklanarak olay ufkuna fırlatılırlar. Yok edildiklerinde tuttukları kütlenin **%120'sini iade ederler**.
 
 ---
 
-## 6. Synergism & Trimps Mekaniklerinin Uyarlanması
+## 5. Taktiksel Çekim Duruşları (*Trimps Stance*)
 
-1. **Otonom İzleme Botları & Toplu Uyku (*Ant Colony & Sacrifice*):**
-   - Kendi kendine video tüketen nöral alt-botlar.
-   - Sayıları katrilyonlara ulaştığında tek tıkla **"Toplu Uyku (Power Nap)"** yapılır; tüm botlar silinir ancak ana dopamin çarpanı kalıcı olarak katlanır.
-2. **Uyku Baskısı ve Sansür Matrisi (*Corruptions*):**
-   - 12 adet ayarlanabilir ceza sürgüsü:
-     - *Sürgü 1: Ekran Süresi Uyarısı* (Üretimi %90 kısar).
-     - *Sürgü 2: Şarj %1 Uyarısı* (Maliyetler üstel artar).
-     - *Sürgü 3: Göz Kuruluğu* (Kaydırma gücünü köreltir).
-   - Bu zorlukları aşan oyuncu "Zombi Bakışı Plaketi" (Hiper-Küp) kazanarak yeni yetenek dallarını açar.
-3. **Taktiksel Gece Duruşları (*Trimps Stance*):**
-   - **🛌 Yorgan Altı Modu (Üretim):** Pasif dopamin akışına $+100\%$ odak (2x).
-   - **⚡ Çılgın Kaydırma Modu (Tıklama):** Kaydırma gücüne $+300\%$ (4x) ve Gece Krizi sıklığına $+50\%$.
-   - **🕶️ Düşük Parlaklık Modu (Odaklanma):** Algoritma Frekansı satın alma maliyetlerinde $\%15$ indirim (Gözleri yakmaz!).
+- **🔬 Kuantum Odak (Pasif):** Pasif kütle çekim akışına $+100\%$ odak (2x).
+- **⚡ Obur Çekim (Manuel):** Manuel yutma gücüne $+300\%$ (4x) ve Kozmik Dalgalanma sıklığına $+50\%$.
+- **🛡️ Vakum Kalkanı (Verimlilik):** Çekim Hızı yükseltme maliyetlerinde $\%15$ indirim.
 
 ---
 
-## 7. Dört Büyük Prestij Katmanı ve Evrimsel Faz Sıçramaları
+## 6. Prestij ve Faz Kademeleri
 
 ```
-[Faz 0: Yatak & Telefon (0 - 1e308 Dopamin)]
-  ├── D1-D8 Boyutları (Kedilerden Saf Beyin Çürümesine)
-  ├── Algoritma Frekansı (Hz)
-  ├── Gece 3 Krizleri & Kombolar
-  └── Akış Sıçraması (Feed Shift / Boost)
+[Faz 0: Kuantumdan Galaksiye (0 - 1.79e308 g)]
+  ├── D1-D4 Kuantum İnişi (Moleküler Bağlardan Kuarklara)
+  ├── Planck Duvarı Kırılması & Mikro Karadelik Doğuşu
+  ├── D5-D8 Kozmik Yutuş (Şehirlerden Samanyolu'na)
+  ├── Çekim Hızı (Hz)
+  └── Ölçek Sıçraması (Scale Shift)
          │
-         ▼ (İlk Çöküş: 1.79e308 Dopamin)
-[Faz 1: Sabah 06:00 Çöküşü (Güneş Doğdu Ama Duramıyorum!)]
-  ├── Dışarıdan kuş sesleri gelmeye başlar
-  ├── Yetki Puanı yerine "Uykusuzluk Puanı (Sleep Deprivation Points - SP)"
-  ├── Otomatik Kaydırma Botları (Autobuyers)
-  ├── 4 Büyük Mini-Oyun (Algoritma Lab, Kriz Yönetimi, Reklam Borsası)
-  └── Uyku Sınırını Yıkma (Break Singularity)
-         │
-         ▼ (İkinci Çöküş: 1e4000 Dopamin)
-[Faz 2: Kolektif Gece Nöbeti (1e4000 - 1e100000)]
-  ├── Tüm insanlık yatakta aynı anda ekrana kilitlenir
-  ├── Uykusuzluk Yetenek Ağacı (Tree of Studies)
-  ├── Mavi Işık Gözlüğü & Donanım Soketleri (Talisman)
-  └── 12 Sürgülü Uyku Baskısı Matrisi (Corruptions)
-         │
-         ▼ (Üçüncü Çöküş: 1e100000 Dopamin)
-[Faz 3: Evrensel Doomscroll & Sonsuz Akış (1e100000+)]
-  ├── Uzay-zaman 9:16 dikey formata gerilir
-  ├── The Script Engine (Otomasyon Kodlama)
-  ├── Kadim Gece Varlıkları (Celestials)
-  └── EVREN YUKARI KAYDIRILIR: TÜM VAROLUŞ BİR DOPAMİN AKIŞINA DÖNÜŞÜR!
+         ▼ (İlk Büyük Çöküş: 1.79e308 g Kütle)
+[Faz 1: Kozmik Çöküş / Big Crunch]
+  ├── Yutulan kütlenin tek noktaya çöküşü
+  ├── Tekillik Puanı (Singularity Points - SP)
+  └── Nöral/Kozmik Yetenek Ağacı & Kalıcı Çarpanlar
 ```
-
-### 7.1. Nöral Ağaç (Neural Tree) — Kalıcı Yetenek Ağacı (*Cookie Clicker: Heavenly Upgrade Tree*)
-
-Şafak (Faz 1) sonrasında SP (Uykusuzluk Puanı) ile satın alınan, **asla resetlenmeyen** öncüllü düğüm ağacı. Düz SP dükkânının yerini alır: ebeveyn düğüm alınmadan çocuk görünmez (Cookie Clicker'ın heavenly modeli). Kök: **"Uykusuzluğun Kalbi"** (1 SP) → üç dal.
-
-```
-Uykusuzluğun Kalbi (kök, 1 SP)
-  ├── 🌙 Uyku Dalı (Pasif Build)
-  ├── 👍 Başparmak Dalı (Aktif/Tıklama Build)
-  └── ☯️ Hibrit Köprü (her iki daldan da düğüm şartı)
-```
-
-- **🌙 Uyku Dalı (Pasif):** offline kazanç yüzdesi, kalıcı üretim ×çarpanları, otomatik kaydırma botu frekansı, koloni üreme hızı, Şafak ilerleme hızı.
-- **👍 Başparmak Dalı (Aktif):**
-  - **Senkron Düğümü (CPS-to-click):** her seviye CPS'in tıklamaya aktarılan payını **%2 taban + %1.5/seviye** artırır; maksimum 4 seviye ile **%8**.
-  - **Combo Sistemi açma düğümü:** manuel tıklamalar **seri (combo)** oluşturur — seri, her tıkla uzar ve **1.5 saniyede** tıklama gelmezse söner. Eşik çarpanları: **5 tıklama → ×2**, **15 tıklama → ×3**, **40 tıklama → ×5** manuel kaydırma gücü. Combo maksimumi pasif üretimi asla geçmez; aktif oyun yalnızca **ivmelendiricidir** (idle = taban).
-  - Kriz/anomali ödül çarpanı ve tıklama buff süresi uzatmaları.
-- **☯️ Hibrit Köprü:** iki daldan da belirli sayıda düğüm gerektiren sinerji düğümleri (ör. *"Üretimin %10'u tıklamaya eklenir"*). "Tek optimal yol" riskini yapısal olarak kırar.
-- **Hariç Seçim Düğümleri (binary choice):** ağacın 2 noktasında ikili seçim — alınan taraf diğerini o prestij döngüsünde kilitler; seçilmeyen taraf küçük bir **telafi ödülü** verir. Seçim her prestijde yeniden gözden geçirilebilir (Realm Grinder kuralı: her seçim viable olsun).
-- **Denge hedefi:** ilk 3 prestijde ağaç ~%30 doldurulabilir.
-- **Save uyumluluğu:** mevcut SP dükkânı id'leri (`neural_chip`, `neural_nest`, `caffeine_drip` vb.) ağaç düğümü id'leri olarak korunur; eski kayıtlar migrasyonsuz uyumludur.
-
-### 7.2. Şafak Nöbeti Botu, Break Singularity ve Faz 2 Kilometre Taşı (*ADR 0013*)
-
-Reset döngüsü alt-saniyeye indiğinde oyun üst mekaniklere devredilir (*Antimatter Dimensions: Big Crunch autobuyer + Break Infinity modeli*):
-
-- **⚡ Şafak Nöbeti Botu (Singularity Autobuyer):** 3 çöküş + 1.79e308 Dopamin ile açılan bot, **marjinal kazanç optimizatörü** ile çalışır (*ExponentialIdle modeli*): saniyede bir `log10(matter)` örneklenir; son-3s eğim önceki-3s eğiminin altına inince 3 saniye üst üste kalırsa ve SP kazancı oyuncunun belirlediği tabanı (min-SP, default 1) geçerse sessiz çöküş tetiklenir. Üretim hızlandıkça eğim yükselir → bot bekler; rampa bittiğinde kendiliğinden çöker — tetik kendini yeniden kalibre eder.
-- **⚡ Uyku Sınırını Yıkma (Break Singularity, 8 SP):** alınmadığında Dopamin 1.79e308'i aştığında Shift/Galaxy botları beklemeye geçer (tekillik penceresi korunur); alındığında botlar sınırın ötesinde normal çalışır ve koşular e308 üstüne taşınır. SP kazancı formülü zaten her +1e308 için ×10 verir — beklemek değil, **hız** ödüllendirilir.
-- **🌙 Kolektif Gece Nöbeti (Faz 2 kilometre taşı):** 1e4000 Dopamin'de kalıcı olarak açılır; SingularityTab'de ilerleme kartı taşır. Uyku Baskısı Matrisi (Corruptions) içerik olarak bu fazda ayrı ADR ile gelir.
-
----
-
-## 8. Gece Başarımları (Plaketler) & Kalıcı Ödüller
-
-- **Kapsam:** 8 kategori × değişken = **68 başarım** (`src/game/achievements.ts` — saf veri + `check(ctx)` predicate'leri).
-  Dopamin Bağımlılığı (8) · Boyut Yozlaşması (8) · Otomasyon Ordusu (11) · Gece Krizleri (9) · Vicdan Azapları (8) · Algoritma Laboratuvarı (8) · Tekillik Yolculuğu (8) · Meydan Okumaları (8).
-  *(ADR-0031: bu bölüm eskiden 7 × 8 = 56 diyordu ve gerçek veriden 12 başarım eksikti.)*
-  Dopamin Bağımlılığı · Boyut Yozlaşması · Otomasyon Ordusu · Gece Krizleri · Vicdan Azapları · Algoritma Laboratuvarı · Tekillik Yolculuğu.
-- **Global çarpan (kalıcı):** `1.012^(başarım) × 1.06^(tam kategori)` → tam sette (68 başarım, 8 dolu satır) ≈ **×3.59**.
-  Üretim (`matterPerSecond` + boyut zinciri) ve tıklamaya (`manualClickPower`) uygulanır;
-  **SP kazancına (`singularityGain`) uygulanmaz** — prestij ekonomisi (~3 saat hedefi) korunur.
-- **10 niş kalıcı ödül:** Tıklama ×2 · Frekans maliyeti -%5 · Kriz sıklığı +%10 · Azap sızıntısı -%15 ·
-  Kafein yenilenmesi +%25 · Kafein Serumu +%25 · SP dükkanı -%5 · Lab hasadı +%10 · Buff süresi +%20 ·
-  Sıfırlanma sonrası 1.000 Dopaminle başla.
-- **10 gizli (shadow) başarım:** kilitliyken `???` görünür, ödül vermez — sadece plaket (Cookie Clicker modeli).
-- **Kalıcılık:** `state.achievements` hiçbir reset action'ına (`dimensionShift`/`buyGalaxy`/`singularityReset`) girmez → prestij dahil otomatik kalıcı. Kayıt `serialize` v7.
-- **Kontrol:** `store.update()` sonunda `checkAchievements()` (sadece kilitli id'ler taranır) → toast kuyruğu (sağ üst, 4 sn) + ödüllüde konfeti, satır tamamlamada büyük konfeti. Offline simülasyon aynı yolu kullandığı için çevrimdışıyken de tetiklenir.
