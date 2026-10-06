@@ -30,7 +30,7 @@ function lockInfo(def: ChallengeDef): { hint: string; progress: string } {
   const req = def.unlock
   const p = unlockProgress(store.unlockContext, { id: def.id, name: def.name, hint: '', req, order: def.order })
   if (req.kind === 'singularities') {
-    return { hint: `${req.count} Sabah 06:00 Çöküşü yaşa`, progress: `${p.current}/${p.target}` }
+    return { hint: `${req.count} Kozmik Çöküş yaşa`, progress: `${p.current}/${p.target}` }
   }
   return { hint: 'Kilitli', progress: `${p.current}/${p.target}` }
 }

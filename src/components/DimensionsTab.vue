@@ -196,24 +196,66 @@ function handleSlackerClick(e: MouseEvent, id: string) {
 }
 
 // Dokunmatik Yukarı Kaydırma (Touch Swipe-Up Gesture)
+let touchStartTime = 0
 let touchStartY = 0
 let touchStartX = 0
+let touchScrollStartY = 0
 
 function handleTouchStart(e: TouchEvent) {
   if (e.touches.length === 1) {
-    touchStartY = e.touches[0].clientY
-    touchStartX = e.touches[0].clientX
+    const target = e.target as HTMLElement | null
+    // Buton, link veya form elemanı üzerindeyse jest başlatma
+    if (target?.closest('button, a, input, select, textarea, [role="button"]')) {
+      touchStartTime = 0
+      return
+    }
+
+    const touch = e.touches[0]
+    touchStartTime = performance.now()
+    touchStartY = touch.clientY
+    touchStartX = touch.clientX
+    touchScrollStartY = window.scrollY || document.documentElement.scrollTop || 0
   }
 }
 
 function handleTouchEnd(e: TouchEvent) {
+  // Jest kapalıysa veya başlangıç geçersizse çık
+  if (store.settings.swipeSensitivity === 'off' || touchStartTime === 0) return
+
   if (e.changedTouches.length === 1) {
-    const deltaY = e.changedTouches[0].clientY - touchStartY
-    const deltaX = e.changedTouches[0].clientX - touchStartX
-    // Yukarı doğru belirgin bir fiskeleme jesti (min 36px dikey, yataydan dik)
-    if (deltaY <= -36 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
-      const x = e.changedTouches[0].clientX
-      const y = e.changedTouches[0].clientY
+    const touch = e.changedTouches[0]
+    const endTime = performance.now()
+    const duration = endTime - touchStartTime
+    touchStartTime = 0 // Sıfırla
+
+    // 1. Sayfa dikeyde kaymış mı? (Kullanıcı ekranı kaydırıyorsa ASLA jest/tıklama tetikleme!)
+    const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0
+    if (Math.abs(currentScrollY - touchScrollStartY) > 8) {
+      return
+    }
+
+    const deltaY = touch.clientY - touchStartY
+    const deltaX = touch.clientX - touchStartX
+    const absY = Math.abs(deltaY)
+    const absX = Math.abs(deltaX)
+    const velocity = absY / Math.max(duration, 1)
+
+    // Hassasiyet eşikleri (Dengeli vs Düşük)
+    const isLow = store.settings.swipeSensitivity === 'low'
+    const minDistance = isLow ? 100 : 70 // px
+    const maxDuration = isLow ? 220 : 280 // ms (280ms'den uzun süren dokunmalar kaydırma/drag'dir)
+    const minVelocity = isLow ? 0.65 : 0.42 // px/ms
+
+    // 2. Yalnızca YUKARI doğru (deltaY < 0), dikey yönü belirgin ve hızlı bir fiskeleme
+    if (
+      deltaY <= -minDistance &&
+      duration >= 45 &&
+      duration <= maxDuration &&
+      velocity >= minVelocity &&
+      absY > absX * 1.5
+    ) {
+      const x = touch.clientX
+      const y = touch.clientY
 
       // Taktil dokunsal titreşim
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {

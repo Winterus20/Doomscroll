@@ -2,20 +2,18 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import { sounds } from '../core/audio'
-import { Heart } from 'lucide-vue-next'
 
-interface FloatingHeart {
+interface QuantumRipple {
   id: number
   x: number
   y: number
   scale: number
-  rotation: number
   color: string
 }
 
 const store = useGameStore()
-const hearts = ref<FloatingHeart[]>([])
-let nextHeartId = 1
+const ripples = ref<QuantumRipple[]>([])
+let nextRippleId = 1
 
 let lastTapTime = 0
 let lastTapX = 0
@@ -23,33 +21,30 @@ let lastTapY = 0
 const DOUBLE_TAP_MAX_DELAY = 320 // ms
 const DOUBLE_TAP_MAX_DIST = 35 // px
 
-const HEART_COLORS = [
-  '#ec4899', // Dopamine magenta
-  '#f43f5e', // Crisis rose
-  '#a855f7', // Neural purple
-  '#fb7185', // Soft pink
-  '#f472b6'  // Neon pink
+const QUANTUM_COLORS = [
+  '#00f0ff', // Quantum cyan
+  '#38bdf8', // Sky plasma
+  '#a855f7', // Gravitational purple
+  '#f59e0b', // Singularity amber
+  '#67e8f9'  // Electric cyan
 ]
 
-function spawnHeart(x: number, y: number) {
+function spawnRipple(x: number, y: number) {
   if (store.settings.reduceAnimations) {
-    // Görsel efekt kapalıysa bile vuruş sesini ve primini ver
     sounds.playHapticTap()
     store.manualClick({ x, y })
     return
   }
 
-  const id = nextHeartId++
-  const color = HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)]
-  const rotation = (Math.random() - 0.5) * 30 // -15deg to +15deg
-  const scale = 0.95 + Math.random() * 0.35
+  const id = nextRippleId++
+  const color = QUANTUM_COLORS[Math.floor(Math.random() * QUANTUM_COLORS.length)]
+  const scale = 0.9 + Math.random() * 0.3
 
-  hearts.value.push({
+  ripples.value.push({
     id,
     x,
     y,
     scale,
-    rotation,
     color
   })
 
@@ -57,25 +52,53 @@ function spawnHeart(x: number, y: number) {
   sounds.playHapticTap()
   store.manualClick({ x, y })
 
-  // 800ms sonra kalbi temizle
+  // 650ms sonra temizle
   setTimeout(() => {
-    hearts.value = hearts.value.filter((h) => h.id !== id)
-  }, 800)
+    ripples.value = ripples.value.filter((r) => r.id !== id)
+  }, 650)
 }
 
+let pointerDownTime = 0
+let pointerDownX = 0
+let pointerDownY = 0
+let pointerScrollY = 0
+
 function handlePointerDown(e: PointerEvent) {
-  // Input veya textarea üzerinde çift tık kalp patlatmaz
+  // Sadece birincil dokunuş / sol tık
+  if (e.isPrimary === false || (e.button !== undefined && e.button !== 0)) return
+  pointerDownTime = performance.now()
+  pointerDownX = e.clientX
+  pointerDownY = e.clientY
+  pointerScrollY = window.scrollY || document.documentElement.scrollTop || 0
+}
+
+function handlePointerUp(e: PointerEvent) {
+  if (pointerDownTime === 0) return
+  const elapsed = performance.now() - pointerDownTime
+  pointerDownTime = 0
+
+  // Jestler kapalıysa çift tıkla kütle artırma yapma
+  if (store.settings.swipeSensitivity === 'off') return
+
+  // Input, buton veya tıklanabilir öğelerde çift tık jesti tetikleme
   const target = e.target as HTMLElement | null
-  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+  if (target?.closest('button, a, input, select, textarea, [role="button"]')) {
     return
   }
 
-  const now = performance.now()
-  const dist = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY)
+  // Sayfa kaydıysa veya parmak 12px'den fazla sürüklendiyse (scroll/drag) kesinlikle tık değildir
+  const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0
+  if (Math.abs(currentScrollY - pointerScrollY) > 5) return
 
-  if (now - lastTapTime < DOUBLE_TAP_MAX_DELAY && dist < DOUBLE_TAP_MAX_DIST) {
-    // Çift dokunuş tespit edildi!
-    spawnHeart(e.clientX, e.clientY)
+  const moveDist = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY)
+  if (moveDist > 12 || elapsed > 240) return
+
+  const now = performance.now()
+  const tapDist = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY)
+
+  if (now - lastTapTime < DOUBLE_TAP_MAX_DELAY && tapDist < DOUBLE_TAP_MAX_DIST) {
+    // Gerçek sabit çift dokunuş tespit edildi: Kuantum Rezonans Dalgası!
+    spawnRipple(e.clientX, e.clientY)
     lastTapTime = 0
   } else {
     lastTapTime = now
@@ -84,76 +107,120 @@ function handlePointerDown(e: PointerEvent) {
   }
 }
 
-// Dışarıdan olay tetikleme desteği (örn: CommentTicker kalp butonu)
+// Dışarıdan olay tetikleme desteği
 function handleCustomHeart(e: Event) {
   const customEvent = e as CustomEvent<{ x: number; y: number }>
   if (customEvent.detail) {
-    spawnHeart(customEvent.detail.x, customEvent.detail.y)
+    spawnRipple(customEvent.detail.x, customEvent.detail.y)
   }
 }
 
 onMounted(() => {
   window.addEventListener('pointerdown', handlePointerDown, { passive: true })
+  window.addEventListener('pointerup', handlePointerUp, { passive: true })
   window.addEventListener('doomscroll:heart', handleCustomHeart)
 })
 
 onUnmounted(() => {
   window.removeEventListener('pointerdown', handlePointerDown)
+  window.removeEventListener('pointerup', handlePointerUp)
   window.removeEventListener('doomscroll:heart', handleCustomHeart)
 })
 </script>
 
 <template>
-  <div class="heart-burst-container pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
+  <div class="quantum-burst-container pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
     <div
-      v-for="heart in hearts"
-      :key="heart.id"
-      class="floating-heart"
+      v-for="ripple in ripples"
+      :key="ripple.id"
+      class="quantum-ripple"
       :style="{
-        left: `${heart.x}px`,
-        top: `${heart.y}px`,
-        '--heart-color': heart.color,
-        '--heart-rot': `${heart.rotation}deg`,
-        '--heart-scale': heart.scale
+        left: `${ripple.x}px`,
+        top: `${ripple.y}px`,
+        '--ripple-color': ripple.color,
+        '--ripple-scale': ripple.scale
       }"
     >
-      <Heart
-        class="heart-svg drop-shadow-[0_0_12px_var(--heart-color)]"
-        :fill="heart.color"
-        :stroke="heart.color"
-      />
+      <!-- Merkez Enerji Çekirdeği -->
+      <div class="ripple-core"></div>
+      <!-- İç Halka -->
+      <div class="ripple-ring-inner"></div>
+      <!-- Dış Gravitasyonel Şok Dalgası -->
+      <div class="ripple-ring-outer"></div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.floating-heart {
+.quantum-ripple {
   position: absolute;
-  transform: translate(-50%, -50%) scale(0);
-  animation: heart-pop 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
   will-change: transform, opacity;
 }
 
-.heart-svg {
-  width: 36px;
-  height: 36px;
+.ripple-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 16px var(--ripple-color);
+  animation: core-fade 0.4s ease-out forwards;
 }
 
-@keyframes heart-pop {
+.ripple-ring-inner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--ripple-color);
+  transform: translate(-50%, -50%) scale(0.2);
+  box-shadow: 0 0 10px var(--ripple-color), inset 0 0 8px var(--ripple-color);
+  animation: ring-expand 0.55s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.ripple-ring-outer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transform: translate(-50%, -50%) scale(0.1);
+  box-shadow: 0 0 18px var(--ripple-color);
+  animation: ring-expand-outer 0.65s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
+}
+
+@keyframes core-fade {
+  0% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+}
+
+@keyframes ring-expand {
   0% {
-    transform: translate(-50%, -50%) scale(0) rotate(0deg);
-    opacity: 0.9;
-  }
-  30% {
-    transform: translate(-50%, -50%) scale(var(--heart-scale, 1.25)) rotate(var(--heart-rot, 0deg));
+    transform: translate(-50%, -50%) scale(0.2);
     opacity: 1;
   }
-  60% {
-    transform: translate(-50%, calc(-50% - 40px)) scale(calc(var(--heart-scale, 1.25) * 1.1)) rotate(var(--heart-rot, 0deg));
+  100% {
+    transform: translate(-50%, -50%) scale(calc(var(--ripple-scale, 1) * 2.2));
+    opacity: 0;
+  }
+}
+
+@keyframes ring-expand-outer {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
     opacity: 0.9;
   }
   100% {
-    transform: translate(-50%, calc(-50% - 90px)) scale(calc(var(--heart-scale, 1.25) * 0.7)) rotate(var(--heart-rot, 0deg));
+    transform: translate(-50%, -50%) scale(calc(var(--ripple-scale, 1) * 2.8));
     opacity: 0;
   }
 }

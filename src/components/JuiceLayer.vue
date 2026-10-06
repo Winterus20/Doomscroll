@@ -126,6 +126,10 @@ function clearBodyShake(): void {
     clearTimeout(shakeTimeout)
     shakeTimeout = null
   }
+  const target = document.getElementById('game-main-content')
+  if (target) {
+    target.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+  }
   document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
 }
 
@@ -399,25 +403,50 @@ function handleShockwaveEvent(e: Event) {
 }
 
 function handleShakeEvent(e: Event) {
-  // Azaltılmış hareket: gövde sarsıntısı sınıfı HİÇ eklenmez (ve açık kalan temizlenir)
+  // Azaltılmış hareket: sarsıntı sınıfı HİÇ eklenmez (ve açık kalan temizlenir)
   if (shouldReduceMotion()) {
     clearBodyShake()
     return
   }
 
+  const target = document.getElementById('game-main-content')
+  if (!target) return
+
   // P0 Balatro: shake kademesi — detail.level: 'soft' | 'medium' | 'hard'
   const level = (e as CustomEvent<{ level?: string }>).detail?.level ?? 'medium'
   const cls = level === 'hard' ? 'shake-hard' : level === 'soft' ? 'shake-soft' : 'screen-shake'
   const ms = level === 'hard' ? 400 : level === 'soft' ? 200 : 250
+
+  const hasHard = target.classList.contains('shake-hard')
+  const hasMedium = target.classList.contains('screen-shake')
+
+  // Zaten aynı veya daha üst kademede bir sarsıntı aktifse, sınıfı silip eklemek
+  // ve reflow tetiklemek yerine sadece zamanlayıcıyı uzatırız.
+  // Bu sayede ardışık kütle/dekad artışlarında mobilde ve PC'de GPU katman yırtılması veya titreme olmaz.
+  if (
+    target.classList.contains(cls) ||
+    (cls === 'shake-soft' && (hasMedium || hasHard)) ||
+    (cls === 'screen-shake' && hasHard)
+  ) {
+    if (shakeTimeout) {
+      clearTimeout(shakeTimeout)
+    }
+    shakeTimeout = setTimeout(() => {
+      target.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+      shakeTimeout = null
+    }, ms)
+    return
+  }
+
   if (shakeTimeout) {
     clearTimeout(shakeTimeout)
   }
-  document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
-  void document.body.offsetWidth
-  document.body.classList.add(cls)
+
+  target.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+  target.classList.add(cls)
 
   shakeTimeout = setTimeout(() => {
-    document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+    target.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
     shakeTimeout = null
   }, ms)
 }
@@ -523,11 +552,7 @@ onUnmounted(() => {
     animId = null
   }
 
-  if (shakeTimeout) {
-    clearTimeout(shakeTimeout)
-    shakeTimeout = null
-  }
-  document.body.classList.remove('screen-shake', 'shake-soft', 'shake-hard')
+  clearBodyShake()
 
   particles.length = 0
   shockwaves.length = 0

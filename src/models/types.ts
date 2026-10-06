@@ -52,6 +52,10 @@ export interface AutobuyerConfig {
   interval: number // saniye cinsinden
   timer: number
   minGainSp?: number // Şafak Nöbeti Botu: minimum SP kazancı tabanı (default 1)
+  // Kokpit Gelişmiş Kuralları
+  customRule?: {
+    maxGalaxies?: number // Küme botu için opsiyonel tavan sınırı (0 = sınırsız)
+  }
 }
 
 export type LabSeedType =
@@ -162,6 +166,7 @@ export interface GameSettings {
   batterySaver: boolean // Düşük CPU/GPU tasarruf modu
   floatingTexts: boolean // Tıklama ve kritik uçan yazıları
   newsTickerEnabled: boolean // Üst haber bandı açık/kapalı
+  swipeSensitivity?: 'balanced' | 'low' | 'off' // Mobil ekran kaydırma / fiske jesti hassasiyeti
   offlineProgressModal: boolean // Çevrimdışı rapor modalı
   hotkeysEnabled: boolean // Klavye kısayolları (1-9, M vb.)
   activeSlot: number // 1, 2 veya 3
@@ -305,6 +310,8 @@ export interface AchievementContext {
   leechedTotal: Decimal
   wallHour: number
   completedChallenges: string[]
+  seenNewsCount: number
+  hasClickedSecretNews: boolean
 }
 
 export interface SerializedPlayerState {
@@ -399,6 +406,9 @@ export interface SerializedPlayerState {
   }>
   achievements?: string[]
   achievementsSeenCount?: number
+  seenNewsIds?: string[]
+  uselessNewsClicks?: number
+  hasClickedSecretNews?: boolean
   unlockedFeatures?: string[] // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilit açılışları
   /** ADR-0035 (v15): hayat boyu ulaşılan en yüksek dopamin. Açılış kalıcılığının
    *  asıl kaydı — Sıçrama/Küme/şafak `matter`'ı sıfırlasa da kapılar buradan açılır.

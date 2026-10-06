@@ -46,10 +46,10 @@ function handleCast(spellId: CrisisSpellType) {
     <TabHero
       :icon="Zap"
       icon-class="text-cyan-400"
-      title="Gece Yarısı Kriz Yönetimi: Kafein & Uykusuzluk Kararları"
-      badge="Gece Kararları"
+      title="Kozmik Kriz Yönetimi: Kuantum Alan Müdahaleleri"
+      badge="Kriz Müdahalesi"
       badge-class="ds-badge-cyan"
-      subtitle="Gece ilerledikçe biriken uykusuzluk enerjisini kullanarak riskli hamleler yap. Dikkat et; bazı kararlar ters tepebilir!"
+      subtitle="Olay ufkunda biriken kuantum plazma enerjisini kullanarak kritik müdahaleler yap. Dikkat et; aşırı yükleme gravitasyonel kararsızlığa yol açabilir!"
       accent="cyan"
     >
       <template #stats>
@@ -84,7 +84,7 @@ function handleCast(spellId: CrisisSpellType) {
         >
           <AlertTriangle class="w-4 h-4 text-rose-400 shrink-0" />
           <span class="tabular-nums">
-            ⚠️ TERS TEPKİ: Şarj aleti temassızlık yaptı! Üretim %50 yavaşladı! (Kalan: {{ Math.ceil(store.crisisBackfireDebuff) }} sn)
+            ⚠️ GRAVİTASYONEL KARARSIZLIK: Kuantum alanı ters tepti! Üretim %50 yavaşladı! (Kalan: {{ Math.ceil(store.crisisBackfireDebuff) }} sn)
           </span>
         </div>
       </template>

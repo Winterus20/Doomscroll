@@ -152,7 +152,7 @@ const spBalance = computed(() => formatNumber(store.singularityPoints, store.set
             :class="uiState(getNode('insomnia_heart')) === 'available'
               ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
               : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed'"
-            v-tip="'Ağacın tüm dallarını açar'"
+            v-tip="'Ağacın tüm dallarını açar ve her çöküşte 10.000 g kütle kazandırır'"
           >
             <span>Al ({{ nodeCost(getNode('insomnia_heart')) }} SP)</span>
           </button>

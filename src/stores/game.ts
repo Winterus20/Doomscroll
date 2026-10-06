@@ -70,6 +70,11 @@ import type {
   StrikeStage
 } from '../models/types'
 import { format } from '../core/format'
+import {
+  calculateCosmicPreyLadder,
+  calculateEventHorizon,
+  calculateWritingParadox
+} from '../core/cosmic-scale'
 
 function parseSavedDecimal(value: string | number | undefined, fallback: Decimal): Decimal {
   const parsed = new Decimal(value ?? fallback.toString())
@@ -170,9 +175,9 @@ export const BASE_UNLOCKED_DIMENSIONS = 3
 const PURCHASE_CHAIN_BONUS_SECONDS = 2.5
 const PURCHASE_MATTER_TICK_SECONDS = 0.45
 
-// Satın alınan her 10 adette boyut çarpanı artışı (ADR-0023 ilk prestij dengelemesi):
-// 2.0 + sınırsız max-alım son koşuda dakikalar içinde 1e308'e fırlatıyordu.
-export const DIM_PER_TEN_MULT = 1.58
+// Satın alınan her 10 adette boyut çarpanı artışı:
+// 1.58 iken ilk koşu 4s 11dk sürüyordu. 1.595 değeri kaskadı yumuşak hızlandırarak ilk koşuyu tam 3s 30dk altın standardına kilitler.
+export const DIM_PER_TEN_MULT = 1.595
 
 // ---- Gece Kriz Meydan Okumaları (Faz 3: denge sabitleri) ----
 // C2: alım sonrası tam durma biter, üretim 60 sn'de lineer rampayla döner.
@@ -505,7 +510,7 @@ export const NEURAL_TREE: NeuralNode[] = [
     id: 'insomnia_heart',
     name: 'Uykusuzluğun Kalbi',
     icon: '❤️',
-    desc: 'Ağacın kökü. 02:47\'de atmayan o kalp; tüm dalları açar.',
+    desc: 'Ağacın kökü. Tüm dalları açar ve her çöküş ile sıfırlamada 10.000 g başlangıç kütlesi verir.',
     branch: 'root',
     cost: 1,
     requires: [],
@@ -1362,6 +1367,11 @@ export const useGameStore = defineStore('game', {
     achievementsSeenCount: 0,
     achievementToastQueue: [] as string[],
 
+    // Kozmik Haber Bandı (ADR-0045) — görülen haberler & etkileşimli tıklama
+    seenNewsIds: [] as string[],
+    uselessNewsClicks: 0,
+    hasClickedSecretNews: false,
+
     // Özellik Merdiveni (v0.11.0) — yapışkan (sticky) kilitleme listesi
     unlockedFeatures: [] as string[],
 
@@ -1401,6 +1411,7 @@ export const useGameStore = defineStore('game', {
       batterySaver: false,
       floatingTexts: true,
       newsTickerEnabled: true,
+      swipeSensitivity: 'balanced' as const,
       offlineProgressModal: true,
       hotkeysEnabled: true,
       activeSlot: 1
@@ -1696,10 +1707,50 @@ export const useGameStore = defineStore('game', {
       return state.matter.gte(new Decimal(def.goalMatter))
     },
 
+    // Planck Duvarı kırıldı mı? (Break Singularity yükseltmesi veya Nöral Ağaç düğümü)
+    hasBreakSingularity(state): boolean {
+      return (
+        (state.singularityUpgrades?.break_singularity || 0) >= 1 ||
+        (state.neuralNodesBought?.break_singularity || 0) >= 1
+      )
+    },
+
     // Tekillik bekleme modu: Break Singularity alınmadıysa e308 üstünde
     // Shift/Galaxy botları ateşlenmez (tekillik penceresi korunur).
     singularityHoldActive(state): boolean {
-      return state.matter.gte(D_INFINITY) && (state.singularityUpgrades?.break_singularity || 0) < 1
+      return state.matter.gte(D_INFINITY) && !this.hasBreakSingularity
+    },
+
+    // --- OTONOMİ KOKPİTİ GETTER'LARI ---
+    isCockpitMode(state): boolean {
+      return state.singularities >= 1
+    },
+
+    isAutobuyerCockpitMode(state): boolean {
+      return state.singularities >= 1
+    },
+
+    activeAutobuyersCount(state): number {
+      return Object.values(state.autobuyers).filter((b) => b.unlocked && b.enabled).length
+    },
+
+    totalAutobuyersCount(state): number {
+      return Object.values(state.autobuyers).filter((b) => b.unlocked).length
+    },
+
+    autobuyerFleetSpeedMult(): number {
+      const chipBonus = Math.pow(1.5, this.singularityUpgrades?.neural_chip || 0)
+      const overclock = this.neuralEffects?.botFrequencyMult || 1
+      return chipBonus * overclock
+    },
+
+    autobuyerEffectiveInterval() {
+      return (id: string): number => {
+        const bot = this.autobuyers[id]
+        if (!bot) return 1
+        const speed = this.autobuyerFleetSpeedMult
+        return speed > 0 ? bot.interval / speed : bot.interval
+      }
     },
 
     // QoL: harcanabilir SP ile alınabilir Nöral Ağaç düğümü var mı? (Şafak sekmesi bildirim noktası)
@@ -1727,6 +1778,7 @@ export const useGameStore = defineStore('game', {
 
     // QoL: şartı sağlanmış ve dopaminle alınabilir kilitli bot var mı? (Botlar sekmesi bildirim noktası)
     hasAffordableLockedBot(state): boolean {
+      if (state.singularities >= 1) return false // Prestij sonrası dükkan kapalı; tüm botlar kokpitte
       return Object.values(state.autobuyers).some((bot) => {
         if (bot.unlocked) return false
         if (!this.isAutobuyerRequirementMet(bot.id)) return false
@@ -1936,6 +1988,14 @@ export const useGameStore = defineStore('game', {
         rankColor = 'text-blue-400'
       }
 
+      const matterForScale = state.stats.totalMatterProduced.gt(state.matter)
+        ? state.stats.totalMatterProduced
+        : state.matter
+      const notation = state.settings.notation
+      const cosmicPrey = calculateCosmicPreyLadder(matterForScale, notation)
+      const eventHorizon = calculateEventHorizon(matterForScale, notation)
+      const writingParadox = calculateWritingParadox(matterForScale, notation)
+
       return {
         thumbDistanceMeters: meters,
         thumbDistanceKm: km,
@@ -1944,20 +2004,35 @@ export const useGameStore = defineStore('game', {
         blueLightPhotons: bluePhotons,
         zombieRank: rank,
         zombieRankColor: rankColor,
-        milestoneHint
+        milestoneHint,
+        cosmicPrey,
+        eventHorizon,
+        writingParadox
       }
     },
 
     singularityGain(state): Decimal {
       if (state.activeChallenge) return D_0
       if (state.matter.lt(D_INFINITY)) return D_0
+
+      const hasBreak = (state.singularityUpgrades?.break_singularity || 0) >= 1 ||
+                       (state.neuralNodesBought?.break_singularity || 0) >= 1
+
+      // 1. EVRE: Planck Duvarı Henüz Yıkılmadı (İlk ~5 koşu)
+      // Ne kadar kütle üretilirse üretilsin, tam olarak 1 SP verilir.
+      if (!hasBreak) {
+        return D_1
+      }
+
+      // 2. EVRE: Planck Duvarı Yıkıldı (Break Singularity Aktif)
+      // Taban 3 SP + Kütle 1e308'i aştıkça üstel büyüme
       const logMatter = state.matter.log10().toNumber()
       const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
       const spMult = memoChallengeEffects(state.completedChallenges).spMult
       const totalMult = dawnSpeedMult * spMult
-      // Denge: İlk çöküşün taban ödülü 3 SP garanti edilir (oyuncu kök + 2 başlangıç yükseltmesiyle 2. koşuya güçlü başlar).
-      // Üstü her +45 dekadda x10 ölçeklenir.
-      const rawGain = Decimal.pow(10, Math.max(0, (logMatter - 308) / 45)).times(3).times(totalMult)
+
+      const logDiff = Math.max(0, logMatter - 308)
+      const rawGain = Decimal.pow(10, logDiff / 45).times(3).times(totalMult)
       const floored = Decimal.floor(rawGain)
       return floored.gte(3) ? floored : new Decimal(3)
     },
@@ -2819,10 +2894,23 @@ export const useGameStore = defineStore('game', {
       return hasAchievementReward(state.achievements, 'buff_duration') ? 1.2 : 1
     },
 
-    achievementStartingMatter(state): Decimal {
-      return hasAchievementReward(state.achievements, 'starting_matter')
-        ? new Decimal(1000)
-        : new Decimal(10)
+    startingMatter(state): Decimal {
+      // 1. Öncelik: Nöral Ağaç kök düğümü (Uykusuzluğun Kalbi) -> 10.000 g
+      if ((state.neuralNodesBought?.insomnia_heart || 0) >= 1) {
+        return new Decimal(10000)
+      }
+
+      // 2. Öncelik: 3 Tekillik Başarımı ('starting_matter') -> 1.000 g
+      if (hasAchievementReward(state.achievements, 'starting_matter')) {
+        return new Decimal(1000)
+      }
+
+      // 3. Varsayılan erken oyun kütlesi -> 10 g
+      return new Decimal(10)
+    },
+
+    achievementStartingMatter(): Decimal {
+      return this.startingMatter
     },
 
     achievementProductionMult(state): number {
@@ -3199,7 +3287,7 @@ export const useGameStore = defineStore('game', {
         this.celebrateFormatUnlock(capAfter)
       }
 
-      this.matter = this.achievementStartingMatter
+      this.matter = this.startingMatter
       this.dimensions.forEach((d) => {
         d.amount = new Decimal(0)
         d.bought = 0
@@ -3248,7 +3336,7 @@ export const useGameStore = defineStore('game', {
 
       this.galaxies++
       this.dimensionShifts = 0
-      this.matter = this.achievementStartingMatter
+      this.matter = this.startingMatter
       this.dimensions.forEach((d) => {
         d.amount = new Decimal(0)
         d.bought = 0
@@ -3296,7 +3384,10 @@ export const useGameStore = defineStore('game', {
       // exitChallenge, completeChallenge) tek kancayla korunur.
       this.syncUnlocks()
 
-      this.matter = this.achievementStartingMatter
+      // ADR-0036 / Kokpit Garantisi: Prestijli oyuncuların botları asla sıfırlanmaz
+      this.ensureAutobuyersPreserved()
+
+      this.matter = this.startingMatter
       this.dimensions.forEach((d) => {
         d.amount = new Decimal(0)
         d.bought = 0
@@ -3699,8 +3790,63 @@ export const useGameStore = defineStore('game', {
       sounds.playToggleBot()
     },
 
+    // Tüm açılmış botları tek tıkla aç / kapat
+    toggleAllAutobuyers(enable?: boolean): void {
+      const unlockedBots = Object.values(this.autobuyers).filter((b) => b.unlocked)
+      if (unlockedBots.length === 0) return
+
+      const targetState = enable !== undefined ? enable : !unlockedBots.every((b) => b.enabled)
+      unlockedBots.forEach((b) => {
+        b.enabled = targetState
+      })
+      sounds.playToggleBot()
+    },
+
+    // Tüm açılmış botların modunu tek tıkla değiştir ('single' | 'bulk' | 'max')
+    setAllAutobuyerModes(mode: AutobuyerMode): boolean {
+      if (mode === 'bulk' && !this.autobuyerBulkUnlocked) return false
+      if (mode === 'max' && !this.autobuyerMaxUnlocked) return false
+
+      Object.keys(this.autobuyers).forEach((id) => {
+        const bot = this.autobuyers[id]
+        if (bot && bot.unlocked && id !== 'singularity') {
+          bot.mode = mode
+          bot.interval = getAutobuyerInterval(id, mode)
+          bot.timer = 0
+        }
+      })
+      sounds.playToggleBot()
+      return true
+    },
+
+    // Prestij / Deserialize Kalıcılık Garantisi
+    ensureAutobuyersPreserved(): void {
+      if (this.singularities >= 1) {
+        // 1. Kademe kilitleri kalıcı açılır
+        this.autobuyerBulkUnlocked = true
+        this.autobuyerMaxUnlocked = true
+
+        // 2. Temel 11 bot kalıcı olarak açılır
+        const permanentIds = [
+          'dim1', 'dim2', 'dim3', 'dim4', 'dim5', 'dim6', 'dim7', 'dim8',
+          'tickspeed', 'shift', 'galaxy'
+        ]
+        permanentIds.forEach((id) => {
+          if (this.autobuyers[id]) {
+            this.autobuyers[id].unlocked = true
+          }
+        })
+
+        // 3. Şafak Nöbeti Botu: 3. çöküşten sonra kalıcı açılır
+        if (this.singularities >= 3 && this.autobuyers.singularity) {
+          this.autobuyers.singularity.unlocked = true
+        }
+      }
+    },
+
     // Otomatik Bot Kilidini Aç (her zaman tekli modda başlar)
     unlockAutobuyer(id: string): boolean {
+      if (this.singularities >= 1) return false
       const bot = this.autobuyers[id]
       if (!bot || bot.unlocked) return false
       if (!this.isAutobuyerRequirementMet(id)) return false
@@ -4058,6 +4204,24 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    // ---- Kozmik Haber Bandı Takibi (ADR-0045) ----
+    recordNewsSeen(newsId: string): void {
+      if (!this.seenNewsIds.includes(newsId)) {
+        this.seenNewsIds.push(newsId)
+        if (this.seenNewsIds.length >= 50) {
+          this.checkAchievements()
+        }
+      }
+    },
+
+    recordNewsClick(isSecret = false): void {
+      this.uselessNewsClicks++
+      if (isSecret) {
+        this.hasClickedSecretNews = true
+      }
+      this.checkAchievements()
+    },
+
     // ---- Başarım Kontrol Motoru (update() sonunda çalışır; offline'da da tetiklenir) ----
     checkAchievements(): void {
       if (this.achievements.length >= ACHIEVEMENTS.length) return
@@ -4108,7 +4272,9 @@ export const useGameStore = defineStore('game', {
         activeSlackers: this.slackers.length,
         leechedTotal: this.slackers.reduce((a, s) => a.plus(s.leechedDopamine), D_0),
         wallHour: new Date().getHours(),
-        completedChallenges: [...this.completedChallenges]
+        completedChallenges: [...this.completedChallenges],
+        seenNewsCount: this.seenNewsIds.length,
+        hasClickedSecretNews: this.hasClickedSecretNews
       }
 
       let newCount = 0
@@ -4949,6 +5115,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         mythicPity: this.mythicPity || 0,
         achievements: [...this.achievements],
         achievementsSeenCount: this.achievementsSeenCount,
+        seenNewsIds: [...(this.seenNewsIds || [])],
+        uselessNewsClicks: this.uselessNewsClicks || 0,
+        hasClickedSecretNews: this.hasClickedSecretNews || false,
         unlockedFeatures: [...this.unlockedFeatures],
         // ADR-0035 (v15): açılış kalıcılığının asıl kaydı.
         lifetimePeakMatter: this.lifetimePeakMatter.toString(),
@@ -5188,6 +5357,12 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
 
         this.autobuyerBulkUnlocked = data.autobuyerBulkUnlocked ?? false
         this.autobuyerMaxUnlocked = data.autobuyerMaxUnlocked ?? false
+
+        // Prestijli kayıt kalıcılık onarımı (Save migration guarantee)
+        if (this.singularities >= 1) {
+          this.ensureAutobuyersPreserved()
+        }
+
         if (!this.autobuyerBulkUnlocked) {
           Object.values(this.autobuyers).forEach((b) => {
             if (b.mode === 'bulk' || b.mode === 'max') {
@@ -5318,6 +5493,16 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           this.achievementsSeenCount = data.achievementsSeenCount
         }
 
+        if (Array.isArray(data.seenNewsIds)) {
+          this.seenNewsIds = data.seenNewsIds.filter((id) => typeof id === 'string')
+        }
+        if (typeof data.uselessNewsClicks === 'number') {
+          this.uselessNewsClicks = clampSavedNumber(data.uselessNewsClicks, 0, 0, 1000000)
+        }
+        if (typeof data.hasClickedSecretNews === 'boolean') {
+          this.hasClickedSecretNews = data.hasClickedSecretNews
+        }
+
         if (data.settings) {
           this.settings = { ...this.settings, ...data.settings }
           sounds.enabled = this.settings.soundEnabled
@@ -5339,6 +5524,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           if (this.settings.batterySaver === undefined) this.settings.batterySaver = false
           if (this.settings.floatingTexts === undefined) this.settings.floatingTexts = true
           if (this.settings.newsTickerEnabled === undefined) this.settings.newsTickerEnabled = true
+          if (this.settings.swipeSensitivity === undefined) this.settings.swipeSensitivity = 'balanced'
           if (this.settings.offlineProgressModal === undefined) this.settings.offlineProgressModal = true
           if (this.settings.hotkeysEnabled === undefined) this.settings.hotkeysEnabled = true
           if (this.settings.activeSlot === undefined) this.settings.activeSlot = SaveSystem.getActiveSlot()

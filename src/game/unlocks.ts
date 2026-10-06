@@ -233,9 +233,9 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   {
     id: 'autobuyers',
     name: 'Otomatik Botlar Sekmesi',
-    hint: '1e12 Dopamin biriktir',
-    req: { kind: 'dopamine', amount: decadeGate(12) },
-    order: 120
+    hint: '1.000.000.000 (1e9) Dopamin biriktir',
+    req: { kind: 'dopamine', amount: decadeGate(9) },
+    order: 90
   },
   {
     id: 'stance_spam',
@@ -330,8 +330,8 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   },
   {
     id: 'challenges',
-    name: 'Gece Kriz Meydan Okumaları',
-    hint: '1 Sabah 06:00 Çöküşü yaşa',
+    name: 'Kozmik Meydan Okumalar',
+    hint: '1 Kozmik Çöküş yaşa',
     req: { kind: 'singularities', count: 1 },
     order: ARC_LOG10_MAX * 10 + 10
   }

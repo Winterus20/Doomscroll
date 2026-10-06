@@ -187,7 +187,7 @@ function handleAnomalyKey(anomaly: FloatingAnomaly, event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="layer-anomaly pointer-events-none fixed inset-0 overflow-hidden">
+  <div class="layer-anomaly pointer-events-none fixed inset-0 w-screen h-screen max-w-full max-h-full overflow-hidden">
     <!-- 1. Yüzen Gece Krizleri (Balatro Lazer Beam & Holo Kapsülleri) -->
     <TransitionGroup name="anomaly-pop" tag="div" class="absolute inset-0">
       <div
@@ -201,7 +201,6 @@ function handleAnomalyKey(anomaly: FloatingAnomaly, event: KeyboardEvent) {
         @keydown="handleAnomalyKey(anomaly, $event)"
         class="anomaly-wobble anomaly-item pointer-events-auto absolute cursor-pointer select-none"
         :class="{
-          'panic-pulse': anomaly.remainingTime <= 3.5,
           'anomaly-mythic': anomaly.type === 'void'
         }"
       >
@@ -209,7 +208,11 @@ function handleAnomalyKey(anomaly: FloatingAnomaly, event: KeyboardEvent) {
         <div
           v-tilt="getTiltConfig(anomaly.type)"
           class="anomaly-capsule card-tilt-surface relative overflow-hidden rounded-2xl p-[1.5px] transition-all min-w-[220px] max-w-[86vw] sm:min-w-[260px] sm:max-w-[340px]"
-          :class="[getCapsuleGlow(anomaly.type), getAnomalyEdition(anomaly.type)]"
+          :class="[
+            getCapsuleGlow(anomaly.type),
+            getAnomalyEdition(anomaly.type),
+            anomaly.remainingTime <= 3.5 ? 'panic-pulse' : ''
+          ]"
         >
           <!-- Dönen Lazer Çerçeve (Border Beam Lazer) -->
           <div class="anomaly-beam-border"></div>

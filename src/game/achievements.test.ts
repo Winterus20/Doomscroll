@@ -95,7 +95,9 @@ function zeroContext(): AchievementContext {
     activeSlackers: 0,
     leechedTotal: new Decimal(0),
     wallHour: 0,
-    completedChallenges: []
+    completedChallenges: [],
+    seenNewsCount: 0,
+    hasClickedSecretNews: false
   }
 }
 
@@ -135,7 +137,9 @@ function saturatedContext(): AchievementContext {
     activeSlackers: 5,
     leechedTotal: new Decimal('1e40'),
     wallHour: 2,
-    completedChallenges: [...CHALLENGE_IDS]
+    completedChallenges: [...CHALLENGE_IDS],
+    seenNewsCount: 100,
+    hasClickedSecretNews: true
   }
 }
 
@@ -287,6 +291,21 @@ describe('achievement registry integrity', () => {
     for (let h = 0; h < 24; h++) {
       expect(def.check({ ...zeroContext(), wallHour: h })).toBe(h === 2)
     }
+  })
+
+  it('keys news ticker achievements on seenNewsCount and hasClickedSecretNews', () => {
+    const fakeNews = getAchievement('dop_fake_news')
+    const realNews = getAchievement('dop_real_news')
+    expect(fakeNews).toBeDefined()
+    expect(realNews).toBeDefined()
+    if (!fakeNews || !realNews) return
+
+    expect(fakeNews.check({ ...zeroContext(), seenNewsCount: 49 })).toBe(false)
+    expect(fakeNews.check({ ...zeroContext(), seenNewsCount: 50 })).toBe(true)
+    expect(fakeNews.check({ ...zeroContext(), seenNewsCount: 100 })).toBe(true)
+
+    expect(realNews.check({ ...zeroContext(), hasClickedSecretNews: false })).toBe(false)
+    expect(realNews.check({ ...zeroContext(), hasClickedSecretNews: true })).toBe(true)
   })
 
   it('mirrors the challenge registry one-for-one', () => {

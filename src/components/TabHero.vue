@@ -25,12 +25,18 @@ withDefaults(
 
 <template>
   <div class="panel-hero" :class="`hero-accent-${accent}`">
-    <div class="hero-orb" aria-hidden="true"></div>
-    <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <!-- Minimalist HUD Reticle & Geometrik Arka Plan Vurgusu -->
+    <div class="hero-reticle" aria-hidden="true">
+      <div class="reticle-line-h"></div>
+      <div class="reticle-line-v"></div>
+      <div class="reticle-ring"></div>
+    </div>
+
+    <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-3 z-10">
       <div class="min-w-0">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
           <component :is="icon" class="w-5 h-5 shrink-0" :class="iconClass" />
-          <h2 class="text-base font-extrabold text-slate-50 truncate">
+          <h2 class="text-base font-extrabold text-slate-100 tracking-tight truncate">
             {{ title }}
           </h2>
           <span v-if="badge" class="ds-badge" :class="badgeClass">{{ badge }}</span>
@@ -46,8 +52,45 @@ withDefaults(
         <slot name="stats"></slot>
       </div>
     </div>
-    <div v-if="$slots.alert" class="relative mt-3">
+    <div v-if="$slots.alert" class="relative mt-3 z-10">
       <slot name="alert"></slot>
     </div>
   </div>
 </template>
+
+<style scoped>
+.hero-reticle {
+  position: absolute;
+  right: -1rem;
+  top: -1.5rem;
+  width: 7rem;
+  height: 7rem;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.reticle-ring {
+  position: absolute;
+  inset: 1rem;
+  border-radius: 9999px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.reticle-line-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+}
+
+.reticle-line-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+}
+</style>

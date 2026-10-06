@@ -192,6 +192,11 @@ function toggleNewsTicker() {
   sounds.playClick()
 }
 
+function setSwipeSensitivity(val: 'balanced' | 'low' | 'off') {
+  store.settings.swipeSensitivity = val
+  sounds.playClick()
+}
+
 // --- Ses & Lo-Fi Mikser Ayarları ---
 function toggleSound() {
   store.settings.soundEnabled = !store.settings.soundEnabled
@@ -848,6 +853,45 @@ function executeHardReset() {
             >
               {{ (store.settings.newsTickerEnabled ?? true) ? 'Açık' : 'Kapalı' }}
             </button>
+          </div>
+
+          <!-- Mobil Ekran Kaydırma & Fiske Jest Hassasiyeti -->
+          <div class="glass-panel-card p-3.5 rounded-xl space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs font-mono font-semibold text-slate-200">Mobil Ekran Jest Hassasiyeti</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Ekranda yukarı kaydırarak manuel kütle üretme jesti</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+              <button
+                type="button"
+                @click="setSwipeSensitivity('balanced')"
+                class="px-2 py-1.5 rounded-lg text-xs font-mono font-semibold border transition-all text-center cursor-pointer"
+                :class="(store.settings.swipeSensitivity ?? 'balanced') === 'balanced' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-black/40 text-slate-400 border-white/[0.06] hover:text-slate-200'"
+              >
+                Dengeli
+              </button>
+              <button
+                type="button"
+                @click="setSwipeSensitivity('low')"
+                class="px-2 py-1.5 rounded-lg text-xs font-mono font-semibold border transition-all text-center cursor-pointer"
+                :class="store.settings.swipeSensitivity === 'low' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-black/40 text-slate-400 border-white/[0.06] hover:text-slate-200'"
+              >
+                Düşük (Sert)
+              </button>
+              <button
+                type="button"
+                @click="setSwipeSensitivity('off')"
+                class="px-2 py-1.5 rounded-lg text-xs font-mono font-semibold border transition-all text-center cursor-pointer"
+                :class="store.settings.swipeSensitivity === 'off' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-black/40 text-slate-400 border-white/[0.06] hover:text-slate-200'"
+              >
+                Kapalı
+              </button>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono">
+              {{ (store.settings.swipeSensitivity ?? 'balanced') === 'off' ? 'Jest kapalı: Sayfa kaydırırken asla tıklama yapmaz. Yalnızca butonla yutulur.' : (store.settings.swipeSensitivity ?? 'balanced') === 'low' ? 'Düşük hassasiyet: Yalnızca hızlı ve sert fiske hareketleri kabul edilir.' : 'Dengeli: Sayfa kaydırmaları elenir; kasıtlı hızlı fiskeler kütle üretir.' }}
+            </div>
           </div>
         </div>
 

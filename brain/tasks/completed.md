@@ -1,5 +1,365 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-06] — SP İlerleme Eğrisi (1-1-1 Pre-Break & Üstel Post-Break), Başlangıç Kütlesi ve Kozmik Otonomi Kokpiti (v0.37.0)
+
+### Kullanıcı Talebi ve Mimari Kararlar:
+- **Tekil SP İlerlemesi:** İlk tekillikte (ve Planck Duvarı kırılana kadar) net **1 SP** kazanımı. Planck Duvarı kırıldıktan (`hasBreakSingularity`) sonra ise diğer inkremental devlerdeki gibi üstel artış ($3 \to 5 \to 10 \to 50 \to 100\dots$).
+- **Hibrit Bot Yaşam Döngüsü (Anti-Frustration):** İlk koşuda botlar $10^9\text{ g}$ eşiğinde kütle ile kademeli açılır. Ancak ilk prestijden (`singularities >= 1`) sonra tüm standart botlar (D1–D8, Hz, Shift, Galaxy) **kalıcı olarak açık** kalır, kütle satın alma dükkanı kalkar ve arayüz **Kozmik Otonomi Kokpiti**ne dönüşür.
+- **Başlangıç Kütlesi:** Nöral Ağaç kök düğümü (`insomnia_heart`) her çöküş ve sıfırlamada +10.000 g kütle verir, böylece sonraki koşularda ilk botlar saniyeler içinde anında ateşlenir.
+
+### Gerçekleştirilen Geliştirmeler:
+1. **SP Eğrisi ve Planck Duvarı Mantığı (`src/stores/game.ts`):**
+   - `hasBreakSingularity`: Tekillik yükseltmesi veya nöral düğümü kontrol eden reaktif getter.
+   - `singularityGain`: `!hasBreakSingularity` iken net `D_1` (1 SP). `hasBreakSingularity` iken $10^{308}\text{ g}$ için taban 3 SP + kütle arttıkça $3 \times 10^{\frac{\Delta \log_{10}}{45}}$ üstel ölçekleme.
+   - `singularityHoldActive`: Planck duvarı kırılana kadar kütle $1.79\times 10^{308}\text{ g}$ eşiğinde kilitlenir.
+   - `startingMatter`: `insomnia_heart >= 1` ise 10.000 g; `starting_matter` başarımı varsa 1.000 g; aksi halde 10 g. `resetRunState()`, `dimensionShift()`, `buyGalaxy()` metodlarına entegre edildi.
+2. **Kozmik Otonomi Kokpiti (`src/components/AutobuyersTab.vue` & `src/stores/game.ts`):**
+   - `singularities >= 1` iken kalıcı lisans (`ensureAutobuyersPreserved()`) ile `resetRunState()` veya meydan okumalarda botların kapanması/kilitlenmesi engellendi.
+   - UI dükkandan Kokpite evrildi: Master Switch ("Tümünü Başlat / Durdur"), Filo Hızlı Mod Atama ("Tümünü MAKS Yap", "Tümünü ×10 Yap", "Tümünü ×1 Yap"), kompakt D1-D8 kanadı ve özel otomasyon kartları.
+   - `App.vue` sekme butonu dinamikleşti: İlk koşuda `"Botlar"`, çöküşten sonra `"Kokpit"`.
+3. **İlk Koşu Pacing İnce Ayarı (3 Saat 30 Dakika Kalibrasyonu):**
+   - `DIM_PER_TEN_MULT` parametresi `1.58` $\to$ **`1.595`** olarak güncellendi.
+   - Nilpotent ODE kaskadı boyunca kümülatif yayılarak ilk koşu süresini 4 saat 11 dakikadan tam hedeflenen **3 saat 30 dakika** altın standardına sabitledi.
+4. **Doğrulama ve Testler:**
+   - `src/stores/balance.test.ts`: 1 SP Planck tavanı ve üstel post-break formülü test edildi.
+   - `src/stores/autobuyers-cockpit.test.ts`: 7 birim testi ile kokpit dayanıklılığı ve filo kontrolleri doğrulandı.
+   - `npm test`: **188/188 test başarılı.**
+   - `npm run build`: **0 hata ile temiz production bundle oluşturuldu.**
+
+## [2026-10-06] — UROBOROS Faz 0 (0 → 1.79e308 g) Matematiksel Denetim, Literatür Araştırması ve 3-4 Saatlik Pacing Dengeleme Raporu
+
+### Kullanıcı Talebi:
+- *"oyunun guclendirmeler, iste matematiksel her seyini cikaran ve dengeleyecek bir ekip kur bu ekip once olan matematigi cikarsin sonra internetten arastirma yapsin derin ve detayli iste en iyi sekilde nasil olur gibisinden sonra bu verilerle 3,4 saate 1e308 e kadar nasil bir denge kurabiliriz bunu arastirsin ekstradan senin soyleyecegin veya onerecegin bir sey varsa soylersin bu projede sen ve ben iki beyin calisacagiz subagentlari sen yoneteceksin onlar senin ekibin gibi"*
+
+### Kurulan Ekip ve İş Bölümü:
+1. **İki Beyin Yönetim Konseyi:** Ürün Sahibi (Creative Director) & Antigravity (Lead System Architect).
+2. **Baş Matematik Denetçisi (Subagent 1):** Kod tabanındaki tüm boyutları (D1-D8), maliyet kovalarını, her 10 alım çarpanını (1.58x), tickspeed fonksiyonunu ($16^n$, galaxyBonus), sıçrama gereksinimlerini, galaksi formüllerini, duruşları, anomalileri ve kısıtları çıkardı.
+3. **İnkremental Oyun Teorisyeni (Subagent 2):** *Antimatter Dimensions*, *Cookie Clicker*, *Synergism*, *Trimps* literatürünü, $O(t^8 / 8!)$ ODE nil-potent matris kaskadını, polinomik vs üstel tickspeed kesişimini ve bumpy pacing modelini araştırdı.
+4. **Doğrulama ve Ölçüm (Headless Harness):** `run.ts` simülatörü çalıştırıldı; aktif oyuncunun ilk tekilliğe (1.79e308 g) **4 saat 11 dakika 12 saniyede (251 dk)** ulaştığı kanıtlandı.
+
+### Çıkan Temel Belgeler:
+- `brain/research/ouroboros-phase0-mathematical-architecture-and-pacing.md` (Kapsamlı matematiksel mimari ve dengeleme yol haritası).
+- Hassas duyarlılık analizi ve 3-4 saat (180-240 dk) bandına ince ayar stratejileri.
+
+## [2026-10-06] — Başarımların ve Meydan Okumaların UROBOROS: The Cosmic Feast Temasına Dönüştürülmesi (v0.36.0)
+
+### Kullanıcı Talebi:
+- *"basarimlarin isimleri onceki temadan kalmanonlari duzelt"*
+
+### Durum ve Tespit:
+- Eski prototip teması olan *Doomscroll: The Endless Reels* (Dopamin, başparmak, gece 3, kedi videoları, reels ordusu, vicdan azapları, uykusuzluk, uçak modu) döneminden kalma 67 başarımı ve 8 kategoriyi içeren `src/game/achievements.ts`, UROBOROS'a tam olarak dönüştürülmemişti.
+- Meydan okuma tanımları (`src/game/challenges.ts`) ve özellik kilitlerindeki (`src/game/unlocks.ts`) bazı adlandırmalar da eski telefon/gece metaforlarını taşıyordu.
+
+### Yapılan Değişiklikler:
+1. **Başarım Kategorileri (`ACHIEVEMENT_CATEGORIES`):**
+   - `dopamine` $\to$ **Kozmik Kütle Açlığı** ("Maddeyi yut, kütle biriktir. Olay ufkunun kaderi.")
+   - `dimensions` $\to$ **Kütle Boyutları** ("Moleküllerden Samanyolu'na, çekim hızı ve ölçek sıçramaları.")
+   - `automation` $\to$ **Otonom Çekim Ağı** ("Botları devreye sok, toplu ve maksimum çekime geç.")
+   - `crisis` $\to$ **Kozmik Dalgalanmalar** ("Kozmik anomaliler, süpernova patlamaları ve rezonans komboları.")
+   - `guilt` $\to$ **Kozmik Parazitler** ("Olay ufkuna dadanırlar, kütle emerler, patlatılırlar.")
+   - `lab` $\to$ **Kuantum Laboratuvarı** ("İzotop ek, reaksiyonu olgunlaştır, hasat et ve mutasyon yarat.")
+   - `singularity` $\to$ **Kozmik Tekillik** ("Büyük Çöküşü yaşa, SP biriktir, evrensel döngüyü sürdür.")
+   - `challenges` $\to$ **Kozmik Meydan Okumalar** ("Uzay-zaman bozulmalarını ve Planck krizlerini aş.")
+2. **Tüm 67 Başarım İsmi, Açıklaması, İkonu ve Ödül Metinleri Yenilendi (`src/game/achievements.ts`):**
+   - `dop_first` .. `dop_tekillik`: İlk Kuantum Yutumu, Çekim Isınması, Obur Çekim Maratonu, Doyumsuz Tekillik, İlk Kütle Patlaması, Moleküler Çözünme, Kozmik Obur, Olay Ufku Nöbetçisi, Planck Duvarı Eşiği, Yerçekimi Hükümdarı, Termodinamik İhlali, Işığın Kaçamadığı Nokta, Sonsuz Çekim Alanı, Kozmik Çöküş Eşiği, Evrensel Tekillik.
+   - Gizli başarımlar: Kozmik Gece Nöbeti, Kozmik Parazit Sinyali, Doğrudan Kozmik İletim.
+   - Boyut başarımları: Bağları Parçala, Kütleçekim Zinciri, Çekim Hızı Yükseltmesi, Hiper-Çekim Rezonansı, İlk Ölçek Sıçraması, Galaktik Genişleme, Kozmik Kütle Kümesi, Saf Tekillik.
+   - Otomasyon: İlk Otonom Çekici, Çekim Botu Filosu, Kozmik Otonomi, Toplu Çekim Modu, Maksimum Olay Ufku, Frekans Modülatörü, Sıçrama Operatörü, Küme Mimarı, Kuantum Çekirdeği, Durgunluk Evresi, Milyonluk Alt-Sürü.
+   - Dalgalanmalar: İlk Kozmik Dalgalanma, Dalgalanma Avcısı, Kozmik Gözlemci, Süper Rezonans, Boşluk Tekilliği, Rezonans Ustası, İlk Alan Müdahalesi, Kriz Operatörü, Kozmik Anomali Müptelası.
+   - Parazitler: İlk Çekim Paraziti, Parazit Püskürtme, Çekim Arındırıcı, Geçirimsiz Olay Ufku, Parazit Kümelenmesi, Kütle Oburu Parazit, Parazit Yalıtkanı, Parazit Katili.
+   - Kuantum Lab: İlk Kuantum Tohumu, İlk Kuantum Hasadı, İzotop Araştırmacısı, Endüstriyel Kuantum Sentezi, Reaksiyon Dengesi, Kritik Kütle Matrisi, Kozmik Mutasyon, Saf Tekillik İzotopu.
+   - Tekillik: Olay Ufkunun Şafağı, İlk Büyük Çöküş, Üç Çöküş Döngüsü, Tekillik Rezervi, Tekillik Ağacı, Bir Saatlik Tekillik, Kozmik Mesai, Kozmik Hükümdar.
+   - Meydan Okumalar: İzolasyonun Sonu, Durgunluk Kırılması, Kuantum Kararlılığı, Kırık Simetri Fatihi, Enflasyon Fatihi, Zamanın Efendisi, Boyut Yırtıcı, Fırtına Dindirici.
+3. **Meydan Okuma Tanımları ve Flavorları Kozmik Kimliğe Taşındı (`src/game/challenges.ts`):**
+   - C1: **Vakum İzolasyonu** (Otonom botlar devre dışı)
+   - C2: **Kütleçekim Durgunluğu** (Her alımda 3 sn duraklama)
+   - C3: **Kuantum Kararsızlığı** (D1 zayıf başlar, üstel büyür)
+   - C4: **Simetri Kırılması** (Yalnızca tek kütle boyutları çalışır)
+   - C5: **Kozmik Enflasyon** (Her alım diğer maliyetleri şişirir)
+   - C6: **Zaman Genleşmesi** (Çekim hızı frekansı yavaşlar)
+   - C7: **Boyutsal Çöküş** (Yalnızca ilk 6 boyut aktif)
+   - C8: **Radyasyon Fırtınası** (Hawking radyasyon birikimi)
+4. **UI İpucu ve Kilit Düzeltmeleri:**
+   - `src/components/AchievementsTab.vue`: Gizli başarım ipucu "geceyi kurcala" yerine "olay ufkunu kurcala" olarak güncellendi.
+   - `src/game/unlocks.ts`: `challenges` özelliği için "Kozmik Meydan Okumalar" ve "1 Kozmik Çöküş yaşa" metinleri sağlandı.
+5. **Doğrulama ve Kalite Kapısı:**
+   - `npm test`: 176/176 test yeşil.
+   - `npm run build`: `vue-tsc && vite build` sıfır hata ile production bundle derlendi.
+
+## [2026-10-06] — Antimatter Dimensions Tarzı Kozmik Haber Bandı (News Ticker) & İronik/Mizahi Mesaj Motoru (v0.35.0)
+
+### Kullanıcı Talebi:
+- *"bu canli yayin kismini antimatter dimensions daki gibi yazilar yazdirmak istiyorum onun yazilarini bul internetten oku sonra en iyi plani yap"*
+- *"en guzel sekilde ironik seyler mizahi seyler falan hepsinden doldur en iyi sekilde"*
+
+### Araştırma ve Kaynak Kod Bulguları:
+- *Antimatter Dimensions* açık kaynak deposu (`IvarK/AntimatterDimensionsSourceCode`) incelendi:
+  - `src/core/secret-formula/news.js`: 1.470+ haber ve espri mesajı (`unlocked`, `onClick`, `dynamic`).
+  - `src/components/ui-modes/NewsTicker.vue`: Marquee kaydırma motoru, son 15 haberi tutan `recentTickers` tampon belleği, `onLineClick` ile tetiklenen gizli başarımlar.
+  - Başarımlar: `FAKE NEWS!` (50 haber gör) ve `Real news` (tıklanabilir habere tıkla).
+
+### Yapılan Geliştirmeler:
+1. **Bağımsız Haber Veritabanı Modülü (`src/game/news.ts`):**
+   - 100+ özenle hazırlanmış, Türkçe yerelleştirilmiş, ironik, mizahi ve bilimsel haber havuzu.
+   - **Grup 1 (AD Klasikleri):** Hevipelle alıntıları ("IN THE END, IT DOESN'T ANTIMATTER"), 5 saatlik güncelleme şakaları, 9. boyut teorileri ("9'un karekökü 3'tür, var olamaz"), $1.79\times 10^{308}$ dertleri, Max All dopamini, `NaN` ve bilimsel notasyon satirleri.
+   - **Grup 2 (Uroboros Kozmik Lore):** Su damlasındaki karbon bağından Samanyolu'nu yutan kara deliğe kadar açılan hikaye (Belediye duyuruları, stajyerin kahve fincanı, Jüpiter'in fıstık gibi çıtırdaması, Satürn halkalarının karadeliğe atkı olması, Güneş'e el sallama).
+   - **Grup 3 (Doomscroll & Dopamin Satiri):** Gece 03:00 telefon bağımlılığı, maraton koşan başparmak, mavi ışık filtresi ve tost yapılabilen telefon arka kapağı esprileri.
+   - **Grup 4 (İnkremental & Sayı Motoru):** Cookie Clicker, Trimps, Synergism göndermeleri; `break_eternity.js`, emekli olan `BigInt` ve accumulator döngüsü satirleri.
+   - **Grup 5 (Dinamik Canlı Şablonlar):** Anlık kütleye (`Sadece {kütle} g mı? Yuvarlama hatası`), frekansa (Hz) ve boyut sayısına göre gerçek zamanlı değişen metinler.
+   - **Grup 6 (İnteraktif Easter Egg'ler):**
+     - `Disco Time! (bana tıkla!)` $\rightarrow$ Gökkuşağı neon border ve parıltılı metin animasyonu.
+     - `DİKKAT: Bu haber saf anti-maddeden yapılmıştır!` $\rightarrow$ Ekran sarsıntısı (`doomscroll:shake`), patlama sesi ve metin değişimi.
+     - `Bu habere tıkladığında hiçbir şey olmuyor.` $\rightarrow$ Tıklama sayacıyla oyuncuyla dalga geçen ve 10. tıkta kütle veren gizli buton.
+     - `Bu mesajı ters çevirmek için tıkla!` $\rightarrow$ 180° takla atan metin transformu.
+     - `🎲 Şanslı Dalgalanma!` $\rightarrow$ Konfeti + kütle ödülü.
+2. **Store & Kayıt Entegrasyonu (`src/stores/game.ts` & `src/models/types.ts`):**
+   - `seenNewsIds: string[]`, `uselessNewsClicks: number`, `hasClickedSecretNews: boolean` alanları state'e, `serialize` ve `deserialize` katmanlarına eklendi.
+   - `recordNewsSeen(newsId)` ve `recordNewsClick(isSecret)` aksiyonları tanımlandı.
+3. **Başarım Entegrasyonu (`src/game/achievements.ts`):**
+   - `dop_fake_news` ("SAHTE HABER!"): 50 farklı haber bandı mesajı gör.
+   - `dop_real_news` ("GERÇEK HABER"): Tıklanabilir interaktif bir habere tıkla.
+4. **Bileşen Yenilenmesi (`src/components/CommentTicker.vue`):**
+   - Tekrarı kesin olarak önleyen 15 elemanlık FIFO `recentTickers` tamponu.
+   - Hover ile duraklatma (Pause on hover), hız değiştirici (1x / 1.6x), hızlı ileri sarma butonu.
+   - Web Audio (`playTallyTick`, `playMythicCollect`, `playAnomaly`), Haptic titreşim ve `canvas-confetti` entegrasyonu.
+5. **Doğrulama:**
+   - Birim testleri: `npm test` $\rightarrow$ 165/165 yeşil (%100 başarı).
+   - Derleme: `npm run build` (`vue-tsc && vite build`) $\rightarrow$ 0 hata, 4.87 saniye.
+   - Mimari Karar Belgesi: [`ADR-0045`](file:///data/data/com.termux/files/home/incremental/brain/decisions/0045-antimatter-dimensions-cosmic-news-ticker.md).
+
+## [2026-10-06] — Sarsıntı (Screen Shake) Sırasında Sabit Arayüz İzolasyonu ve Kapsayıcı Blok Titreme Çözümü (v0.34.4)
+
+### Kullanıcı Talebi:
+- *"ekran titrerken falan mobilde alttaki tabler ve yut,maks al seceneklerinin oldugu kisim silinip tekrar geliyor benzer sey pc de de yasaniyor sorunun ana kaynagini bul ve duzelt"*
+
+### Kök Neden & Mimari Analiz:
+- W3C CSS Transforms Module Level 1 spesifikasyonu gereği, bir elemana `transform` uygulandığında, o eleman tüm `position: fixed` alt elemanları için yeni bir **Containing Block** (kapsayıcı blok) haline gelir.
+- `src/App.vue` içinde `#game-main-content` (~3000px yükseklikteki tüm oyun kartları konteyneri) sarsıntı (`.screen-shake`) aldığında, içinde bulunan mobil alt sekme dock'u (`<nav>`, `max-md:fixed max-md:bottom-0`) ve mobil taktil çubuğu (`<FloatingThumbBar />`, `fixed bottom-[60px]`), viewport yerine 3000px'lik konteynerin en dibine itiliyordu. Bu nedenle sarsıntı sürdüğü 200–400ms boyunca **ekrandan siliniyor**, sarsıntı bitince tekrar geliyordu.
+- PC'de ekran < 768px iken birebir aynı durum oluşuyor; masaüstünde ise her sarsıntıda `void target.offsetWidth` ile tetiklenen senkron DOM reflow ve GPU compositing layer yok edilip kurulması nedeniyle header butonlarında titreme/yırtılma yaşanıyordu.
+
+### Yapılan Geliştirmeler:
+1. **Sabit Katman İzolasyonu (`src/App.vue`):**
+   - `<FloatingThumbBar />` ve tüm modallar (`SettingsModal`, `ConfirmModal`, `AuthModal`, `CloudConflictModal`, `AdminPanel`), `#game-main-content` sarsıntı konteynerinin dışına, doğrudan kök div'e taşındı.
+   - `LabTab.vue` içindeki `showCodexModal` (Viral Kodeks) `<Teleport to="body">` ile sarmalandı.
+2. **Mobil Alt Dock Dinamik Teleportasyonu (`src/App.vue`):**
+   - Tailwind `max-md` (768px) eşiğiyle senkron çalışan `isMobile` reaktif değişkeni ve `window.matchMedia('(max-width: 767px)')` dinleyicisi eklendi.
+   - `<Teleport to="body" :disabled="!isMobile">`: Mobilde `<nav>` doğrudan `document.body`'ye taşınır; `#game-main-content`'in sarsıntı transform'undan tamamen izole kalır. Masaüstünde ise yerinde inline render edilir.
+3. **Reflow-Free Sarsıntı Yönetimi (`src/components/JuiceLayer.vue`):**
+   - Senkron reflow tetikleyen `void target.offsetWidth` kaldırıldı.
+   - Zaten sarsıntı aktifken gelen ardışık dekad/satın alma/kombo olaylarında sınıf silinip tekrar eklenmez, animasyon kesilmez, sadece `shakeTimeout` uzatılır (coalescing).
+4. **GPU Donanım Hızlandırması (`src/style.css`):**
+   - `@keyframes screen-shake`, `shake-soft-anim` ve `shake-hard-anim` yönergeleri `translate3d(x, y, 0)` ile doğrudan GPU kompozitörüne bağlandı; `will-change: transform` eklendi.
+5. **Doğrulama:**
+   - Yeni birim testi: `src/core/screen-shake.test.ts` (164/164 birim testi eksiksiz geçti).
+   - `npm run build`: Production derlemesi 0 hata ile 9.11 saniyede tamamlandı.
+   - Mimari karar: [`ADR-0044`](file:///data/data/com.termux/files/home/incremental/brain/decisions/0044-screen-shake-containing-block-and-fixed-ui-isolation.md).
+
+## [2026-10-06] — Sekmeler Arası Yön Duyarlı Akıcı Slide-Fade Geçiş Animasyonu (v0.34.3)
+
+### Kullanıcı Talebi:
+- *"kaydirma yaparken guzel bi animasyon olursa iyi olur"*
+
+### Kök Neden & Mimari Analiz:
+- Sekmeler arası geçişlerde (mobil yatay jest, dock buton tıklaması, klavye sol/sağ okları) anlık sert geçiş yapılıyordu.
+- Mobil jest hissini tamamlayan ve gözü yormayan fiziksel bir kayma ve sönümleme (slide-fade) hissi istendi.
+- **Kritik Kısıt:** İki sekmenin aynı anda DOM'da kalarak dikey sayfa boyunu zıplatmaması (`mode="out-in"`), yatay scrollbar oluşturmaması (`overflow-x-hidden`) ve düşük donanım / erişilebilirlik ayarlarında (`reduceAnimations`) sorunsuz çalışması gerekiyordu.
+
+### Yapılan Geliştirmeler:
+1. **App.vue (Yön Duyarlılığı ve Geçiş Mantığı):**
+   - `slideDirection` (`ref<'next' | 'prev'>`) eklendi.
+   - `switchTab` ve `switchTabByOffset` fonksiyonlarında hedef sekmenin mevcut sekmeye göre sağda mı (`next`) solda mı (`prev`) olduğu dinamik tespit edildi.
+   - `transitionName`: Kullanıcının `reduceAnimations` ayarına göre `tab-slide-next`, `tab-slide-prev` veya `tab-fade` seçildi.
+   - `<Transition :name="transitionName" mode="out-in">` ile sekme bileşenleri sarıldı ve benzersiz `key` nitelikleri eklendi.
+2. **GPU Hızlandırmalı CSS Animasyonları:**
+   - 180ms süreli, `cubic-bezier(0.16, 1, 0.3, 1)` eğrili `translate3d(±24px, 0, 0)` ve `opacity` geçiş sınıfları eklendi.
+   - Yatay taşmaları engellemek için `<main>` kapsayıcısına `overflow-x-hidden min-h-[380px]` sınıfları uygulandı.
+3. **Doğrulama:**
+   - `npm test`: 162/162 birim testi başarıyla geçti.
+   - `npm run build`: Production paketi 0 hata ile derlendi.
+   - Mimari karar [`ADR-0043`](file:///data/data/com.termux/files/home/incremental/brain/decisions/0043-directional-tab-slide-fade-transitions.md) dosyasına kaydedildi.
+
+## [2026-10-06] — Mobil Yatay Jest ile Menü/Sekme Gezinimi (Swipe Left/Right Tabs) (v0.34.2)
+
+### Kullanıcı Talebi:
+- *"birde mobilde saga sola kaydirinca bu alttaki menuler arasinda gecis yapabilelim"*
+
+### Kök Neden & Mimari Analiz:
+- Oyunda 9 farklı ana sekme (`Katmanlar`, `Lab`, `Kriz`, `Botlar`, `Koloni`, `Tekillik`, `Meydan`, `Plaket`, `Rapor`) bulunuyor ve mobilde alt dock (`navRef`) üzerinde yer alıyor.
+- Oyuncunun tek elle gezinirken alt menü butonlarına tek tek dokunmak yerine ekranda sağa-sola parmak kaydırarak sekmeler arasında akıcı geçiş yapabilmesi istendi.
+- **Kritik Kısıt:** Bir önceki görevde çözülen dikey sayfa kaydırmanın (`vertical scroll`) yatay jestle asla çakışmaması, sadece kasıtlı yatay fiske yapıldığında tetiklenmesi gerekiyordu.
+
+### Yapılan Geliştirmeler:
+1. **App.vue (Yatay Jest Algılayıcı & Dinamik Sekme Atlama):**
+   - `availableTabs`: Yalnızca açık ve kilitli olmayan sekmeler dinamik olarak hesaplandı (örneğin kilitli sekmeler atlanarak sonraki açık sekmeye geçilir).
+   - `switchTabByOffset(direction)`: Sola kaydırmada (`deltaX < 0`) bir sonraki açık sekmeye, sağa kaydırmada (`deltaX > 0`) bir önceki sekmeye geçiş sağlandı.
+   - **Katı Scroll İzolasyonu:** `absX > absY * 1.4`, `absX >= 48px`, `velocity >= 0.22 px/ms`, `duration <= 420ms` ve dikey sayfa kayma kontrolü (`Math.abs(scrollY - startScrollY) <= 12px`) ile dikey sayfa kaydırmalar %100 filtrelendi.
+   - İnteraktif öğeler (form elemanları, modal pencereler, alt kaydırılabilir dock) jest kapsamı dışında tutuldu.
+2. **Taktil Geri Bildirim & Dock Senkronizasyonu:**
+   - Sekme değiştiğinde `sounds.playHapticTap()` ve Web Vibration API `navigator.vibrate(12)` ile parmak ucunda tatmin edici bir dokunsal geri bildirim sağlandı.
+   - Alttaki gezinme dock'u (`navRef`), yeni aktif sekmeyi otomatik olarak ekranın ortasına kaydırır (`scrollActiveTabIntoView`).
+   - Masaüstü kullanıcıları için klavye sol/sağ ok tuşlarıyla (`ArrowLeft` / `ArrowRight`) da sekmeler arası gezinme desteği eklendi.
+3. **Doğrulama:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npm run build`: Production derlemesi 0 hata ile 10.68 saniyede tamamlandı.
+   - Mimari karar [`ADR-0042`](file:///data/data/com.termux/files/home/incremental/brain/decisions/0042-mobile-horizontal-swipe-tab-navigation.md) dosyasına işlendi.
+
+## [2026-10-06] — Mobil Ekran Kaydırmada Yanlış Dokunma ve İstenmeyen Tıklama Koruması (v0.34.1)
+
+### Kullanıcı Talebi:
+- *"telefonda ekrani kaydirirken arada kendi kendine dokunuyor o yuzden iste sayi artiyor o dokunma seyini ayarla hassasiyetini falan veya suresini"*
+
+### Kök Neden Analizi:
+1. **DimensionsTab.vue (Süre ve Hız Kontrolsüz Fiske Jest Dinleyicisi):**
+   - `@touchstart.passive` ve `@touchend.passive` ile tüm sekme alanında dikey hareket dinleniyordu.
+   - Sadece `deltaY <= -36` ve `|deltaY| > |deltaX| * 1.2` kontrolü vardı; süre (`duration`), hız (`velocity`) veya `window.scrollY` değişimi kontrol edilmiyordu.
+   - Kullanıcı alt boyutlara bakmak için sayfayı yavaşça yukarı kaydırdığında (normal sayfa kaydırma / scroll), parmağını çektiği an `deltaY <= -36` tetikleniyor ve `store.manualClick()` çağrılarak sayı istemsizce artıyordu.
+2. **HeartBurstLayer.vue (Ham pointerdown Çift Tık Yanılgısı):**
+   - Doğrudan `window` üzerinde `pointerdown` dinleyip 320ms ve 35px içindeki ardışık iki dokunuşu "Çift Dokunma" sayarak `store.manualClick()` çağırıyordu.
+   - Mobilde art arda kaydırma hamleleri yaparken parmakların başlangıç noktası yakın düştüğünde, kullanıcı yalnızca ekranı kaydırıyor olmasına rağmen çift tık algılanıyordu.
+
+### Yapılan Geliştirmeler:
+1. **DimensionsTab.vue (Fiske ve Kaydırma İzolasyonu):**
+   - **Scroll Drift Kontrolü:** Başlangıç ve bitiş `window.scrollY` farkı 8px'den fazlaysa ekran kaydırılmış demektir; jest anında iptal edilir.
+   - **Süre Sınırı:** Yalnızca 45ms ile 280ms arasındaki hızlı hareketler kabul edilir. 280ms'den uzun süren dokunuşlar drag/scroll sayılır.
+   - **Hız ve Mesafe Eşiği:** Mesafe 70px'e yükseltildi; minimum hız `velocity >= 0.42 px/ms` ve dikey baskınlık `absY > absX * 1.5` getirildi.
+   - **İnteraktif Eleman Koruması:** Buton, link veya form elemanlarına dokunulduğunda jest başlatılmaz.
+2. **HeartBurstLayer.vue (PointerUp Tabanlı Statik Çift Tık):**
+   - Ham `pointerdown` tetiklemesi kaldırıldı.
+   - `pointerup` aşamasında parmağın 12px'den az hareket ettiği, sürenin 240ms'den kısa olduğu ve sayfanın kaymadığı statik dokunuşlar çift tık havuzuna alınır.
+3. **Kullanıcı Ayarı (`swipeSensitivity`):**
+   - `GameSettings` içine `swipeSensitivity: 'balanced' | 'low' | 'off'` eklendi.
+   - `SettingsModal.vue` içine "Dengeli", "Düşük (Sert Fiske)" ve "Kapalı" seçenekleri olan kullanıcı dostu bir kontrol paneli entegre edildi. "Kapalı" seçildiğinde tüm ekran jestleri kapatılır, yalnızca butonla yutulur.
+4. **Doğrulama:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npm run build`: Production derlemesi 0 hata ile 10.47 saniyede tamamlandı.
+
+## [2026-10-06] — Antimatter Dimensions Tarzı Kesintisiz Akan Kozmik Canlı Haber Bandı (v0.34.0)
+
+### Kullanıcı Talebi:
+- *"bu canli yayin kismini en uste al ve surekli yazilar aksin sagdan sola antimatter dimensionsdaki gibi onu arastir ve en iyi sekilde yap"*
+
+### Kök Neden & Mimari Analiz:
+1. **Konum:** `CommentTicker.vue` daha önce `<Header />` bileşeninin altında yer alıyordu. Antimatter Dimensions ve klasik incremental türünde ise haber bandı (News Ticker) her zaman sayfanın en üstünde (`#game-main-content` başlığı üzerinde) yer alır.
+2. **Animasyon Eksikliği:** Önceki uygulamada metin akışı yoktu; sabit duran metin 7 saniyede bir `truncate` edilip fade efektiyle değişiyordu.
+3. **Antimatter Dimensions Referans Mimarisi:**
+   - IvarK / Antimatter Dimensions açık kaynak kod tabanı (`javascripts/core/newsticker.js`) incelendi.
+   - Metin sağ kenarın tamamen dışından (`translateX(parentWidth)`) başlayıp, sabit bir piksel hızıyla (`rate = 100 px/s`) sol kenarın tamamen dışına (`translateX(-textWidth)`) akmaktadır.
+   - Bir metin ekranı terk ettiğinde derhal sonraki metin rastgele seçilip akış kesintisiz sürdürülür.
+   - Metne tıklandığında easter egg ve başarımlar tetiklenir.
+
+### Yapılan Geliştirmeler:
+1. **Sayfanın En Üstüne Taşıma (`src/App.vue`):**
+   - `<CommentTicker />` bileşeni `<Header />` üzerine, oyunun en tepesine taşındı.
+   - `store.settings.newsTickerEnabled !== false` koşulu ile ayarlar modalından açılıp kapatılabilmesi sağlandı.
+2. **GPU Hızlandırmalı 60 FPS Sağdan Sola Kesintisiz Marquee (`src/components/CommentTicker.vue`):**
+   - CSS `translate3d(var(--start-x), 0, 0)` ile `--start-x` (konteyner genişliği) ve `--end-x` (-metin genişliği) dinamik hesaplandı.
+   - Sabit lineer hız (`100 px/s`) ile kayma sağlandı; animasyon sonlandığında (`@animationend`) bir sonraki rastgele haber sıfır gecikmeyle akışa alındı.
+   - **Hover-to-Pause (Okuma Kolaylığı):** Kullanıcı fareyle bandın üzerine geldiğinde `animation-play-state: paused` tetiklenerek metin anında duraklar ve "DURAKLATILDI" göstergesi belirir; ayrıldığında kaldığı pikselden pürüzsüzce devam eder.
+   - Sol ve sağ kenarlara yumuşak gradyan maskeleri eklenerek metinlerin kenarlardan sihirli bir şekilde doğup kaybolması sağlandı.
+3. **Zenginleştirilmiş Kozmik & Lore Haber Havuzu (52 Özgün Haber):**
+   - 6 kategori: Moleküler/Laboratuvar (`innocent`), Kuantum Çöküş (`hypnotic`), Makro Kriz (`crisis`), Kozmik Tekillik (`dawn`), AD Meta Esprileri (`meta`) ve Gizli Easter Egg'ler (`secret`).
+   - Oyuncunun kütle miktarına ve kriz/kombo durumuna göre haberler filtrelenir ve aşama ilerledikçe yeni temalar sahneye çıkar.
+4. **Taktil Doyum, Hız Ayarı & Gizli Easter Egg Mekaniği:**
+   - **Kuantum Rezonans Tıklaması:** Haber bandına veya Beğeni butonuna tıklandığında +%20 saniyelik kütle ödülü, ses efekti (`playTallyTick`), haptik titreşim (`navigator.vibrate(8)`) ve ekranda floating juice dalgası oluşur.
+   - **Gizli Sinyal Easter Egg:** Gizli haberlere (`@kuantum_sirri`, `@kozmik_piyango`) tıklandığında konfeti patlaması (`canvas-confetti`), mistik ses (`playMythicCollect`) ve 10x üretim kütle ödülü verilir.
+   - **Hız Değiştirici (1x / 1.6x):** Okuma hızına göre 100 px/s ve 160 px/s modları arasında tek tıkla geçiş eklendi.
+   - **Hızlı Geçiş (Skip):** İleri butonu ile istenildiğinde derhal sonraki habere atlama imkanı sağlandı.
+5. **Doğrulama:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npm run build`: Production derlemesi 0 hata ile 24.30 saniyede tamamlandı.
+
+## [2026-10-06] — Mobil HUD Çift Aksiyon Butonları (Yut, Hz, Tümü Al) Çakışması Giderildi (v0.33.2)
+
+### Kullanıcı Talebi:
+- *"mobilde iki tane yut,hz arttirici ve tumu al butonu var"*
+
+### Kök Neden Analizi:
+- Masaüstü görünümde üst başlık panelinde (`Header.vue`) yer alan birincil taktil butonlar (`Manuel Yut`, `Çekim Hızı Hz`, `Tümünü Al`) duyarlı medya sorgusu (`hidden md:flex`) içermediği için mobil cihazlarda da (`<768px`) render ediliyordu.
+- Aynı anda, mobilde başparmak ergonomisini sağlamak amacıyla ekranın alt kısmına sabitlenen `FloatingThumbBar.vue` bileşeni (`md:hidden`) de aktif durumdaydı.
+- Bu durum, mobil ekranda hem en üstte (Header) hem de en altta (FloatingThumbBar) aynı anda 2 adet "YUT!", 2 adet "Hz (Çekim Hızı)" ve 2 adet "Tümü (Maks Al)" butonu belirmesine yol açıyordu.
+
+### Yapılan Değişiklikler:
+1. **Header.vue (Masaüstü/Mobil Ayrımı & Duyarlı HUD):**
+   - Header içindeki taktil eylem butonları (`Manuel Yut`, `Çekim Hızı Hz`, `Tümünü Maks Al`), kombo rozeti ve masaüstü Ayarlar butonu `hidden md:flex` sınıfı ile mobilde gizlendi, sadece masaüstü ekranlarda görünür kılındı.
+   - Mobilde Ayarlar menüsüne her zaman kesintisiz erişilebilmesi için üst durum çubuğunun sağ tarafına doğrudan mobil Ayarlar butonu (`md:hidden`) yerleştirildi.
+   - Header'ın 3. denetim çubuğu, mobilde yalnızca gösterilecek bir mobil kontrol (Kuantum/Obur/Kalkan Duruşları veya Tekillik/Meydan Okuma) varsa render edilecek şekilde dinamik `hasMobileControls` koşuluna bağlandı; erken oyunda boş çizgi kalması engellendi.
+2. **FloatingThumbBar.vue (Taktil Geri Bildirim & Rehberlik):**
+   - Mobil `handleConsume` fonksiyonuna Web Vibration API haptik titreşim (`navigator.vibrate(8)`) ve taktil floating juice parçacığı (`doomscroll:tap`) entegre edildi.
+   - İlk açılışta oyuncuyu yönlendirmek üzere ilk boyut alınana kadar YUT butonuna hafif `cta-beacon` nabız sınıfı bağlandı.
+3. **Doğrulama & Test:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npm run build`: Production derlemesi 0 hata/uyarı ile 11.55 saniyede tamamlandı.
+
+## [2026-10-06] — Arka Plan Büyüme/Küçülme ve Kaybolan Pop-Up Hatalarının Giderilmesi (v0.33.1)
+
+### Kullanıcı Talebi:
+- *"pop uplar veya baska bir sey yuzunden arada arka plan boyle buyuyor sonra kuculuyor falan arada pop uplar kayboluyor"*
+
+### Kök Neden Analizi:
+1. **`document.body` Üzerindeki CSS Transform (Containing Block Kırılması):**
+   - Boyut alımlarında, dekad atlamalarında veya kriz pop-up'larına tıklandığında `JuiceLayer.vue` tarafından `document.body`'ye `.screen-shake` / `.shake-hard` sınıfları ekleniyordu.
+   - W3C CSS standartlarına göre `body` üzerine `transform` uygulandığında, tüm `position: fixed` elemanlar (`AlgorithmicSwirl` arka planı, `AnomalyOverlay`, modallar) ekran penceresi (viewport) yerine `document.body`'yi kapsayıcı blok (containing block) kabul eder.
+   - Sayfa yüksekliği (~2500px) viewport'tan (~800px) kat kat büyük olduğundan, `fixed inset-0` olan WebGL arka planı anlık olarak 3000px'e genişleyip devasa şekilde büyüyor (**"arka plan böyle büyüyor"**), shake süresi (250-400ms) bitince `transform` kalktığı için aniden küçülüyordu (**"sonra küçülüyor"**).
+   - Aynı anda `AnomalyOverlay` de `body` koordinatlarına kilitlendiği için yüzen anomali pop-up'ları ekran dışına fırlıyor veya kayboluyordu (**"arada pop uplar kayboluyor"**).
+2. **Mobilde Çift Dokunma Yakınlaştırması (Double-Tap-To-Zoom):**
+   - `index.html`'de `user-scalable=no, maximum-scale=1.0` ve CSS'te `touch-action: manipulation` eksikliği nedeniyle, oyuncular pop-up'lara veya butonlara hızlı tıkladığında mobil tarayıcı çift tık yakınlaştırması tetikliyor, arka plan büyüyüp küçülüyordu.
+3. **Anomali Kapsül Geçiş ve Animasyon Çakışması:**
+   - `AnomalyOverlay.vue`'daki `<TransitionGroup>` bileşeninde `.anomaly-pop-leave-to` ve `.anomaly-pop-leave-from` tanımlanmadığı için süresi biten veya tıklanan pop-up'lar tek karede kayboluyordu.
+   - `.panic-pulse` animasyonu `!important` ile ana wobble transform'unu eziyor ve `.anomaly-wobble` üzerindeki `contain: layout paint` görsel taşmaları kırpıyordu.
+
+### Yapılan Düzeltmeler:
+1. **İzole Sarsıntı Konteyneri (`src/App.vue`, `src/components/JuiceLayer.vue`, `src/style.css`):**
+   - Sarsıntı efekti asla `document.body` veya `html`'e uygulanmayacak şekilde izole edildi; doğrudan oyun kartlarını barındıran `#game-main-content` konteynerine bağlandı.
+   - `.screen-shake`, `.shake-soft` ve `.shake-hard` sınıflarından lingering `both` kaldırıldı, `transform-origin: center center` eklendi.
+2. **Arka Plan Görünüm Sabitlemesi (`src/components/AlgorithmicSwirl.vue`):**
+   - WebGL tuval konteyneri `w-screen h-screen max-w-full max-h-full` ve `contain: strict` ile kesin viewport sınırlarına kelepçelendi; gereksiz `will-change: transform` kaldırıldı.
+3. **Pop-Up & Katman Düzenlemeleri (`src/components/AnomalyOverlay.vue`, `src/components/ScreenOverlay.vue`):**
+   - `.layer-anomaly` z-index değeri 50'ye yükseltildi; `ScreenOverlay` z-index'i 30'a çekilerek auraların pop-up'ları örtmesi engellendi.
+   - `panic-pulse` uyarısı ana wobble taşıyıcısından alınıp doğrudan iç `.anomaly-capsule` sınırına taşındı.
+   - Vue TransitionGroup için `.anomaly-pop-leave-from` ve `.anomaly-pop-leave-to` eklenerek yumuşak kaybolma sağlandı.
+   - `.anomaly-wobble` üzerindeki `contain: layout paint` kaldırıldı.
+4. **Mobil Çift Dokunma Koruması (`index.html`, `src/style.css`):**
+   - `viewport` meta etiketine `maximum-scale=1.0, user-scalable=no, viewport-fit=cover` eklendi.
+   - `html, body`, butonlar ve tıklanabilir öğelere `touch-action: manipulation;` ve `overscroll-behavior: none;` uygulandı.
+5. **Doğrulama:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npm run build`: Production derlemesi 0 hata ile 10.75 saniyede tamamlandı.
+
+## [2026-10-06] — Modern Minimalist Kuantum-Kozmik HUD & Anti-Slop UI/UX Dönüşümü (v0.33.0)
+
+### Kullanıcı Talebi:
+- *"arayuzu ve ui ux i ai sloptan daha modern minimalist bir gorunume cevir oyuna uygun olsun"*
+
+### Mimari Karar & Vizyon (ADR-0040):
+- Arayüz bütünüyle "AI slop" kalıntılarından (rastgele neon degrade butonlar, 9:16 telefon video posterleri, yağlı parmak izi lekeleri, kırık telefon camı SVG'leri, TikTok çift tık kalpleri, telefon pili %3 widget'ı) arındırıldı.
+- Yerine modern, minimalist, yüksek çözünürlüklü **"Kuantum-Kozmik Gözlemevi HUD" (Cosmic Singularity HUD)** tasarım sistemi inşa edildi.
+
+### Kapsam ve Yapılan Değişiklikler:
+1. **Tasarım Sistemi & Global Stiller (`src/style.css`):**
+   - Obsidian Singularity HUD panel token'ları (`--ds-bg: #07090e`, `--ds-panel: rgba(12, 16, 24, 0.78)`), crisp 1px kenarlıklar ve üst ışık vurgusu.
+   - Cırtlak degrade ve pofuduk hap buton stilleri kaldırılarak taktil mekanik HUD butonları oluşturuldu.
+   - 9:16 telefon video motifi (`.hero-orb`) ve yatak odası vinyeti (`.bedroom-vignette`) kaldırılarak derin uzay gravite merceklenmesi (`.cosmic-vignette`) ve olay ufku ışıması (`.singularity-horizon`) getirildi.
+2. **Üst Bar & Merkezi Sayaç (`src/components/Header.vue`):**
+   - Eski telefon pili `%3 (Düşük Güç Modu)` kaldırıldı; yerine gerçek zamanlı **Tekillik Kararlılığı Telemetrisi (KARARLI / KARARSIZ)** yerleştirildi.
+   - Gece saati fazları doomscroll terminolojisinden ("Yorgan Altı", "Kuş Vakti") hard sci-fi çöküş fazlarına dönüştürüldü ("Planck Yırtılması", "Mikro Karadelik", "Makro Çöküş", "Galaktik Olay Ufku", "Kozmik Tekillik").
+   - Müzik çubuğu Kuantum Sinyal Modülatörü olarak rafine edildi.
+   - YUT!, Hz, Tümü ve Tekillik butonları minimalist, yüksek kontrastlı mekanik HUD butonlarına dönüştürüldü.
+3. **Kozmik Telemetri Akışı (`src/components/CommentTicker.vue`):**
+   - "CANLI REELS SOHBETİ" sosyal medya kalıntısı kaldırılarak **"Kozmik Gözlem & Telemetri Kayıtları"** akışı haline getirildi.
+   - Kalp butonu rezonans enerji aktarımı (+Kütle) ile bilimkurgu temasına entegre edildi.
+4. **Katmanlar & Efektler (`src/components/ScreenOverlay.vue`, `src/components/HeartBurstLayer.vue`, `src/components/FloatingThumbBar.vue`):**
+   - Yağlı başparmak izi ve çatlak cam vektörleri bütünüyle temizlendi; derin uzay gravite dalgalanması eklendi.
+   - Çift tıklamada çıkan pembe TikTok kalpleri kaldırıldı; yerini eşmerkezli **Kuantum Rezonans Halkaları (Gravitational Shockwaves)** aldı.
+   - Mobil kaydırma çubuğu garish mor-pembe gradient yerine minimalist koyu cam HUD dock'a ve "YUT!" aksiyonuna kavuştu.
+5. **Boyut Satırları & Tablar (`src/components/DimensionRow.vue`, `src/components/TabHero.vue`, `src/components/LabTab.vue`, `src/components/CrisisTab.vue`, `src/components/ChallengesTab.vue`, `src/components/AchievementsTab.vue`):**
+   - 9:16 video posterleri ve dağınık emojiler kaldırıldı; yerini Planck metrik ölçek rozetleri (`10⁻⁹ m` ... `10²¹ m`), kusursuz tabular hizalama ve temiz 10'luk paket ilerleme çubuğu aldı.
+   - TabHero bileşenindeki eski telefon çerçevesi minimalist HUD reticle / koordinat vurgusu ile yenilendi.
+   - Tüm sekmelerdeki başlık ve alt metinler UROBOROS kozmik tekillik lore'uyla tam senkronize edildi.
+6. **Doğrulama:**
+   - `npm test`: 162/162 birim testi eksiksiz geçti.
+   - `npx vue-tsc --noEmit`: 0 TypeScript hatası.
+   - `npm run build`: Production derlemesi 0 hata ile 10.26 saniyede tamamlandı.
+
 ## [2026-10-04] — UROBOROS: The Cosmic Feast Tematik Dönüşümü ve Kalite Kapısı Onayı (v0.32.0)
 
 ### Kullanıcı talebi:
@@ -1607,3 +1967,32 @@ Düz SP dükkânı seçim yaratmıyordu; aktif (tıklama) oyun geç oyunda anlam
    - `brain/decisions/0012-neural-tree.md` (ADR) ve `GAME_DESIGN.md` 7.1 "Nöral Ağaç" bölümü eklendi.
 7. **Doğrulama:**
    - `npm run build` (`vue-tsc && vite build`) sıfır TypeScript hatası ile tamamlandı (çekirdek faz 6.82s, UI fazı ve son kontrol dahil).
+
+---
+
+## [2026-10-06] - Kozmik Kütle Eşdeğerliği, Olay Ufku ve Zaman Paradoksu (S-Tier StatsTab Dönüşümü) (v0.30.0)
+
+### Kök Neden Analizi:
+- `StatsTab.vue`'daki "Fiziksel Kütle Çekim Mesafesi" bölümü, eski prototipten kalan dünyevi bir başparmak metriğiydi (`clicks * 0.05` m, Galata/Eyfel/Everest kıyaslamaları).
+- Oyunun teması olan $10^{-24}\text{ g}$'dan $1.79 \times 10^{308}\text{ g}$'a uzanan evrensel kütle açlığı ve kuantum-kozmik tekillik konseptiyle uyuşmuyordu.
+- Ayrıca saf basamak yazma hesabı ($10^{308}$ için 309 basamak = 103 saniye) tek başına sunulduğunda anti-klimaks yaratabilirdi.
+
+### Uygulanan Çözümler:
+1. **Yeni Çekirdek Motor ([`src/core/cosmic-scale.ts`](file:///data/data/com.termux/files/home/incremental/src/core/cosmic-scale.ts)):**
+   - **Kozmik Av Merdiveni (Tasty Planet Modeli):** 18 kademeli gerçek kütle skalası (Su damlası $0.05\text{ g}$ $\to$ Ataş $\to$ Elma $\to$ İnsan $\to$ Piramit $\to$ Okyanus $\to$ Ay $\to$ Dünya $\to$ Jüpiter $\to$ Güneş $\to$ Sagittarius A* $\to$ TON 618 $\to$ Samanyolu $\to$ Gözlemlenebilir Evren $\to$ Multiverse $10^{70}\text{ g}$). Canlı çarpan, logaritmik ilerleme çubuğu ve lore açıklaması.
+   - **Schwarzschild Olay Ufku ($R_s = \frac{2GM}{c^2}$):** Yutulan kütlenin oluşturduğu karadeliğin gerçek astrofiziksel çapı (Sub-attometre kuantum köpüğünden $\to$ Fındık/Bilye $\to$ Futbol Topu $\to$ Şehir $\to$ Işık Yılı hiper-tekilliğine).
+   - **Çifte Zaman Paradoksu (Antimatter Dimensions Modeli):** Hem saniyede 3 basamakla elle yazma süresi, hem kütleyi saniyede 1 gram tek tek sayma süresi ($10^{290}$ × Evrenin Yaşı), hem de 10 punto kağıt şeridi uzunluğu hesabı.
+2. **Store Entegrasyonu ([`src/stores/game.ts`](file:///data/data/com.termux/files/home/incremental/src/stores/game.ts)):**
+   - `biometrics` getter'ı `cosmicPrey`, `eventHorizon` ve `writingParadox` hesaplamalarıyla zenginleştirildi; geriye dönük alanlar tam korundu.
+3. **Kullanıcı Arayüzü ([`src/components/StatsTab.vue`](file:///data/data/com.termux/files/home/incremental/src/components/StatsTab.vue)):**
+   - Eski dünyevi kart kaldırılarak yerine 3 modlu interaktif Cyberpunk/Bento kart eklendi:
+     - `[ 🪐 Kozmik Avlar ]`
+     - `[ 🌀 Olay Ufku Çapı ]`
+     - `[ ⏱️ Zaman Paradoksu ]`
+   - `copyReport()` paylaşım metni yeni telemetri verileriyle (`Kütle Eşdeğeri`, `Olay Ufku Çapı`, `Kütleyi Yazma Süresi`) güncellendi.
+4. **Birim Testleri ([`src/core/cosmic-scale.test.ts`](file:///data/data/com.termux/files/home/incremental/src/core/cosmic-scale.test.ts)):**
+   - 11 kapsamlı birim testi eklendi; sınır değerleri, formüller ve NaN/sıfır korumaları doğrulandı (176/176 test yeşil).
+5. **Doğrulama:**
+   - `npm test -- --run` $\to$ 176/176 test geçti.
+   - `npm run build` $\to$ Sıfır TypeScript hatası ile başarılı derleme kanıtlandı.
+- **[2026-10-06 Düzeltme & Sadeleştirme]**: Kullanıcı geri bildirimi doğrultusunda 3 modlu widget yapısı kaldırıldı; *Antimatter Dimensions* tarzı tekil, sade ve ferah bir telemetri kartına dönüştürüldü. Basamak yazma süresi ve kütle eşdeğerliği doğrudan tek kartta sunuldu.

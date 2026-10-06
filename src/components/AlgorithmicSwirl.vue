@@ -422,7 +422,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="algorithmic-swirl-container pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
+    class="algorithmic-swirl-container pointer-events-none fixed inset-0 w-screen h-screen max-w-full max-h-full z-0 overflow-hidden select-none"
     aria-hidden="true"
   >
     <!-- WebGL Canlı Balatro Swirl Katmanı -->
@@ -443,6 +443,6 @@ onUnmounted(() => {
 
 <style scoped>
 .algorithmic-swirl-container {
-  will-change: transform;
+  contain: strict;
 }
 </style>

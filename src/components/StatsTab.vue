@@ -27,8 +27,7 @@ import {
   BatteryMedium,
   Crosshair,
   ShieldCheck,
-  Compass,
-  ArrowUpRight
+  Orbit
 } from 'lucide-vue-next'
 import TabHero from './TabHero.vue'
 
@@ -210,6 +209,8 @@ async function copyReport() {
     `🌌 Manuel Yutma: ${store.stats.manualClicks.toLocaleString('tr-TR')} kez`,
     `⚡ Zirve Çekim Hızı: ${format(store.stats.highestDps, 2, store.settings.notation)} / sn`,
     `🌀 Kozmik Çöküş: ${store.stats.singularityCount} kez (Rekor: ${fastestStr})`,
+    `🪐 Kütle Eşdeğeri: ${b.cosmicPrey?.multiplierText || '—'}`,
+    `✍️ Kütleyi Yazma Süresi: ${b.writingParadox?.writingTimeFormatted || '—'} (${b.writingParadox?.digitsFormatted || ''})`,
     `👁️ Tekillik Teşhisi: ${b.zombieRank}`,
     `🔋 Kozmik Yoğunluk: %${b.mentalBatteryPct}`,
     `🌌 Ayrıştırılan Foton: ${format(b.blueLightPhotons, 2, store.settings.notation)}`,
@@ -808,29 +809,56 @@ async function copyReport() {
     <!-- 5. TEKİLLİK TELEMETRİSİ & LORE (TELEMETRY & LORE)                          -->
     <!-- ========================================================================= -->
     <div v-else-if="activeSubTab === 'biometrics'" class="space-y-3">
-      <!-- 5.1 Kütle Çekim Mesafesi & İllüstratif Kıyaslama -->
-      <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-2">
+      <!-- 5.1 Kozmik Kütle & Yazma Telemetrisi (Antimatter Dimensions Modeli - Sade ve Tekil) -->
+      <div class="glass-panel-card p-4 rounded-xl border border-white/[0.06] space-y-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <Compass class="w-5 h-5 text-pink-400" />
+            <Orbit class="w-5 h-5 text-purple-400" />
             <div>
-              <h3 class="text-xs font-bold text-slate-100">Fiziksel Kütle Çekim Mesafesi</h3>
-              <p class="text-[10px] text-slate-400">Her taktil çekim ortalama 5 cm olay ufku etkisi üretir</p>
+              <h3 class="text-xs font-bold text-slate-100">Kozmik Kütle Analizi</h3>
+              <p class="text-[10px] text-slate-400">Yutulan kütlenin basamak yazma süresi ve evrensel eşdeğeri</p>
             </div>
           </div>
           <div class="text-right">
-            <div class="text-base font-mono font-extrabold text-pink-300 tabular-nums">
-              {{ bio.thumbDistanceMeters.toFixed(1) }} Metre
+            <div class="text-base font-mono font-extrabold text-purple-300 tabular-nums">
+              {{ bio.writingParadox.writingTimeFormatted }}
             </div>
             <div class="text-[10px] font-mono text-slate-500 tabular-nums">
-              ({{ bio.thumbDistanceKm.toFixed(3) }} Kilometre)
+              ({{ bio.writingParadox.digitsFormatted }})
             </div>
           </div>
         </div>
 
-        <div class="p-2.5 rounded-lg bg-black/40 border border-white/[0.05] text-xs text-pink-200/90 font-medium flex items-center gap-2">
-          <ArrowUpRight class="w-4 h-4 text-pink-400 shrink-0" />
-          <span>{{ bio.milestoneHint }}</span>
+        <div class="space-y-2 pt-2 border-t border-white/[0.05] text-xs">
+          <!-- 1. Yazma Süresi (Antimatter Dimensions) -->
+          <div class="flex items-start gap-2 text-slate-300 leading-relaxed">
+            <Clock class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span>
+                Saniyede 3 basamak hızla aralıksız yazsaydınız, bu kütleyi yazmak
+                <strong class="text-amber-300 font-mono font-bold">{{ bio.writingParadox.writingTimeFormatted }}</strong>
+                sürerdi.
+              </span>
+              <span class="text-[10px] text-slate-500 block mt-0.5 font-mono">
+                {{ bio.writingParadox.humorousQuote }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 2. Kütle Eşdeğerliği -->
+          <div class="flex items-start gap-2 text-slate-300 leading-relaxed">
+            <Sparkles class="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+            <div>
+              <span>
+                Bu yutulan kütleyle tam
+                <strong class="text-purple-300 font-mono font-bold">{{ bio.cosmicPrey.multiplierText }}</strong>
+                oluşturulabilir.
+              </span>
+              <span class="text-[11px] text-slate-400 block mt-0.5">
+                {{ bio.cosmicPrey.summaryText }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

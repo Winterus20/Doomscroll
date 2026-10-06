@@ -4,10 +4,20 @@
 
 
 @layer base {
+  html,
   body {
     @apply bg-[#08090d] text-slate-100 selection:bg-purple-500/20 selection:text-purple-300;
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+  button,
+  input,
+  [role="button"],
+  a {
+    touch-action: manipulation;
   }
   button:focus-visible,
   input:focus-visible {
@@ -17,54 +27,52 @@
 }
 
 /* ==========================================================================
-   Doomscroll Unified Design System — "Obsidian Dock"
-   Tek dil: white-alpha paneller, tek ritim, tek tipografi, tek aksiyon dili.
-   Renk sözlüğü (sabit anlam):
-     Mor (purple)   → Reels / Üretim / Format
-     Zümrüt (emerald) → Lab / Büyüme / Onay
-     Camgöbeği (cyan) → Kriz / Enerji / Bilgi
-     Mavi (blue)    → Bot / Otomasyon
-     Amber (amber)  → Şafak / Prestij / Plaket
-     Gül (rose)     → Vicdan / Risk / Tehlike
+   UROBOROS Unified Design System — "Cosmic Singularity HUD"
+   Modern minimalist Hard Sci-Fi estetiği: Obsidian paneller, crisp 1px kenarlıklar,
+   semantik kuantum-kozmik renk sözlüğü.
+   Renk sözlüğü:
+     Kuantum Mavisi (cyan)   → Telemetri / Çekim Hızı (Hz) / Aktif Sinyal
+     Boyut Moru (purple)      → Kütle Katmanları / Ölçek Sıçraması
+     Tekillik Altını (amber)  → Kozmik Çöküş / Prestij / Kilometre Taşları
+     Nöral Zümrüt (emerald)   → Laboratuvar / Sentez / Onay
+     Hawking Korusu (rose)    → Kozmik Parazitler / Kriz / Risk
    ========================================================================== */
 
 :root {
-  --ds-bg: #08090d;
-  --ds-panel: rgba(13, 16, 23, 0.72);
-  --ds-panel-strong: rgba(14, 18, 26, 0.85);
-  --ds-border: rgba(255, 255, 255, 0.07);
-  --ds-border-strong: rgba(255, 255, 255, 0.12);
-  --ds-track: rgba(0, 0, 0, 0.45);
+  --ds-bg: #07090e;
+  --ds-panel: rgba(12, 16, 24, 0.78);
+  --ds-panel-strong: rgba(14, 19, 28, 0.90);
+  --ds-border: rgba(255, 255, 255, 0.08);
+  --ds-border-strong: rgba(255, 255, 255, 0.14);
+  --ds-track: rgba(0, 0, 0, 0.5);
 }
 
-/* --- Paneller (tek dil) --- */
+/* --- Paneller (Obsidian HUD) --- */
 .glass-panel {
   background: var(--ds-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ds-border);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.6);
 }
 
-/* A4: blur yalnız gerçek overlay katmanında (modal). Header normal akışta
-   olduğu için blur arkasını bulanıklaştırmaz — sadece maliyet üretirdi. */
+/* Header & Ana yüzeyler */
 .glass-panel-glow {
   background: var(--ds-panel-strong);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ds-border-strong);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
 }
 
-/* A4: tekrarlayan kartlarda backdrop-filter yok — katı yüzey (blur yalnız
-   gerçek katmanlı yüzeylerde: sticky header/nav, modal). */
+/* Katman kartları */
 .glass-panel-card {
-  background: rgba(15, 18, 26, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  background: rgba(13, 17, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .glass-panel-card:hover {
-  background: rgba(19, 24, 35, 0.75);
+  background: rgba(18, 24, 36, 0.94);
   border-color: rgba(255, 255, 255, 0.14);
 }
 
@@ -83,36 +91,15 @@
     padding: 1.25rem 1.5rem;
   }
 }
-/* 9:16 dikey reels motifi — özgün kimlik detayı (§4): hero köşesinde
-   genel bir blur topu yerine telefon/dikey feed çerçevesi izlenimi. */
-.hero-orb {
-  position: absolute;
-  right: -1.5rem;
-  top: -2rem;
-  width: 6rem;
-  height: 10.67rem; /* 9:16 */
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(160deg, rgba(168, 85, 247, 0.07), rgba(6, 182, 212, 0.04));
-  transform: rotate(8deg);
-  pointer-events: none;
-}
+/* Sekme Hero Renk Vurguları */
 .hero-accent-purple { border-color: rgba(168, 85, 247, 0.28); }
-.hero-accent-purple .hero-orb { background: rgba(147, 51, 234, 0.12); }
 .hero-accent-emerald { border-color: rgba(16, 185, 129, 0.28); }
-.hero-accent-emerald .hero-orb { background: rgba(16, 185, 129, 0.1); }
 .hero-accent-cyan { border-color: rgba(6, 182, 212, 0.28); }
-.hero-accent-cyan .hero-orb { background: rgba(6, 182, 212, 0.1); }
 .hero-accent-blue { border-color: rgba(59, 130, 246, 0.28); }
-.hero-accent-blue .hero-orb { background: rgba(59, 130, 246, 0.12); }
 .hero-accent-amber { border-color: rgba(245, 158, 11, 0.28); }
-.hero-accent-amber .hero-orb { background: rgba(245, 158, 11, 0.1); }
 .hero-accent-violet { border-color: rgba(139, 92, 246, 0.28); }
-.hero-accent-violet .hero-orb { background: rgba(139, 92, 246, 0.12); }
 .hero-accent-rose { border-color: rgba(244, 63, 94, 0.28); }
-.hero-accent-rose .hero-orb { background: rgba(244, 63, 94, 0.1); }
-.hero-accent-slate { border-color: rgba(255, 255, 255, 0.07); }
-.hero-accent-slate .hero-orb { background: rgba(148, 163, 184, 0.08); }
+.hero-accent-slate { border-color: rgba(255, 255, 255, 0.08); }
 
 /* Hero içindeki sayaç / istatistik kutusu — tüm sekmelerde aynı */
 .stat-box {
@@ -371,15 +358,16 @@
 
 /* Screen Shake (Clean micro-shake) */
 @keyframes screen-shake {
-  0% { transform: translate(0, 0); }
-  20% { transform: translate(-2px, 1px); }
-  40% { transform: translate(2px, -1px); }
-  60% { transform: translate(-1px, -1px); }
-  80% { transform: translate(1px, 1px); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-2px, 1px, 0); }
+  40% { transform: translate3d(2px, -1px, 0); }
+  60% { transform: translate3d(-1px, -1px, 0); }
+  80% { transform: translate3d(1px, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
 }
 .screen-shake {
-  animation: screen-shake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  animation: screen-shake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  will-change: transform;
 }
 
 /* Tabular Monospace (Zero Layout Jitter) */
@@ -389,14 +377,14 @@
 }
 
 /* Katman sıralaması — tek elden senkron:
-   Oyun (0) < Anomali (40) < Juice parçacık (60) < Toast (70) < Modal (80) */
+   Oyun (0) < Aura (30) < Anomali (50) < Juice parçacık (60) < Toast (70) < Modal (80) */
 /* Modal cam yüzeyi — tek meşru backdrop-filter (içerik üstünde katman) */
 .modal-glass {
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
 
-.layer-anomaly { z-index: 40; }
+.layer-anomaly { z-index: 50; }
 .layer-juice { z-index: 60; }
 .layer-toast { z-index: 70; }
 .layer-modal { z-index: 80; }
@@ -494,22 +482,24 @@ body::after {
 
 /* Shake kademeleri — soft: hafif dürtme, hard: tekillik sarsıntısı */
 @keyframes shake-soft-anim {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-1px, 1px); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-1px, 1px, 0); }
 }
 .shake-soft {
-  animation: shake-soft-anim 0.18s ease both;
+  animation: shake-soft-anim 0.18s ease;
+  will-change: transform;
 }
 @keyframes shake-hard-anim {
-  0% { transform: translate(0, 0); }
-  15% { transform: translate(-4px, 2px); }
-  35% { transform: translate(4px, -2px); }
-  55% { transform: translate(-3px, -2px); }
-  75% { transform: translate(3px, 2px); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate3d(0, 0, 0); }
+  15% { transform: translate3d(-4px, 2px, 0); }
+  35% { transform: translate3d(4px, -2px, 0); }
+  55% { transform: translate3d(-3px, -2px, 0); }
+  75% { transform: translate3d(3px, 2px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
 }
 .shake-hard {
-  animation: shake-hard-anim 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  animation: shake-hard-anim 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  will-change: transform;
 }
 
 /* ==========================================================================
@@ -670,7 +660,6 @@ body::after {
 .anomaly-wobble {
   transform: translate(-50%, -50%);
   animation: anomaly-wobble-anim 3.2s ease-in-out infinite;
-  contain: layout paint;
 }
 .anomaly-item:focus-visible {
   outline: 2px solid rgba(34, 211, 238, 0.8);
@@ -712,9 +701,16 @@ body::after {
   animation: anomaly-pop-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .anomaly-pop-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
-  transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.anomaly-pop-leave-from {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.anomaly-pop-leave-to {
   opacity: 0;
+  transform: translate(-50%, -50%) scale(0.7);
 }
 
 /* ==========================================================================
@@ -775,7 +771,7 @@ body::after {
   }
 }
 .panic-pulse {
-  animation: panic-pulse-anim 0.42s ease-in-out infinite alternate !important;
+  animation: panic-pulse-anim 0.42s ease-in-out infinite alternate;
 }
 
 /* 4. Ekran Kenar Ambiyansı (Crisis Perimeter Aura) */
@@ -1152,27 +1148,27 @@ body::after {
 }
 
 /* ==========================================================================
-   Gece Teması — Yatak Odası + Şafak + Format Yozlaşması (v0.30.0)
-   - bedroom-vignette: tek ışık telefonmuş gibi merkez aydınlık, köşeler karanlık
-   - dawn-horizon: alt ufukta şafak turuncusu, gece ilerlemesiyle belirir
-   - decay-*: D1 temiz → D8 bozuk. Yalnızca opacity/transform (ucuz, GPU dostu)
+   Kozmik Tema — Derin Uzay Gravitasyonel Merceklenme & Olay Ufku
+   - cosmic-vignette: derin uzay vinyeti ve merkez kuantum ışıması
+   - singularity-horizon: tekillik eşiğinde parlayan alt ufuk aurası
+   - decay-*: D1 mikrodünya → D8 kozmik kuantum dalgalanması
    Hepsi .reduce-anim / battery-saver / prefers-reduced-motion'da susar.
    ========================================================================== */
-.bedroom-vignette {
+.cosmic-vignette {
   background:
-    radial-gradient(ellipse 55% 45% at 50% 38%, rgba(168, 85, 247, 0.07) 0%, transparent 65%),
-    radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+    radial-gradient(ellipse 65% 55% at 50% 40%, rgba(0, 240, 255, 0.02) 0%, transparent 70%),
+    radial-gradient(ellipse 130% 110% at 50% 50%, transparent 60%, rgba(5, 7, 15, 0.8) 100%);
 }
-.dawn-horizon {
+.singularity-horizon {
   background: linear-gradient(
     to top,
-    rgba(251, 146, 60, 0.22) 0%,
-    rgba(244, 63, 94, 0.12) 35%,
+    rgba(245, 158, 11, 0.16) 0%,
+    rgba(168, 85, 247, 0.08) 40%,
     transparent 100%
   );
 }
-.battery-saver .bedroom-vignette,
-.battery-saver .dawn-horizon {
+.battery-saver .cosmic-vignette,
+.battery-saver .singularity-horizon {
   display: none !important;
 }
 

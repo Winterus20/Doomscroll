@@ -55,10 +55,80 @@ describe('Denge ve Mimari Doğrulama Testleri', () => {
     expect(store.minNapBots.toNumber()).toBeGreaterThan(1000)
   })
 
-  it('İlk Şafak Çöküşü taban 3 SP garanti eder', () => {
+  it('İlk Şafak Çöküşü (break_singularity yokken) tam olarak 1 SP verir', () => {
     const store = useGameStore()
     store.matter = new Decimal('1.8e308')
-    expect(store.singularityGain.toNumber()).toBeGreaterThanOrEqual(3)
+    expect(store.hasBreakSingularity).toBe(false)
+    expect(store.singularityGain.toNumber()).toBe(1)
+  })
+
+  it('break_singularity yokken kütle 1e500 e çıksa dahi kazanç 1 SP de sabit kalır', () => {
+    const store = useGameStore()
+    store.matter = new Decimal('1e500')
+    expect(store.hasBreakSingularity).toBe(false)
+    expect(store.singularityGain.toNumber()).toBe(1)
+  })
+
+  it('break_singularity alındığında 1.8e308 eşiğinde taban 3 SP verir', () => {
+    const store = useGameStore()
+    store.neuralNodesBought = { break_singularity: 1 }
+    store.matter = new Decimal('1.8e308')
+    expect(store.hasBreakSingularity).toBe(true)
+    expect(store.singularityGain.toNumber()).toBe(3)
+  })
+
+  it('break_singularity sonrası kütle arttıkça SP üstel ölçeklenir (3 -> 5 -> 10 -> 50 -> 100...)', () => {
+    const store = useGameStore()
+    store.neuralNodesBought = { break_singularity: 1 }
+
+    // 1e318 -> 5 SP
+    store.matter = new Decimal('1e318')
+    expect(store.singularityGain.toNumber()).toBe(5)
+
+    // 1e332 -> 10 SP
+    store.matter = new Decimal('1e332')
+    expect(store.singularityGain.toNumber()).toBe(10)
+
+    // 1e363 -> 50 SP
+    store.matter = new Decimal('1e363')
+    expect(store.singularityGain.toNumber()).toBe(50)
+
+    // 1e377 -> 102 SP (~100 SP bandı)
+    store.matter = new Decimal('1e377')
+    expect(store.singularityGain.toNumber()).toBe(102)
+  })
+
+  it('Kök düğüm insomnia_heart alındığında başlangıç kütlesi 10.000 g olur', () => {
+    const store = useGameStore()
+    // Başlangıçta 10 g
+    expect(store.startingMatter.toNumber()).toBe(10)
+
+    // insomnia_heart satın alınır
+    store.neuralNodesBought = { insomnia_heart: 1 }
+    expect(store.startingMatter.toNumber()).toBe(10000)
+
+    // Koşu sıfırlandığında kütle 10.000 g ye oturmalıdır
+    store.matter = new Decimal(50)
+    store.resetRunState()
+    expect(store.matter.toNumber()).toBe(10000)
+  })
+
+  it('insomnia_heart sıçrama (shift) ve küme (galaxy) resetlerinde de 10.000 g korur', () => {
+    const store = useGameStore()
+    store.neuralNodesBought = { insomnia_heart: 1 }
+
+    // Shift şartını sağla ve çalıştır
+    const shiftReq = store.shiftRequirement
+    store.dimensions[shiftReq.tier - 1].amount = new Decimal(shiftReq.amount)
+    const shifted = store.dimensionShift(false)
+    expect(shifted).toBe(true)
+    expect(store.matter.toNumber()).toBe(10000)
+
+    // Galaxy şartını sağla ve çalıştır
+    store.dimensions[7].amount = new Decimal(store.galaxyRequirement)
+    const galaxyBought = store.buyGalaxy(false)
+    expect(galaxyBought).toBe(true)
+    expect(store.matter.toNumber()).toBe(10000)
   })
 
   it('offlineSimBoost getDimensionMultiplier içine enjekte edilmez (1800x kaskad hatası çözülmüştür)', () => {

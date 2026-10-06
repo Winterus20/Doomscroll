@@ -27,8 +27,9 @@ Thumbs.db
 
 # Harness / clickaudit build artifacts (repoya girmez, dist/ mantigi ile ayni gerekce)
 brain/scratchpad/harness/out/
-brain/scratchpad/harness/results*.json
-brain/scratchpad/harness/bench*.json
-brain/scratchpad/harness/smoke*.json
+brain/scratchpad/harness/*.json
 brain/scratchpad/clickaudit/out/
-brain/scratchpad/clickaudit/result*.json
+brain/scratchpad/clickaudit/*.json
+
+# Agent runtime state
+.agents/.state/

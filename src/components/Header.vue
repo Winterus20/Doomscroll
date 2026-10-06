@@ -12,7 +12,7 @@ import {
   ArrowUp,
   Cpu,
   Layers,
-  Battery,
+  Activity,
   Play,
   Pause,
   SkipForward,
@@ -260,7 +260,7 @@ function handleCounterVisibility() {
 const singularityReady = computed(() => store.canSingularity)
 const singularityGainText = computed(() => format(store.singularityGain, 2, store.settings.notation))
 // Break Singularity alındıysa Shift/Galaxy botları tekillikte beklemeyi bırakır
-const singularityBroken = computed(() => (store.singularityUpgrades?.break_singularity || 0) >= 1)
+const singularityBroken = computed(() => store.hasBreakSingularity)
 const singularityTip = computed(() =>
   singularityBroken.value
     ? `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Sınır yıkıldı: Shift/Galaxy botları e308 üstünde de çalışıyor.`
@@ -340,14 +340,14 @@ const nightClock = computed(() => {
   const mm = String(totalMinutes % 60).padStart(2, '0')
   return `${hh}:${mm}`
 })
-// Gece fazı — saat rozeti + nokta rengi tek kaynaktan (Header + ScreenOverlay aynı dil)
+// Kozmik çöküş fazı — telemetri rozeti + nokta rengi
 const nightPhase = computed(() => {
   const p = nightProgress.value
-  if (p >= 1) return { label: 'Şafak 06:15', dot: 'bg-amber-300', text: 'text-amber-200' }
-  if (p >= 0.8) return { label: 'Kuş Vakti', dot: 'bg-orange-300', text: 'text-orange-200' }
-  if (p >= 0.55) return { label: 'Cızırtı', dot: 'bg-purple-300', text: 'text-purple-200' }
-  if (p >= 0.25) return { label: 'Derin Gece', dot: 'bg-cyan-300', text: 'text-cyan-200' }
-  return { label: 'Yorgan Altı', dot: 'bg-rose-500', text: 'text-slate-200' }
+  if (p >= 1) return { label: 'Kozmik Tekillik', dot: 'bg-amber-300', text: 'text-amber-200' }
+  if (p >= 0.8) return { label: 'Galaktik Olay Ufku', dot: 'bg-orange-300', text: 'text-orange-200' }
+  if (p >= 0.55) return { label: 'Makro Çöküş', dot: 'bg-purple-300', text: 'text-purple-200' }
+  if (p >= 0.25) return { label: 'Mikro Karadelik', dot: 'bg-cyan-300', text: 'text-cyan-200' }
+  return { label: 'Planck Yırtılması', dot: 'bg-blue-400', text: 'text-slate-200' }
 })
 
 // 0-state onboarding: ilk format hiç alınmamışsa oyuncuya tek bir eylem çizilir
@@ -412,6 +412,8 @@ function stanceLockHint(featureId: string): { hint: string; progress: string } |
 }
 const stanceSpamLock = computed(() => stanceLockHint('stance_spam'))
 const stancePrivateLock = computed(() => stanceLockHint('stance_private'))
+const isStanceUnlocked = computed(() => (store.dimensions[0]?.bought ?? 0) >= 25 || store.isFeatureUnlocked('stance_spam'))
+const hasMobileControls = computed(() => isStanceUnlocked.value || inChallenge.value || singularityReady.value)
 
 function buyTickspeed() {
   store.buyTickspeed()
@@ -598,45 +600,45 @@ onUnmounted(() => {
 
 <template>
   <header class="w-full glass-panel-glow rounded-2xl p-4 md:p-5 mb-6 relative overflow-hidden border border-white/[0.08]">
-    <!-- 1. ÜST STATUS BAR (Minimalist Akıllı Telefon Çubuğu + Lo-Fi Radyo) -->
+    <!-- 1. ÜST STATUS BAR (Kozmik Telemetri & Kuantum Rezonans Çubuğu) -->
     <div class="flex items-center justify-between text-xs font-mono border-b border-white/[0.06] pb-2.5 mb-4 text-slate-400 select-none flex-wrap gap-2">
-      <!-- Sol: Zaman & Durum (Şafak ilerlemesiyle senkron) -->
+      <!-- Sol: Kozmik Zaman & Çöküş Fazı -->
       <div
         class="flex items-center gap-2 min-w-0"
-        v-tip="`Telemetri ${nightClock} — ${nightPhase.label}. Kütle arttıkça tekillik yoğunlaşır, 1.79e308 g kütlede kozmik çöküş hazır olur.`"
+        v-tip="`Telemetri Zamanı ${nightClock} — Faz: ${nightPhase.label}. 1.79e308 g kütlede Kozmik Çöküş tetiklenir.`"
       >
-        <span class="inline-block w-1.5 h-1.5 rounded-full animate-pulse shrink-0" :class="nightPhase.dot"></span>
-        <span class="font-bold tracking-wider tabular-nums" :class="nightPhase.text">{{ nightClock }}</span>
-        <span class="text-[10px] text-slate-500 truncate hidden sm:inline">{{ nightPhase.label }}</span>
-        <!-- Gece → şafak ince gökyüzü şeridi -->
+        <span class="inline-block w-2 h-2 rounded-full shrink-0" :class="[nightPhase.dot, 'shadow-xs animate-pulse']"></span>
+        <span class="font-bold tracking-wider tabular-nums text-slate-200">{{ nightClock }}</span>
+        <span class="text-[10px] text-slate-400 font-semibold truncate hidden sm:inline">{{ nightPhase.label }}</span>
+        <!-- Kozmik İlerleme İnce Şeridi -->
         <span class="hidden md:inline-block w-16 h-1 rounded-full overflow-hidden bg-black/50 border border-white/[0.06] shrink-0" aria-hidden="true">
           <span
             class="block h-full rounded-full transition-all duration-500"
             :style="{
               width: `${Math.round(nightProgress * 100)}%`,
-              background: 'linear-gradient(to right, #312e81, #a855f7, #fb7185, #fbbf24)'
+              background: 'linear-gradient(to right, #00f0ff, #a855f7, #f59e0b)'
             }"
           ></span>
         </span>
       </div>
 
-      <!-- Orta: Gece Lo-Fi Radyo Mini Oynatıcı (U1: mobilde gizli — ilk bakışta sayaç + hedef tek odak) -->
-      <div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/60 border border-purple-500/30 text-[11px] shadow-sm">
-        <!-- Visualizer Bar'ları -->
-        <div class="flex items-end gap-0.5 h-3.5 px-0.5" v-tip="'Lo-Fi Radyo'">
+      <!-- Orta: Kuantum Sinyal Alıcısı (U1: mobilde gizli — sayaç odaklı) -->
+      <div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/60 border border-cyan-500/25 text-[11px] shadow-sm">
+        <!-- Visualizer Barları -->
+        <div class="flex items-end gap-0.5 h-3 px-0.5" v-tip="'Kuantum Sinyal Modülatörü'">
           <span
             v-for="(lvl, idx) in visualizerBars"
             :key="idx"
-            class="w-1 rounded-full bg-gradient-to-t from-purple-500 to-cyan-400 transition-all duration-100"
+            class="w-1 rounded-full bg-gradient-to-t from-cyan-500 to-purple-400 transition-all duration-100"
             :style="{ height: `${Math.max(20, lvl * 100)}%` }"
           ></span>
         </div>
 
-        <!-- Parça İsmi -->
+        <!-- Parça / Frekans İsmi -->
         <button
           @click="emit('open-settings')"
-          class="font-mono font-medium text-slate-300 hover:text-purple-300 flex items-center gap-1.5 transition-colors cursor-pointer truncate max-w-[110px] sm:max-w-[160px]"
-          v-tip="`${currentTrackInfo.name} (${currentTrackInfo.subtitle}) - Ayarları aç`"
+          class="font-mono font-medium text-slate-300 hover:text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer truncate max-w-[110px] sm:max-w-[160px]"
+          v-tip="`${currentTrackInfo.name} (${currentTrackInfo.subtitle}) — Frekans Ayarları`"
         >
           <span class="text-xs">{{ currentTrackInfo.icon }}</span>
           <span class="truncate font-semibold">{{ currentTrackInfo.name }}</span>
@@ -644,26 +646,26 @@ onUnmounted(() => {
 
         <span class="text-slate-700">|</span>
 
-        <!-- Oynat / Duraklat Butonu -->
+        <!-- Oynat / Duraklat -->
         <button
           @click="toggleMusic"
           class="hit-44 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          v-tip="store.settings.musicEnabled ? 'Müziği Duraklat' : 'Müziği Başlat'"
+          v-tip="store.settings.musicEnabled ? 'Sinyali Duraklat' : 'Sinyali Başlat'"
         >
-          <component :is="store.settings.musicEnabled ? Pause : Play" class="w-3 h-3 text-purple-400" />
+          <component :is="store.settings.musicEnabled ? Pause : Play" class="w-3 h-3 text-cyan-400" />
         </button>
 
-        <!-- Sonraki Parça Butonu -->
+        <!-- Sonraki Frekans Kanalı -->
         <button
           @click="nextTrack"
           class="hit-44 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          v-tip="'Sonraki Radyo Kanalı'"
+          v-tip="'Sonraki Kuantum Kanalı'"
         >
-          <SkipForward class="w-3 h-3 text-cyan-400" />
+          <SkipForward class="w-3 h-3 text-purple-400" />
         </button>
       </div>
 
-      <!-- Sağ: Kullanıcı İsmi / Bulut & Pil -->
+      <!-- Sağ: Bulut Hesabı & Tekillik Kararlılığı Telemetrisi -->
       <div class="flex items-center gap-2">
         <button
           @click="emit('open-auth')"
@@ -676,10 +678,27 @@ onUnmounted(() => {
           <span v-if="authStore.isAuthenticated" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
         </button>
 
-        <div class="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300" v-tip="'Pil: %3 (Düşük Güç Modu — yine de kaydırmaya devam)'">
-          <Battery class="w-4 h-4 text-rose-300" />
-          <span class="text-[11px] font-bold tabular-nums">%3</span>
+        <!-- Tekillik Kararlılığı Göstergesi -->
+        <div
+          class="flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-mono font-semibold"
+          :class="store.crisisBackfireDebuff > 0
+            ? 'bg-rose-500/15 border-rose-500/35 text-rose-300'
+            : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'"
+          v-tip="store.crisisBackfireDebuff > 0 ? 'Gravitasyonel Kararsızlık: Kriz ters tepmesi aktif' : 'Olay Ufku Kararlı: Çekim alanı dengede'"
+        >
+          <Activity class="w-3.5 h-3.5" :class="store.crisisBackfireDebuff > 0 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'" />
+          <span class="uppercase tracking-wider text-[10px]">{{ store.crisisBackfireDebuff > 0 ? 'KARARSIZ' : 'KARARLI' }}</span>
         </div>
+
+        <!-- Ayarlar Butonu (Mobilde üst barda doğrudan erişim) -->
+        <button
+          @click="emit('open-settings')"
+          aria-label="Ayarlar"
+          class="md:hidden flex items-center justify-center h-7 w-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer shrink-0"
+          v-tip="'Ayarlar'"
+        >
+          <Settings class="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
 
@@ -771,10 +790,15 @@ onUnmounted(() => {
     </div>
 
     <!-- 3. DENETİM VE AKSİYON BUTONLARI ÇUBUĞU -->
-    <div class="flex flex-col md:flex-row items-center justify-between gap-3 pt-3 border-t border-white/[0.05]">
+    <div
+      :class="[
+        hasMobileControls ? 'flex' : 'hidden md:flex',
+        'flex-col md:flex-row items-center justify-between gap-3 pt-3 border-t border-white/[0.05]'
+      ]"
+    >
       <!-- Sol: Stance Modları (Denetim Merkezi - İlk 25 alımdan sonra veya duruş açılınca görünür) -->
       <div
-        v-if="(store.dimensions[0]?.bought ?? 0) >= 25 || store.isFeatureUnlocked('stance_spam')"
+        v-if="isStanceUnlocked"
         class="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] shrink-0 justify-center md:justify-start w-fit mx-auto md:mx-0 max-w-full overflow-x-auto no-scrollbar"
       >
         <button
@@ -822,12 +846,17 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Sağ: TAKTİL BUTONLAR (Kayıp/zıplama yapmayan sabit yükseklikli ve sarmasız buton grubu) -->
-      <div class="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full">
-        <!-- Hipnotik Seri rozeti: seri ≥2 iken Kaydır butonunun solunda belirir, geri sayım çubuğu 1.5 sn'de boşalır -->
+      <!-- Sağ: TAKTİL BUTONLAR (Masaüstü eylem butonları + ortak Tekillik butonu) -->
+      <div
+        :class="[
+          inChallenge || singularityReady ? 'flex' : 'hidden md:flex',
+          'items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full'
+        ]"
+      >
+        <!-- Hipnotik Seri rozeti: masaüstünde YUT butonunun solunda belirir (mobilde FloatingThumbBar'da gösterilir) -->
         <div
           v-if="comboActive"
-          class="h-11 px-2 rounded-xl bg-rose-500/15 border border-rose-500/40 flex flex-col items-center justify-center gap-1 min-w-[54px] shrink-0"
+          class="hidden md:flex h-11 px-2 rounded-xl bg-rose-500/15 border border-rose-500/40 flex-col items-center justify-center gap-1 min-w-[54px] shrink-0"
           v-tip="`Hipnotik Çekim Serisi: ${comboCount} üst üste yutma — seri 1.5 sn içinde söner, devam et!`"
         >
           <span class="text-xs font-mono font-black text-rose-300 tabular-nums leading-none">{{ comboBadgeText }}</span>
@@ -839,84 +868,81 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 1. Manuel Yut (Space / Consume) — birincil aksiyon: en büyük, en parlak -->
+        <!-- 1. Manuel Yut (Space / Consume) — masaüstü birincil taktil aksiyon (mobilde FloatingThumbBar'da yer alır) -->
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
-          class="btn-tactile btn-sheen h-12 px-3.5 sm:px-5 rounded-xl bg-purple-600/35 hover:bg-purple-600/45 text-white border border-purple-400/60 text-sm font-bold font-mono flex items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[120px] sm:min-w-[150px]"
+          class="hidden md:flex btn-tactile btn-sheen h-11 px-3.5 sm:px-4.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-white border border-purple-400/50 text-xs font-bold font-mono items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[115px] sm:min-w-[140px]"
           :class="{ 'cta-beacon': showFirstSwipeHint }"
           v-tip="swipeTip"
         >
-          <ArrowUp class="w-4 h-4 text-purple-400 shrink-0" />
+          <ArrowUp class="w-4 h-4 text-purple-300 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
-              <span>YUT!</span>
-              <kbd class="hidden sm:inline-block px-1 py-0.2 rounded bg-black/40 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
+              <span class="tracking-wide">YUT!</span>
+              <kbd class="hidden sm:inline-block px-1 py-0.2 rounded bg-black/50 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
             </div>
-            <span class="text-[10px] text-purple-300/80 font-mono font-normal tabular-nums truncate max-w-[65px] sm:max-w-[90px]">
+            <span class="text-[10px] text-purple-200/80 font-mono font-normal tabular-nums truncate max-w-[65px] sm:max-w-[90px]">
               +{{ formattedClickPower }}
             </span>
           </div>
         </button>
 
-        <!-- 2. Çekim Hızı (Tickspeed) — ikincil üretim -->
+        <!-- 2. Çekim Hızı (Hz / Tickspeed) — masaüstü ikincil kuantum modülatörü (mobilde FloatingThumbBar'da yer alır) -->
         <button
           @click="buyTickspeed"
           v-hold="buyTickspeed"
           :disabled="!canAffordTickspeed"
-          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all flex items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[78px] sm:min-w-[95px]"
+          class="hidden md:flex btn-tactile h-11 px-2.5 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[76px] sm:min-w-[92px]"
           :class="canAffordTickspeed
-            ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 border-purple-500/30 cursor-pointer affordance-pulse'
-            : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-50'"
-          :style="canAffordTickspeed ? { '--pulse-c1': 'rgba(168, 85, 247, 0.3)', '--pulse-c2': 'rgba(168, 85, 247, 0.7)' } : undefined"
+            ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 border-cyan-500/35 cursor-pointer affordance-pulse'
+            : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-50'"
+          :style="canAffordTickspeed ? { '--pulse-c1': 'rgba(0, 240, 255, 0.3)', '--pulse-c2': 'rgba(0, 240, 255, 0.7)' } : undefined"
           v-tip="'Çekim Hızını (Hz) yükseltir'"
         >
-          <Cpu class="w-4 h-4 text-purple-300 shrink-0" />
+          <Cpu class="w-4 h-4 text-cyan-400 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
               <span class="text-[10px] text-slate-400">Hz</span>
               <span class="font-bold tabular-nums text-white text-xs">×{{ tickspeedMultiplier }}</span>
             </div>
-            <span class="text-[10px] text-purple-300/90 font-mono tabular-nums truncate max-w-[60px] sm:max-w-[80px]">
+            <span class="text-[10px] text-cyan-300/90 font-mono tabular-nums truncate max-w-[60px] sm:max-w-[80px]">
               {{ tickspeedCost }}
             </span>
           </div>
         </button>
 
-        <!-- 3. Tümünü Al Butonu — üçüncül, ghost -->
+        <!-- 3. Tümünü Al Butonu — masaüstü üçüncül ghost HUD butonu (mobilde FloatingThumbBar'da yer alır) -->
         <button
           @click="maxAll"
           :disabled="!canAffordAny"
-          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl font-bold text-xs tracking-wider flex items-center gap-1.5 sm:gap-2 transition-all border font-mono shrink-0 min-w-[65px] sm:min-w-[75px]"
+          class="hidden md:flex btn-tactile h-11 px-2.5 sm:px-3 rounded-xl font-bold text-xs tracking-wider items-center gap-1.5 sm:gap-2 transition-all border font-mono shrink-0 min-w-[65px] sm:min-w-[74px]"
           :class="canAffordAny
-            ? 'bg-white/[0.08] hover:bg-white/[0.12] text-white border-white/20 cursor-pointer'
-            : 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-40'"
-          v-tip="'Tüm açık format ve frekans yükseltmelerini alır'"
+            ? 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/20 cursor-pointer'
+            : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40'"
+          v-tip="'Tüm açık boyut ve frekans yükseltmelerini alır'"
         >
-          <Layers class="w-4 h-4 text-purple-400 shrink-0" />
+          <Layers class="w-4 h-4 text-slate-300 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <span class="text-xs font-bold">Tümü</span>
             <span class="text-[10px] text-slate-400 font-normal">Maks Al</span>
           </div>
         </button>
 
-        <!-- 4. Güneşi Karşıla (Tekillik hazır) / Meydan Okumayı Tamamla (challenge aktif) -->
+        <!-- 4. Kozmik Çöküş (Tekillik hazır) / Meydan Okumayı Tamamla -->
         <button
           v-if="inChallenge || singularityReady"
           @click="handleSingularity"
           :disabled="inChallenge && !singularityReady"
-          class="btn-tactile h-12 px-2 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
+          class="btn-tactile h-11 px-2.5 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
           :class="inChallenge && !singularityReady
             ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-60'
             : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 shadow-md animate-pulse'"
           v-tip="inChallenge ? challengeTip : singularityTip"
         >
-          <!-- ADR-0029: bu iki öğe amber-500 zemin üzerinde amber-900 idi
-               (4.22:1 ve 3.07:1). 10 px'lik metin 4.5:1 istiyor; slate-950
-               ~9.4:1 verir ve SingularityTab ile de tutarlı olur. -->
           <Sun class="w-4 h-4 text-slate-950/80 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight min-w-0">
-            <span class="text-[10px] text-slate-950/80 font-normal">{{ inChallenge ? 'Meydan Okuma' : '06:00' }}</span>
+            <span class="text-[10px] text-slate-950/80 font-normal">{{ inChallenge ? 'Meydan' : 'Tekillik' }}</span>
             <span class="text-xs font-black tabular-nums truncate max-w-[110px] sm:max-w-[150px]">
               {{ inChallenge ? challengeRewardShort : `+${singularityGainText}` }}
             </span>
@@ -925,15 +951,11 @@ onUnmounted(() => {
 
       </div>
 
-      <!-- 5. Ayarlar Butonu -->
-      <!-- ADR-0029: bu buton yatay kaydırma satırının DIŞINDA. Önceden satırın
-           en sonundaydı ve 360 px'te taşma nedeniyle görünmez biçimde kırpılıyordu
-           — yani telefonda "hareketi azalt / CRT / pil tasarrufu" ayarlarına
-           ULAŞILAMIYORDU. Artık asla taşmaz. -->
+      <!-- 5. Ayarlar Butonu (Masaüstü) -->
       <button
         @click="emit('open-settings')"
         aria-label="Ayarlar"
-        class="btn-tactile h-12 w-10 sm:w-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer flex items-center justify-center shrink-0"
+        class="hidden md:flex btn-tactile h-11 w-10 sm:w-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer items-center justify-center shrink-0"
         v-tip="'Ayarlar'"
       >
         <Settings class="w-4 h-4" />

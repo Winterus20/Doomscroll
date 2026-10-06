@@ -94,10 +94,10 @@ const isHypeFull = computed(() => store.labHype >= 100)
     <TabHero
       :icon="FlaskConical"
       icon-class="text-emerald-400"
-      title="Algoritma Stüdyosu: Viral Matris & Trend Reaktörü"
-      badge="Viral Stüdyo"
+      title="Kuantum Sentez Laboratuvarı: Parçacık Reaktörü & Matris"
+      badge="Kuantum Laboratuvarı"
       badge-class="ds-badge-emerald"
-      subtitle="Popüler Reels ses ve meme formatlarını akış matrisine yerleştir, yönlü rezonanslarla algoritmayı hackle ve dolan Viral Reaktörü akışa fırlat!"
+      subtitle="Atomaltı kuantum tohumlarını rezonans matrisine yerleştir, yönlü sinerjilerle parçacıkları sentezle ve Reaktör enerjisini tekilliğe boşalt!"
       accent="emerald"
     >
       <template #stats>
@@ -587,12 +587,13 @@ const isHypeFull = computed(() => store.labHype >= 100)
       </div>
     </div>
 
-    <!-- Viral Kodeks Modal / Çekmece -->
-    <div
-      v-if="showCodexModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-      @click.self="showCodexModal = false"
-    >
+    <!-- Viral Kodeks Modal / Çekmece (Body'ye teleport edilir) -->
+    <Teleport to="body">
+      <div
+        v-if="showCodexModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        @click.self="showCodexModal = false"
+      >
       <div class="glass-panel-card max-w-2xl w-full p-5 rounded-2xl border border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.2)] space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
           <div class="flex items-center gap-2">
@@ -680,5 +681,6 @@ const isHypeFull = computed(() => store.labHype >= 100)
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>

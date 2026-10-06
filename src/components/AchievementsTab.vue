@@ -29,7 +29,7 @@ const multiplierText = computed(() => format(store.achievementMultiplier, 2, sto
     <TabHero
       :icon="Trophy"
       icon-class="text-amber-400"
-      title="Gece Başarımları"
+      title="Kozmik Başarımlar & Plaketler"
       :badge="`${totalUnlocked}/${totalCount}`"
       badge-class="ds-badge-amber"
       subtitle="Her başarım kalıcı ×1.012 üretim verir, tam satır (kategori) ×1.06 ekler. Ödüllü başarımlar prestij dahil kalıcı yetenek açar. Gizli başarımlar ipucu vermez, ödül vermez — sadece plaket."
@@ -91,7 +91,7 @@ const multiplierText = computed(() => format(store.achievementMultiplier, 2, sto
               </span>
             </div>
             <div class="text-[11px] leading-snug" :class="isUnlocked(ach.id) ? 'text-slate-300' : 'text-slate-500'">
-              {{ isUnlocked(ach.id) || !ach.secret ? ach.desc : 'Gizli başarım — geceyi kurcala, belki bulursun.' }}
+              {{ isUnlocked(ach.id) || !ach.secret ? ach.desc : 'Gizli başarım — olay ufkunu kurcala, belki bulursun.' }}
             </div>
             <div v-if="ach.reward" class="mt-auto pt-1">
               <span

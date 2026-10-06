@@ -20,14 +20,14 @@ export interface AchievementCategoryMeta {
 }
 
 export const ACHIEVEMENT_CATEGORIES: AchievementCategoryMeta[] = [
-  { id: 'dopamine', name: 'Dopamin Bağımlılığı', desc: 'Yukarı kaydır, üret, biriktir. Başparmağın kaderi.', icon: '📱' },
-  { id: 'dimensions', name: 'Boyut Yozlaşması', desc: 'İstasyonlar, frekans, sıçrama ve kümeler.', icon: '🏭' },
-  { id: 'automation', name: 'Otomasyon Ordusu', desc: 'Botları aç, toplu ve max moda geçir.', icon: '🤖' },
-  { id: 'crisis', name: 'Gece Krizleri', desc: 'Anomaliler, rezonans komboları ve gece kararları.', icon: '🌃' },
-  { id: 'guilt', name: 'Vicdan Azapları', desc: 'Dadanırlar, emerler, susturulurlar.', icon: '😈' },
-  { id: 'lab', name: 'Algoritma Laboratuvarı', desc: 'Tohum ek, olgunlaştır, hasat et, mutasyona uğrat.', icon: '🧪' },
-  { id: 'singularity', name: 'Tekillik Yolculuğu', desc: 'Şafağı gör, çök, SP biriktir, nöbette kal.', icon: '🌅' },
-  { id: 'challenges', name: 'Meydan Okumalar', desc: 'Gece Kriz Meydan Okumalarını tamamla.', icon: '🏆' }
+  { id: 'dopamine', name: 'Kozmik Kütle Açlığı', desc: 'Maddeyi yut, kütle biriktir. Olay ufkunun kaderi.', icon: '🌌' },
+  { id: 'dimensions', name: 'Kütle Boyutları', desc: 'Moleküllerden Samanyolu\'na, çekim hızı ve ölçek sıçramaları.', icon: '⚛️' },
+  { id: 'automation', name: 'Otonom Çekim Ağı', desc: 'Botları devreye sok, toplu ve maksimum çekime geç.', icon: '🤖' },
+  { id: 'crisis', name: 'Kozmik Dalgalanmalar', desc: 'Kozmik anomaliler, süpernova patlamaları ve rezonans komboları.', icon: '✨' },
+  { id: 'guilt', name: 'Kozmik Parazitler', desc: 'Olay ufkuna dadanırlar, kütle emerler, patlatılırlar.', icon: '👾' },
+  { id: 'lab', name: 'Kuantum Laboratuvarı', desc: 'İzotop ek, reaksiyonu olgunlaştır, hasat et ve mutasyon yarat.', icon: '🔬' },
+  { id: 'singularity', name: 'Kozmik Tekillik', desc: 'Büyük Çöküşü yaşa, SP biriktir, evrensel döngüyü sürdür.', icon: '🕳️' },
+  { id: 'challenges', name: 'Kozmik Meydan Okumalar', desc: 'Uzay-zaman bozulmalarını ve Planck krizlerini aş.', icon: '🏆' }
 ]
 
 // Eşik sabitleri (string tabanlı: float kayması yok)
@@ -46,157 +46,159 @@ const SP10 = new Decimal(10)
 const SP1000 = new Decimal(1000)
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  // ---- 1. Dopamin Bağımlılığı (ADR-0032: 0 → 1e308 ölçek merdiveni) ----
-  { id: 'dop_first', name: 'İlk Yukarı Kaydırma', desc: '1 kez yukarı kaydır', icon: '👆', category: 'dopamine', check: (c) => c.manualClicks >= 1 },
-  { id: 'dop_100', name: 'Başparmak Isınması', desc: '100 kez yukarı kaydır', icon: '👍', category: 'dopamine', check: (c) => c.manualClicks >= 100 },
-  { id: 'dop_1000', name: 'Kaydırma Maratonu', desc: '1.000 kez yukarı kaydır', icon: '🔥', category: 'dopamine', check: (c) => c.manualClicks >= 1000 },
+  // ---- 1. Kozmik Kütle Açlığı (ADR-0032: 0 → 1e308 ölçek merdiveni) ----
+  { id: 'dop_first', name: 'İlk Kuantum Yutumu', desc: '1 kez kütle yut', icon: '🌌', category: 'dopamine', check: (c) => c.manualClicks >= 1 },
+  { id: 'dop_100', name: 'Çekim Isınması', desc: '100 kez kütle yut', icon: '✨', category: 'dopamine', check: (c) => c.manualClicks >= 100 },
+  { id: 'dop_1000', name: 'Obur Çekim Maratonu', desc: '1.000 kez kütle yut', icon: '🔥', category: 'dopamine', check: (c) => c.manualClicks >= 1000 },
   {
-    id: 'dop_10k', name: 'Durdurulamaz Başparmak', desc: '10.000 kez yukarı kaydır', icon: '🌀', category: 'dopamine',
-    reward: { kind: 'click_x2', desc: 'Kalıcı ödül: Yukarı Kaydırma ×2' },
+    id: 'dop_10k', name: 'Doyumsuz Tekillik', desc: '10.000 kez kütle yut', icon: '🌀', category: 'dopamine',
+    reward: { kind: 'click_x2', desc: 'Kalıcı ödül: Manuel Çekim Gücü ×2' },
     check: (c) => c.manualClicks >= 10000
   },
-  { id: 'dop_million', name: 'İlk Viral Patlama', desc: 'Toplam 1e6 Dopamin üret', icon: '📈', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E6) },
-  { id: 'dop_trillion', name: 'Gece 3 Fenomeni', desc: 'Toplam 1e12 Dopamin üret', icon: '🌙', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E12) },
-  { id: 'dop_baron', name: 'Dopamin Baronu', desc: 'Toplam 1e30 Dopamin üret', icon: '👑', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E30) },
-  { id: 'dop_50', name: 'Gece Nöbetçisi', desc: 'Toplam 1e50 Dopamin üret', icon: '🕯️', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E50) },
-  { id: 'dop_75', name: 'Uykusuzluğun Eşiği', desc: 'Toplam 1e75 Dopamin üret', icon: '👁️', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E75) },
+  { id: 'dop_million', name: 'İlk Kütle Patlaması', desc: 'Toplam 1e6 g Kütle yut', icon: '📈', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E6) },
+  { id: 'dop_trillion', name: 'Moleküler Çözünme', desc: 'Toplam 1e12 g Kütle yut', icon: '🪐', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E12) },
+  { id: 'dop_baron', name: 'Kozmik Obur', desc: 'Toplam 1e30 g Kütle yut', icon: '👑', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E30) },
+  { id: 'dop_50', name: 'Olay Ufku Nöbetçisi', desc: 'Toplam 1e50 g Kütle yut', icon: '🕳️', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E50) },
+  { id: 'dop_75', name: 'Planck Duvarı Eşiği', desc: 'Toplam 1e75 g Kütle yut', icon: '⚡', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E75) },
   {
-    id: 'dop_padisah', name: 'Dopamin Padişahı', desc: 'Toplam 1e105 Dopamin üret', icon: '💎', category: 'dopamine',
-    reward: { kind: 'prod_x125', desc: 'Kalıcı ödül: Tüm üretim ×1.25' },
+    id: 'dop_padisah', name: 'Yerçekimi Hükümdarı', desc: 'Toplam 1e105 g Kütle yut', icon: '💎', category: 'dopamine',
+    reward: { kind: 'prod_x125', desc: 'Kalıcı ödül: Tüm kütle üretimi ×1.25' },
     check: (c) => c.totalMatter.gte(N1E105)
   },
   {
-    id: 'dop_yasa', name: 'Gece Yasası', desc: 'Toplam 1e140 Dopamin üret', icon: '📜', category: 'dopamine',
-    reward: { kind: 'dim_cost_x085', desc: 'Kalıcı ödül: Boyut maliyeti -%15' },
+    id: 'dop_yasa', name: 'Termodinamik İhlali', desc: 'Toplam 1e140 g Kütle yut', icon: '📜', category: 'dopamine',
+    reward: { kind: 'dim_cost_x085', desc: 'Kalıcı ödül: Boyut maliyetleri -%15' },
     check: (c) => c.totalMatter.gte(N1E140)
   },
   {
-    id: 'dop_donus_yok', name: 'Sabaha Dönüş Yok', desc: 'Toplam 1e180 Dopamin üret', icon: '⚡', category: 'dopamine',
-    reward: { kind: 'click_x3', desc: 'Kalıcı ödül: Yukarı Kaydırma ×3' },
+    id: 'dop_donus_yok', name: 'Işığın Kaçamadığı Nokta', desc: 'Toplam 1e180 g Kütle yut', icon: '⚡', category: 'dopamine',
+    reward: { kind: 'click_x3', desc: 'Kalıcı ödül: Manuel Çekim Gücü ×3' },
     check: (c) => c.totalMatter.gte(N1E180)
   },
   {
-    id: 'dop_sonsuz_akis', name: 'Sonsuz Akış', desc: 'Toplam 1e225 Dopamin üret', icon: '🌌', category: 'dopamine',
-    reward: { kind: 'shift_power_boost', desc: 'Kalıcı ödül: Sıçrama tabanı 1.66 → 1.9' },
+    id: 'dop_sonsuz_akis', name: 'Sonsuz Çekim Alanı', desc: 'Toplam 1e225 g Kütle yut', icon: '🌌', category: 'dopamine',
+    reward: { kind: 'shift_power_boost', desc: 'Kalıcı ödül: Ölçek Sıçraması tabanı 1.66 → 1.9' },
     check: (c) => c.totalMatter.gte(N1E225)
   },
-  { id: 'dop_safak_yolu', name: 'Şafak Yolu', desc: 'Toplam 1e270 Dopamin üret', icon: '🌅', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E270) },
+  { id: 'dop_safak_yolu', name: 'Kozmik Çöküş Eşiği', desc: 'Toplam 1e270 g Kütle yut', icon: '💥', category: 'dopamine', check: (c) => c.totalMatter.gte(N1E270) },
   {
-    id: 'dop_tekillik', name: 'Dopamin Tekilliği', desc: 'Toplam 1e308 Dopamin üret — Şafak kapısı', icon: '☀️', category: 'dopamine',
-    reward: { kind: 'prod_x2', desc: 'Kalıcı ödül: Tüm üretim ×2' },
+    id: 'dop_tekillik', name: 'Evrensel Tekillik', desc: 'Toplam 1e308 g Kütle yut — Büyük Çöküş kapısı', icon: '☀️', category: 'dopamine',
+    reward: { kind: 'prod_x2', desc: 'Kalıcı ödül: Tüm kütle üretimi ×2' },
     check: (c) => c.totalMatter.gte(N1E308)
   },
-  { id: 'dop_247', name: 'Gece 02:47 Kulübü', desc: 'Saat 02:00-03:00 arasında oyunu aç', icon: '🦉', category: 'dopamine', secret: true, check: (c) => c.wallHour === 2 },
+  { id: 'dop_247', name: 'Kozmik Gece Nöbeti', desc: 'Saat 02:00-03:00 arasında tekilliğe bağlan', icon: '🦉', category: 'dopamine', secret: true, check: (c) => c.wallHour === 2 },
+  { id: 'dop_fake_news', name: 'Kozmik Parazit Sinyali', desc: '50 farklı haber bandı iletisi yakala', icon: '📰', category: 'dopamine', secret: true, check: (c) => c.seenNewsCount >= 50 },
+  { id: 'dop_real_news', name: 'Doğrudan Kozmik İletim', desc: 'Tıklanabilir bir kozmik haber iletisine tıkla', icon: '📡', category: 'dopamine', secret: true, check: (c) => c.hasClickedSecretNews },
 
-  // ---- 2. Boyut Yozlaşması ----
-  { id: 'dim_d1', name: 'Kedi Videosu Bağımlılığı', desc: 'D1 istasyonundan 10 adet al', icon: '🐱', category: 'dimensions', check: (c) => c.dimBought0 >= 10 },
-  { id: 'dim_army', name: 'Reels Ordusu', desc: 'Toplam 100 istasyon al', icon: '🏭', category: 'dimensions', check: (c) => c.dimBoughtTotal >= 100 },
-  { id: 'dim_tick5', name: 'Frekans Yükseltmesi', desc: 'Algoritma Frekansı 5 Hz', icon: '📻', category: 'dimensions', check: (c) => c.tickspeedBought >= 5 },
+  // ---- 2. Kütle Boyutları ----
+  { id: 'dim_d1', name: 'Bağları Parçala', desc: 'D1 Moleküler Bağlar katmanından 10 adet al', icon: '💧', category: 'dimensions', check: (c) => c.dimBought0 >= 10 },
+  { id: 'dim_army', name: 'Kütleçekim Zinciri', desc: 'Toplam 100 kütle boyutu satın al', icon: '🪐', category: 'dimensions', check: (c) => c.dimBoughtTotal >= 100 },
+  { id: 'dim_tick5', name: 'Çekim Hızı Yükseltmesi', desc: 'Çekim Hızı 5 Hz', icon: '📻', category: 'dimensions', check: (c) => c.tickspeedBought >= 5 },
   {
-    id: 'dim_tick20', name: 'Algoritma Overclock', desc: 'Algoritma Frekansı 20 Hz', icon: '⚡', category: 'dimensions',
-    reward: { kind: 'tickspeed_discount', desc: 'Kalıcı ödül: Frekans maliyeti -%5' },
+    id: 'dim_tick20', name: 'Hiper-Çekim Rezonansı', desc: 'Çekim Hızı 20 Hz', icon: '⚡', category: 'dimensions',
+    reward: { kind: 'tickspeed_discount', desc: 'Kalıcı ödül: Çekim Hızı maliyeti -%5' },
     check: (c) => c.tickspeedBought >= 20
   },
-  { id: 'dim_shift', name: 'İlk Akış Sıçraması', desc: '1 Akış Sıçraması yap', icon: '🎢', category: 'dimensions', check: (c) => c.shifts >= 1 },
-  { id: 'dim_shift4', name: 'Tam Ekran Modu', desc: '4 Akış Sıçraması yap (D8 açılır)', icon: '📺', category: 'dimensions', check: (c) => c.shifts >= 4 },
-  { id: 'dim_galaxy', name: 'Sonsuz Akış Kümesi', desc: '1 Akış Kümesi yarat', icon: '🌌', category: 'dimensions', check: (c) => c.galaxies >= 1 },
-  { id: 'dim_fresh', name: 'Temiz Sayfa', desc: 'Sıçrama/Küme yapmadan 1e6 Dopamine ulaş', icon: '📄', category: 'dimensions', secret: true, check: (c) => c.matter.gte(N1E6) && c.shifts === 0 && c.galaxies === 0 },
+  { id: 'dim_shift', name: 'İlk Ölçek Sıçraması', desc: '1 Ölçek Sıçraması yap', icon: '🎢', category: 'dimensions', check: (c) => c.shifts >= 1 },
+  { id: 'dim_shift4', name: 'Galaktik Genişleme', desc: '4 Ölçek Sıçraması yap (D8 açılır)', icon: '🌌', category: 'dimensions', check: (c) => c.shifts >= 4 },
+  { id: 'dim_galaxy', name: 'Kozmik Kütle Kümesi', desc: '1 Kütle Kümesi yarat', icon: '🌀', category: 'dimensions', check: (c) => c.galaxies >= 1 },
+  { id: 'dim_fresh', name: 'Saf Tekillik', desc: 'Sıçrama/Küme yapmadan 1e6 g Kütleye ulaş', icon: '✨', category: 'dimensions', secret: true, check: (c) => c.matter.gte(N1E6) && c.shifts === 0 && c.galaxies === 0 },
 
-  // ---- 3. Otomasyon Ordusu ----
-  { id: 'auto_first', name: 'İlk Vardiyalı Bot', desc: '1 bot kilidi aç', icon: '🤖', category: 'automation', check: (c) => c.unlockedBots.length >= 1 },
-  { id: 'auto_half', name: 'Bot Çiftliği', desc: '6 bot kilidi aç', icon: '⚙️', category: 'automation', check: (c) => c.unlockedBots.length >= 6 },
-  { id: 'auto_all', name: 'Tam Otomasyon', desc: '11 botun tamamını aç', icon: '🧠', category: 'automation', check: (c) => c.unlockedBots.length >= 11 },
-  { id: 'auto_bulk', name: 'Toplu Üretim Bandı', desc: 'Toplu (Bulk) modunu aç', icon: '📦', category: 'automation', check: (c) => c.bulkUnlocked },
-  { id: 'auto_max', name: 'Maksimum Verimlilik', desc: 'Max modunu aç', icon: '🚀', category: 'automation', check: (c) => c.maxUnlocked },
-  { id: 'auto_freq', name: 'Frekans Teknisyeni', desc: 'Frekans (Hz) botunu aç', icon: '🎛️', category: 'automation', check: (c) => c.unlockedBots.includes('tickspeed') },
-  { id: 'auto_shift', name: 'Sıçrama Operatörü', desc: 'Akış Sıçraması botunu aç', icon: '🔁', category: 'automation', check: (c) => c.unlockedBots.includes('shift') },
-  { id: 'auto_galaxy', name: 'Küme Mimarı', desc: 'Akış Kümeleri botunu aç', icon: '🛸', category: 'automation', secret: true, check: (c) => c.unlockedBots.includes('galaxy') },
-  { id: 'colony_hatch', name: 'Nöral Çekirdek', desc: 'Nöral izleme kolonisini aktif et', icon: '🧠', category: 'automation', check: (c) => c.neuralBots.gt(0) },
-  { id: 'colony_nap', name: 'İlk Toplu Uyku', desc: '1 Toplu Uyku (Power Nap) yap', icon: '😴', category: 'automation', check: (c) => c.napCount >= 1 },
-  { id: 'colony_million', name: 'Milyonlarca Alt-Rutin', desc: '1.000.000 nöral bot yetiştir', icon: '🐜', category: 'automation', secret: true, check: (c) => c.neuralBots.gte(N1E6) },
+  // ---- 3. Otonom Çekim Ağı ----
+  { id: 'auto_first', name: 'İlk Otonom Çekici', desc: '1 bot kilidi aç', icon: '🤖', category: 'automation', check: (c) => c.unlockedBots.length >= 1 },
+  { id: 'auto_half', name: 'Çekim Botu Filosu', desc: '6 bot kilidi aç', icon: '⚙️', category: 'automation', check: (c) => c.unlockedBots.length >= 6 },
+  { id: 'auto_all', name: 'Kozmik Otonomi', desc: '11 botun tamamını aç', icon: '🧠', category: 'automation', check: (c) => c.unlockedBots.length >= 11 },
+  { id: 'auto_bulk', name: 'Toplu Çekim Modu', desc: 'Toplu (Bulk) modunu aç', icon: '📦', category: 'automation', check: (c) => c.bulkUnlocked },
+  { id: 'auto_max', name: 'Maksimum Olay Ufku', desc: 'Max modunu aç', icon: '🚀', category: 'automation', check: (c) => c.maxUnlocked },
+  { id: 'auto_freq', name: 'Frekans Modülatörü', desc: 'Çekim Hızı (Hz) botunu aç', icon: '🎛️', category: 'automation', check: (c) => c.unlockedBots.includes('tickspeed') },
+  { id: 'auto_shift', name: 'Sıçrama Operatörü', desc: 'Ölçek Sıçraması botunu aç', icon: '🔁', category: 'automation', check: (c) => c.unlockedBots.includes('shift') },
+  { id: 'auto_galaxy', name: 'Küme Mimarı', desc: 'Kozmik Kümeler botunu aç', icon: '🛸', category: 'automation', secret: true, check: (c) => c.unlockedBots.includes('galaxy') },
+  { id: 'colony_hatch', name: 'Kuantum Çekirdeği', desc: 'Nöral çekim kolonisini aktif et', icon: '🧠', category: 'automation', check: (c) => c.neuralBots.gt(0) },
+  { id: 'colony_nap', name: 'Durgunluk Evresi', desc: '1 Koloni Durgunluk Döngüsü (Power Nap) yap', icon: '⏳', category: 'automation', check: (c) => c.napCount >= 1 },
+  { id: 'colony_million', name: 'Milyonluk Alt-Sürü', desc: '1.000.000 nöral bot yetiştir', icon: '🐜', category: 'automation', secret: true, check: (c) => c.neuralBots.gte(N1E6) },
 
-  // ---- 4. Gece Krizleri ----
-  { id: 'cri_first', name: 'İlk Gece Krizi', desc: '1 Gece Krizine dokun', icon: '✨', category: 'crisis', check: (c) => c.anomaliesClicked >= 1 },
-  { id: 'cri_10', name: 'Kriz Avcısı', desc: '10 Gece Krizine dokun', icon: '🎯', category: 'crisis', check: (c) => c.anomaliesClicked >= 10 },
+  // ---- 4. Kozmik Dalgalanmalar ----
+  { id: 'cri_first', name: 'İlk Kozmik Dalgalanma', desc: '1 Kozmik Dalgalanmaya dokun', icon: '✨', category: 'crisis', check: (c) => c.anomaliesClicked >= 1 },
+  { id: 'cri_10', name: 'Dalgalanma Avcısı', desc: '10 Kozmik Dalgalanmaya dokun', icon: '🎯', category: 'crisis', check: (c) => c.anomaliesClicked >= 10 },
   {
-    id: 'cri_50', name: 'Gece Vardiyası', desc: '50 Gece Krizine dokun', icon: '🌃', category: 'crisis',
-    reward: { kind: 'anomaly_rate', desc: 'Kalıcı ödül: Kriz sıklığı +%10' },
+    id: 'cri_50', name: 'Kozmik Gözlemci', desc: '50 Kozmik Dalgalanmaya dokun', icon: '🔭', category: 'crisis',
+    reward: { kind: 'anomaly_rate', desc: 'Kalıcı ödül: Dalgalanma sıklığı +%10' },
     check: (c) => c.anomaliesClicked >= 50
   },
-  { id: 'cri_combo', name: 'Rezonans Hipnozu', desc: 'İlk Süper Rezonans komboyu tetikle (7× + 300×)', icon: '💥', category: 'crisis', check: (c) => c.combosTriggered >= 1 },
-  { id: 'cri_void', name: 'Void Reel Avcısı', desc: 'Nadir Void Reel Tekilliğini yakala', icon: '🌌', category: 'crisis', secret: true, check: (c) => (c.mythicsClicked || 0) >= 1 },
-  { id: 'cri_combo5', name: 'Hipnoz Ustası', desc: '5 Süper Rezonans kombo tetikle', icon: '💫', category: 'crisis', check: (c) => c.combosTriggered >= 5 },
-  { id: 'cri_spell', name: 'İlk Gece Kararı', desc: '1 gece kriz kararı al', icon: '☕', category: 'crisis', check: (c) => c.spellsCast >= 1 },
+  { id: 'cri_combo', name: 'Süper Rezonans', desc: 'İlk Süper Rezonans komboyu tetikle (Süpernova + Kütle Patlaması)', icon: '💥', category: 'crisis', check: (c) => c.combosTriggered >= 1 },
+  { id: 'cri_void', name: 'Boşluk Tekilliği', desc: 'Nadir Boşluk Tekilliği anomalisini yakala', icon: '🌌', category: 'crisis', secret: true, check: (c) => (c.mythicsClicked || 0) >= 1 },
+  { id: 'cri_combo5', name: 'Rezonans Ustası', desc: '5 Süper Rezonans kombo tetikle', icon: '💫', category: 'crisis', check: (c) => c.combosTriggered >= 5 },
+  { id: 'cri_spell', name: 'İlk Alan Müdahalesi', desc: '1 kriz müdahale kararı al', icon: '⚡', category: 'crisis', check: (c) => c.spellsCast >= 1 },
   {
-    id: 'cri_spells', name: 'Kriz Yöneticisi', desc: '10 gece kriz kararı al', icon: '⚡', category: 'crisis',
-    reward: { kind: 'buff_duration', desc: 'Kalıcı ödül: Kriz buff süresi +%20' },
+    id: 'cri_spells', name: 'Kriz Operatörü', desc: '10 kriz müdahale kararı al', icon: '🛡️', category: 'crisis',
+    reward: { kind: 'buff_duration', desc: 'Kalıcı ödül: Dalgalanma buff süresi +%20' },
     check: (c) => c.spellsCast >= 10
   },
-  { id: 'cri_100', name: 'Kriz Manyağı', desc: '100 Gece Krizine dokun', icon: '👁️', category: 'crisis', secret: true, check: (c) => c.anomaliesClicked >= 100 },
+  { id: 'cri_100', name: 'Kozmik Anomali Müptelası', desc: '100 Kozmik Dalgalanmaya dokun', icon: '👁️', category: 'crisis', secret: true, check: (c) => c.anomaliesClicked >= 100 },
 
-  // ---- 5. Vicdan Azapları ----
-  { id: 'gui_seen', name: 'İlk Vicdan Azabı', desc: 'Ekranda 1 azap belirsin', icon: '👀', category: 'guilt', check: (c) => c.activeSlackers >= 1 || c.slackersFired >= 1 },
-  { id: 'gui_fired', name: 'Susturma', desc: '1 vicdan azabını sustur', icon: '🔇', category: 'guilt', check: (c) => c.slackersFired >= 1 },
-  { id: 'gui_5', name: 'Vicdan Susturucu', desc: '5 vicdan azabı sustur', icon: '🧹', category: 'guilt', check: (c) => c.slackersFired >= 5 },
+  // ---- 5. Kozmik Parazitler ----
+  { id: 'gui_seen', name: 'İlk Çekim Paraziti', desc: 'Olay ufkunda 1 parazit belirsin', icon: '👀', category: 'guilt', check: (c) => c.activeSlackers >= 1 || c.slackersFired >= 1 },
+  { id: 'gui_fired', name: 'Parazit Püskürtme', desc: '1 paraziti olay ufkuna fırlatarak yok et', icon: '💥', category: 'guilt', check: (c) => c.slackersFired >= 1 },
+  { id: 'gui_5', name: 'Çekim Arındırıcı', desc: '5 paraziti yok et', icon: '🧹', category: 'guilt', check: (c) => c.slackersFired >= 5 },
   {
-    id: 'gui_25', name: 'Taş Kalp', desc: '25 vicdan azabı sustur', icon: '🗿', category: 'guilt',
-    reward: { kind: 'leech_reduction', desc: 'Kalıcı ödül: Azap sızıntısı -%15' },
+    id: 'gui_25', name: 'Geçirimsiz Olay Ufku', desc: '25 paraziti yok et', icon: '🗿', category: 'guilt',
+    reward: { kind: 'leech_reduction', desc: 'Kalıcı ödül: Parazit kütle kaçağı -%15' },
     check: (c) => c.slackersFired >= 25
   },
-  { id: 'gui_full', name: 'Tam Vicdan Heyeti', desc: 'Aynı anda 5 azap ekranda olsun', icon: '👥', category: 'guilt', check: (c) => c.activeSlackers >= 5 },
-  { id: 'gui_leech', name: 'Semiren Vicdan', desc: 'Azaplar toplam 1e6 Dopamin emmiş olsun', icon: '🩸', category: 'guilt', check: (c) => c.leechedTotal.gte(N1E6) },
-  { id: 'gui_drug', name: 'Vicdan Uyuşturucu', desc: 'SP dükkanından Vicdan Uyuşturucu al', icon: '💊', category: 'guilt', check: (c) => c.guiltImmunityLvl >= 1 },
-  { id: 'gui_100', name: 'Vicdan Katili', desc: '100 vicdan azabı sustur', icon: '⚔️', category: 'guilt', secret: true, check: (c) => c.slackersFired >= 100 },
+  { id: 'gui_full', name: 'Parazit Kümelenmesi', desc: 'Aynı anda 5 parazit olay ufkunda olsun', icon: '👥', category: 'guilt', check: (c) => c.activeSlackers >= 5 },
+  { id: 'gui_leech', name: 'Kütle Oburu Parazit', desc: 'Parazitler toplam 1e6 g Kütle emmiş olsun', icon: '🩸', category: 'guilt', check: (c) => c.leechedTotal.gte(N1E6) },
+  { id: 'gui_drug', name: 'Parazit Yalıtkanı', desc: 'SP ağacından Parazit Kalkanı satın al', icon: '🛡️', category: 'guilt', check: (c) => c.guiltImmunityLvl >= 1 },
+  { id: 'gui_100', name: 'Parazit Katili', desc: '100 paraziti yok et', icon: '⚔️', category: 'guilt', secret: true, check: (c) => c.slackersFired >= 100 },
 
-  // ---- 6. Algoritma Laboratuvarı ----
-  { id: 'lab_seed', name: 'İlk Format', desc: 'Laboratuvara 1 ses/trend formatı ek', icon: '🌱', category: 'lab', check: (c) => c.seedsPlanted >= 1 },
-  { id: 'lab_harvest', name: 'İlk Hasat', desc: '1 trend hasadı yap', icon: '🌾', category: 'lab', check: (c) => c.labHarvests >= 1 },
-  { id: 'lab_10', name: 'Trend Küratörü', desc: '10 trend formatı hasat et', icon: '🎧', category: 'lab', check: (c) => c.labHarvests >= 10 },
+  // ---- 6. Kuantum Laboratuvarı ----
+  { id: 'lab_seed', name: 'İlk Kuantum Tohumu', desc: 'Kuantum hücresine 1 parçacık formatı ek', icon: '🌱', category: 'lab', check: (c) => c.seedsPlanted >= 1 },
+  { id: 'lab_harvest', name: 'İlk Kuantum Hasadı', desc: '1 kuantum reaksiyonu hasat et', icon: '🌾', category: 'lab', check: (c) => c.labHarvests >= 1 },
+  { id: 'lab_10', name: 'İzotop Araştırmacısı', desc: '10 kuantum reaksiyonu hasat et', icon: '🎧', category: 'lab', check: (c) => c.labHarvests >= 10 },
   {
-    id: 'lab_25', name: 'Endüstriyel Brainrot', desc: '25 trend hasadı yap', icon: '🏗️', category: 'lab',
-    reward: { kind: 'lab_yield', desc: 'Kalıcı ödül: Lab hasadı +%10' },
+    id: 'lab_25', name: 'Endüstriyel Kuantum Sentezi', desc: '25 kuantum reaksiyonu hasat et', icon: '🏗️', category: 'lab',
+    reward: { kind: 'lab_yield', desc: 'Kalıcı ödül: Laboratuvar hasat verimi +%10' },
     check: (c) => c.labHarvests >= 25
   },
-  { id: 'lab_mature3', name: 'Olgun Hasat Zamanı', desc: 'Aynı anda 3 olgun hücre', icon: '🌿', category: 'lab', check: (c) => c.matureCells >= 3 },
-  { id: 'lab_full', name: 'Tam Matris', desc: 'Aynı anda 9 olgun trend hücresi', icon: '🎛️', category: 'lab', check: (c) => c.matureCells >= 9 },
-  { id: 'lab_mutant', name: 'Mutasyon Gözlemcisi', desc: 'Saf Nöron Çürütücü filizlensin (🐱+🗿)', icon: '👾', category: 'lab', check: (c) => c.hasBrainrot },
-  { id: 'lab_mutant2', name: 'Saf Nöron Çürütücü', desc: 'Brainrot Remix olgunlaşsın', icon: '🧬', category: 'lab', secret: true, check: (c) => c.hasMatureBrainrot },
+  { id: 'lab_mature3', name: 'Reaksiyon Dengesi', desc: 'Aynı anda 3 olgun reaksiyon hücresi', icon: '🌿', category: 'lab', check: (c) => c.matureCells >= 3 },
+  { id: 'lab_full', name: 'Kritik Kütle Matrisi', desc: 'Aynı anda 9 olgun reaksiyon hücresi', icon: '🎛️', category: 'lab', check: (c) => c.matureCells >= 9 },
+  { id: 'lab_mutant', name: 'Kozmik Mutasyon', desc: 'Kararsız mutant izotop filizlensin', icon: '👾', category: 'lab', check: (c) => c.hasBrainrot },
+  { id: 'lab_mutant2', name: 'Saf Tekillik İzotopu', desc: 'Mutant reaksiyon olgunlaşsın', icon: '🧬', category: 'lab', secret: true, check: (c) => c.hasMatureBrainrot },
 
-  // ---- 7. Tekillik Yolculuğu ----
-  { id: 'sin_sight', name: 'Şafağı Görmek', desc: '1e30 Dopamine ulaş (Şafak sekmesi açılır)', icon: '🌇', category: 'singularity', check: (c) => c.matter.gte(N1E30) },
+  // ---- 7. Kozmik Tekillik ----
+  { id: 'sin_sight', name: 'Olay Ufkunun Şafağı', desc: '1e30 g Kütleye ulaş (Tekillik sekmesi açılır)', icon: '🌇', category: 'singularity', check: (c) => c.matter.gte(N1E30) },
   {
-    id: 'sin_first', name: 'İlk Çöküş', desc: 'İlk Sabah 06:00 Çöküşünü yaşa', icon: '🌅', category: 'singularity',
-    reward: { kind: 'caffeine_regen', desc: 'Kalıcı ödül: Kafein yenilenmesi +%25' },
+    id: 'sin_first', name: 'İlk Büyük Çöküş', desc: 'İlk Kozmik Tekillik Çöküşünü yaşa', icon: '🌅', category: 'singularity',
+    reward: { kind: 'caffeine_regen', desc: 'Kalıcı ödül: Plazma enerjisi dolum hızı +%25' },
     check: (c) => c.singularityCount >= 1
   },
   {
-    id: 'sin_3', name: 'Üç Gecelik Nöbet', desc: '3 Tekillik yaşa', icon: '🌠', category: 'singularity',
-    reward: { kind: 'starting_matter', desc: 'Kalıcı ödül: Sıfırlanma sonrası 1.000 Dopaminle başla' },
+    id: 'sin_3', name: 'Üç Çöküş Döngüsü', desc: '3 Tekillik yaşa', icon: '🌠', category: 'singularity',
+    reward: { kind: 'starting_matter', desc: 'Kalıcı ödül: Büyük Çöküş sonrası 1.000 g Kütle ile başla' },
     check: (c) => c.singularityCount >= 3
   },
   {
-    id: 'sin_sp', name: 'Uykusuzluk Birikimi', desc: '10 SP biriktir', icon: '🏦', category: 'singularity',
-    reward: { kind: 'caffeine_boost', desc: 'Kalıcı ödül: Kafein Serumu +%25 güçlü' },
+    id: 'sin_sp', name: 'Tekillik Rezervi', desc: '10 SP biriktir', icon: '🏦', category: 'singularity',
+    reward: { kind: 'caffeine_boost', desc: 'Kalıcı ödül: Kuantum Plazma Akışı +%25 güçlü' },
     check: (c) => c.sp.gte(SP10)
   },
   {
-    id: 'sin_shop', name: 'Dükkan Müptelası', desc: 'SP dükkanında toplam 3 seviye al', icon: '🛒', category: 'singularity',
-    reward: { kind: 'sp_discount', desc: 'Kalıcı ödül: SP dükkanı -%5' },
+    id: 'sin_shop', name: 'Tekillik Ağacı', desc: 'Nöral ağaçta toplam 3 seviye al', icon: '🛒', category: 'singularity',
+    reward: { kind: 'sp_discount', desc: 'Kalıcı ödül: SP yükseltme maliyetleri -%5' },
     check: (c) => c.spUpgradesTotal >= 3
   },
-  { id: 'sin_hour', name: 'Bir Saatlik Nöbet', desc: 'Toplam 1 saat oyna', icon: '⏰', category: 'singularity', check: (c) => c.playtime >= 3600 },
-  { id: 'sin_3h', name: 'Tam Mesai', desc: 'Toplam 3 saat oyna', icon: '🕰️', category: 'singularity', check: (c) => c.playtime >= 10800 },
-  { id: 'sin_whale', name: 'Uykusuzluk İmparatorluğu', desc: '1.000 SP biriktir', icon: '🏆', category: 'singularity', secret: true, check: (c) => c.sp.gte(SP1000) },
+  { id: 'sin_hour', name: 'Bir Saatlik Tekillik', desc: 'Toplam 1 saat oyna', icon: '⏰', category: 'singularity', check: (c) => c.playtime >= 3600 },
+  { id: 'sin_3h', name: 'Kozmik Mesai', desc: 'Toplam 3 saat oyna', icon: '🕰️', category: 'singularity', check: (c) => c.playtime >= 10800 },
+  { id: 'sin_whale', name: 'Kozmik Hükümdar', desc: '1.000 SP biriktir', icon: '🏆', category: 'singularity', secret: true, check: (c) => c.sp.gte(SP1000) },
 
-  // ---- 8. Meydan Okumalar (her Gece Krizi'ne 1; koşu ödülü challenge'dan, buradaki plaket global çarpana işler) ----
-  { id: 'chl_c1', name: 'Uçak Modu: İniş', desc: 'Uçak Modu meydan okumasını tamamla', icon: '✈️', category: 'challenges', check: (c) => c.completedChallenges.includes('c1') },
-  { id: 'chl_c2', name: 'Priz Bulundu', desc: 'Şarj Aleti Temassızlığı meydan okumasını tamamla', icon: '🔌', category: 'challenges', check: (c) => c.completedChallenges.includes('c2') },
-  { id: 'chl_c3', name: 'Önbellek Temizliği', desc: 'Önbellekteki Videolar meydan okumasını tamamla', icon: '💾', category: 'challenges', check: (c) => c.completedChallenges.includes('c3') },
-  { id: 'chl_c4', name: 'Sansürü Aşmak', desc: 'Sansür Matrisi meydan okumasını tamamla', icon: '🚫', category: 'challenges', check: (c) => c.completedChallenges.includes('c4') },
-  { id: 'chl_c5', name: 'Enflasyon Canavarı', desc: 'Gece Enflasyonu meydan okumasını tamamla', icon: '📈', category: 'challenges', check: (c) => c.completedChallenges.includes('c5') },
-  { id: 'chl_c6', name: 'Göz Damlası', desc: 'Göz Kuruluğu meydan okumasını tamamla', icon: '👁️', category: 'challenges', check: (c) => c.completedChallenges.includes('c6') },
-  { id: 'chl_c7', name: 'Kısıtlamayı Delmek', desc: 'Hesap Kısıtlaması meydan okumasını tamamla', icon: '🔒', category: 'challenges', check: (c) => c.completedChallenges.includes('c7') },
-  { id: 'chl_c8', name: 'Sessize Alınmış', desc: 'Grup Sohbeti Cehennemi meydan okumasını tamamla', icon: '💬', category: 'challenges', secret: true, check: (c) => c.completedChallenges.includes('c8') }
+  // ---- 8. Kozmik Meydan Okumalar (her Kriz'e 1; koşu ödülü challenge'dan, buradaki plaket global çarpana işler) ----
+  { id: 'chl_c1', name: 'İzolasyonun Sonu', desc: 'Vakum İzolasyonu meydan okumasını tamamla', icon: '🕳️', category: 'challenges', check: (c) => c.completedChallenges.includes('c1') },
+  { id: 'chl_c2', name: 'Durgunluk Kırılması', desc: 'Kütleçekim Durgunluğu meydan okumasını tamamla', icon: '⚡', category: 'challenges', check: (c) => c.completedChallenges.includes('c2') },
+  { id: 'chl_c3', name: 'Kuantum Kararlılığı', desc: 'Kuantum Kararsızlığı meydan okumasını tamamla', icon: '🌱', category: 'challenges', check: (c) => c.completedChallenges.includes('c3') },
+  { id: 'chl_c4', name: 'Kırık Simetri Fatihi', desc: 'Simetri Kırılması meydan okumasını tamamla', icon: '🚫', category: 'challenges', check: (c) => c.completedChallenges.includes('c4') },
+  { id: 'chl_c5', name: 'Enflasyon Fatihi', desc: 'Kozmik Enflasyon meydan okumasını tamamla', icon: '📈', category: 'challenges', check: (c) => c.completedChallenges.includes('c5') },
+  { id: 'chl_c6', name: 'Zamanın Efendisi', desc: 'Zaman Genleşmesi meydan okumasını tamamla', icon: '⏳', category: 'challenges', check: (c) => c.completedChallenges.includes('c6') },
+  { id: 'chl_c7', name: 'Boyut Yırtıcı', desc: 'Boyutsal Çöküş meydan okumasını tamamla', icon: '🔒', category: 'challenges', check: (c) => c.completedChallenges.includes('c7') },
+  { id: 'chl_c8', name: 'Fırtına Dindirici', desc: 'Radyasyon Fırtınası meydan okumasını tamamla', icon: '☢️', category: 'challenges', secret: true, check: (c) => c.completedChallenges.includes('c8') }
 ]
 
 export function getAchievement(id: string): AchievementDef | undefined {

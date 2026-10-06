@@ -1,99 +1,232 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../stores/game'
 import { sounds } from '../core/audio'
-import { Heart, ChevronRight } from 'lucide-vue-next'
+import { Radio, Zap, ChevronRight, Sparkles, Pause, Gauge } from 'lucide-vue-next'
 import { Decimal } from '../core/math'
-
-interface CommentItem {
-  id: number
-  author: string
-  avatarColor: string
-  text: string
-  category: 'innocent' | 'hypnotic' | 'crisis' | 'dawn' | 'general'
-}
+import confetti from 'canvas-confetti'
+import { NEWS_DATABASE, type NewsItem, type NewsClickResult } from '../game/news'
 
 const store = useGameStore()
 
-const COMMENTS: CommentItem[] = [
-  // Moleküler / Masum Faz
-  { id: 1, author: '@lab_stajyeri', avatarColor: '#a855f7', text: 'Tamam sadece su damlasındaki karbonu ayrıştırıp çıkacaktım...', category: 'innocent' },
-  { id: 2, author: '@dr_kuantum', avatarColor: '#f59e0b', text: 'Elektron orbitalleri çöktü ama verim grafiği mükemmel görünüyor!', category: 'innocent' },
-  { id: 3, author: '@guvenlik_amiri', avatarColor: '#3b82f6', text: 'Laboratuvar kapısı neden içeri doğru bükülüyor arkadaşlar?', category: 'innocent' },
-  { id: 4, author: '@fizik_doktorasi', avatarColor: '#ec4899', text: 'Planck duvarında ufak bir delik açıldı ama kontrol altında... galiba.', category: 'innocent' },
-  { id: 5, author: '@kimya_profesoru', avatarColor: '#10b981', text: 'Nükleer çekirdek kararsızlaştı, kahvemi yuttu. 10/10 rezonans.', category: 'innocent' },
+// State
+const currentNews = ref<NewsItem>(NEWS_DATABASE[0])
+const interactiveTextOverride = ref<string | null>(null)
+const isDiscoActive = ref(false)
+const isFlipped = ref(false)
+const heartsGiven = ref<Record<string, number>>({})
+const isHovered = ref(false)
+const isAnimating = ref(false)
+const speedMultiplier = ref<1 | 1.6>(1)
+const recentTickers = ref<string[]>([])
 
-  // Kuantum Çöküş / Hipnotik
-  { id: 6, author: '@hadi_cern', avatarColor: '#f97316', text: 'Kuark çorbası reaktörden taştı, yerçekimi tersine döndü!', category: 'hypnotic' },
-  { id: 7, author: '@olay_ufku_gozlem', avatarColor: '#06b6d4', text: 'Laboratuvar masası olay ufkuna girdi, laptop spagettiye dönüştü.', category: 'hypnotic' },
-  { id: 8, author: '@kozmik_rapor', avatarColor: '#8b5cf6', text: 'Tebrikler: Karbon ayak iziniz sıfırlandı çünkü şehir tekilliğe çekildi.', category: 'hypnotic' },
-  { id: 9, author: '@mikro_karadelik', avatarColor: '#14b8a6', text: 'Mikro-karadelik doymak bilmiyor; kütleçekim ivmesi katlanıyor.', category: 'hypnotic' },
-  { id: 10, author: '@kutle_avcisi', avatarColor: '#ec4899', text: 'Birkaç gigaton daha yutarsak evrenin tüm kütlesini tek bir noktaya toplayacağız.', category: 'hypnotic' },
+const trackContainerRef = ref<HTMLElement | null>(null)
+const trackTextRef = ref<HTMLElement | null>(null)
 
-  // Makro Boyut / Kriz & Histeri
-  { id: 11, author: '@afad_kozmik', avatarColor: '#f43f5e', text: 'DİKKAT: ATMOSFERİK BASINÇ ÇÖKTÜ, DAĞLAR MERKEZE AKIYOR!', category: 'crisis' },
-  { id: 12, author: '@jeoloji_kurulu', avatarColor: '#ef4444', text: 'Tektonik plakalar birleşti, Dünya olay ufkuna doğru spiral çiziyor!', category: 'crisis' },
-  { id: 13, author: '@nasa_canli', avatarColor: '#eab308', text: 'Güneş sistemi ekseninden kaydı; Ay tekillik tarafından yutuldu!', category: 'crisis' },
-  { id: 14, author: '@hawking_isima', avatarColor: '#38bdf8', text: 'Hawking ışıması kör edici seviyede, uzay-zaman geometrisi yırtıldı.', category: 'crisis' },
-  { id: 15, author: '@kozmik_parazit', avatarColor: '#f43f5e', text: 'Kozmik parazitler olay ufkuna yapıştı, kütle kaçırmaya çalışıyor!', category: 'crisis' },
+let restartTimer: number | null = null
+let resizeObserver: ResizeObserver | null = null
+let discoTimeout: number | null = null
 
-  // Kozmik Tekillik / Şafak & Uroboros
-  { id: 16, author: '@samanyolu_merkez', avatarColor: '#f59e0b', text: 'Güneş nükleer füzyonu durdurdu ve tekilliğin içinde eridi.', category: 'dawn' },
-  { id: 17, author: '@galaktik_konsey', avatarColor: '#fbbf24', text: 'Samanyolu spiral kolları karadeliğin içine dökülüyor... Uroboros doymadı!', category: 'dawn' },
-  { id: 18, author: '@kozmik_son', avatarColor: '#10b981', text: 'Tüm yıldızlar söndü, kütle 1.79e308 sınırına yaklaşıyor!', category: 'dawn' },
-  { id: 19, author: '@tekillik_yolcusu', avatarColor: '#c084fc', text: 'Uzay ve zaman yer değiştirdi; evren sonsuz bir kütle düğümüne dönüştü.', category: 'dawn' },
-  { id: 20, author: '@uroboros_tekillik', avatarColor: '#94a3b8', text: 'Yutulan kütle sonsuz, tekillik uyanık, Uroboros kendi kuyruğunu yutuyor.', category: 'dawn' }
-]
-
-const currentIndex = ref(0)
-const heartsGiven = ref<Record<number, number>>({})
-const isTransitioning = ref(false)
-let rotateTimer: number | null = null
-
-// Oyunun durumuna göre ağırlıklı yorum havuzu
-const relevantComments = computed(() => {
-  if (store.isComboActive || store.crisisBackfireDebuff > 0) {
-    return COMMENTS.filter((c) => c.category === 'crisis' || c.category === 'hypnotic')
-  }
-  if (store.matter.gt(1e12)) {
-    return COMMENTS.filter((c) => c.category === 'dawn' || c.category === 'crisis' || c.category === 'hypnotic')
-  }
-  return COMMENTS
+// Havuz: Kilitli olmayan ve kriz/şafak aşamasına uygun haberler
+const availableNews = computed(() => {
+  return NEWS_DATABASE.filter((item) => {
+    if (item.unlocked && !item.unlocked(store)) {
+      return false
+    }
+    return true
+  })
 })
 
-const activeComment = computed(() => {
-  const pool = relevantComments.value
-  if (!pool.length) return COMMENTS[0]
-  return pool[currentIndex.value % pool.length]
+// Anlık haber metni (Statik, Dinamik Fonksiyon veya Tıklama Değişikliği)
+const activeText = computed(() => {
+  if (interactiveTextOverride.value) {
+    return interactiveTextOverride.value
+  }
+  const item = currentNews.value
+  if (typeof item.text === 'function') {
+    return item.text(store)
+  }
+  return item.text
 })
 
+// Anlık beğeni / kütle rezonansı
 const currentLikes = computed(() => {
-  const base = 42 + (activeComment.value.id * 17) % 89
-  const bonus = heartsGiven.value[activeComment.value.id] || 0
+  const hash = currentNews.value.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const base = 42 + (hash % 137)
+  const bonus = heartsGiven.value[currentNews.value.id] || 0
   return base + bonus
 })
 
-function nextComment() {
-  if (isTransitioning.value) return
-  isTransitioning.value = true
-  setTimeout(() => {
-    currentIndex.value = (currentIndex.value + 1) % relevantComments.value.length
-    isTransitioning.value = false
-  }, 200)
+// Hız hesabı: Taban 100 px/sn; hızlı modda 160 px/sn
+const currentPxPerSec = computed(() => {
+  const base = store.settings.reduceAnimations ? 70 : 105
+  return base * speedMultiplier.value
+})
+
+/**
+ * Tekrarı engelleyerek sıradaki haberi seç
+ */
+function pickNextNews() {
+  interactiveTextOverride.value = null
+  const pool = availableNews.value
+  if (!pool.length) {
+    currentNews.value = NEWS_DATABASE[0]
+    return
+  }
+
+  // Son görülen haberleri süz (tampon bellek)
+  const candidatePool = pool.filter((item) => !recentTickers.value.includes(item.id))
+  const finalPool = candidatePool.length > 0 ? candidatePool : pool
+
+  // Rastgele seç
+  const picked = finalPool[Math.floor(Math.random() * finalPool.length)]
+  currentNews.value = picked
+
+  // Son görülenlere ekle (maksimum 15 adet sakla)
+  recentTickers.value.push(picked.id)
+  while (recentTickers.value.length > 15) {
+    recentTickers.value.shift()
+  }
+
+  // Store'a görüldü olarak işle
+  store.recordNewsSeen(picked.id)
 }
 
-function likeComment(e: MouseEvent) {
-  const id = activeComment.value.id
-  heartsGiven.value[id] = (heartsGiven.value[id] || 0) + 1
+/**
+ * Sağdan sola Antimatter Dimensions tarzı kesintisiz kaydırmayı başlatır
+ */
+function startScroll() {
+  if (restartTimer !== null) {
+    clearTimeout(restartTimer)
+    restartTimer = null
+  }
 
-  // Ekran koordinatında kalp fırlat
+  isAnimating.value = false
+
+  nextTick(() => {
+    const container = trackContainerRef.value
+    const textEl = trackTextRef.value
+    if (!container || !textEl) return
+
+    const containerWidth = container.clientWidth || 600
+    const textWidth = textEl.scrollWidth || 300
+
+    const startX = containerWidth
+    const endX = -(textWidth + 24)
+    const totalDistance = startX - endX
+    const duration = totalDistance / currentPxPerSec.value
+
+    textEl.style.setProperty('--start-x', `${startX}px`)
+    textEl.style.setProperty('--end-x', `${endX}px`)
+    textEl.style.setProperty('--ticker-duration', `${duration.toFixed(2)}s`)
+
+    void textEl.offsetWidth
+    isAnimating.value = true
+  })
+}
+
+/**
+ * Bir önceki haber sol taraftan tamamen çıktığında tarayıcı tarafından tetiklenir
+ */
+function onAnimationEnd() {
+  pickNextNews()
+  startScroll()
+}
+
+/**
+ * Manuel sonraki habere atlama
+ */
+function skipNext() {
+  sounds.playTallyTick(0.7)
+  pickNextNews()
+  startScroll()
+}
+
+/**
+ * Hız değiştirici (1x / 1.6x)
+ */
+function toggleSpeed() {
+  speedMultiplier.value = speedMultiplier.value === 1 ? 1.6 : 1
+  sounds.playTallyTick(0.5)
+  startScroll()
+}
+
+/**
+ * Haber bandına tıklama: Taktil rezonans, easter egg tetikleme & kütle ödülü
+ */
+function handleTickerClick(e: MouseEvent) {
+  const item = currentNews.value
+  heartsGiven.value[item.id] = (heartsGiven.value[item.id] || 0) + 1
+
+  // Ekran koordinatında hafif kuantum halka dalgası
   window.dispatchEvent(
     new CustomEvent('doomscroll:heart', {
       detail: { x: e.clientX, y: e.clientY }
     })
   )
 
-  // Küçük dopamin prim ödülü (0.2 saniyelik üretim ya da en az 10)
+  // Dokunsal titreşim (Haptic)
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(8)
+    } catch {
+      /* yoksay */
+    }
+  }
+
+  // Tıklama istatistiği & Gizli haber kontrolü
+  const isSecret = item.category === 'secret'
+  store.recordNewsClick(isSecret)
+
+  // Özel onClick eylemi varsa çalıştır
+  if (item.onClick) {
+    const result = item.onClick(store) as NewsClickResult | string | void
+    if (result) {
+      if (typeof result === 'string') {
+        interactiveTextOverride.value = result
+      } else {
+        if (result.updatedText) {
+          interactiveTextOverride.value = result.updatedText
+        }
+        if (result.effect === 'shake') {
+          window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'medium' } }))
+          sounds.playAnomaly()
+        }
+        if (result.effect === 'disco') {
+          isDiscoActive.value = true
+          sounds.playMythicCollect()
+          if (discoTimeout) clearTimeout(discoTimeout)
+          discoTimeout = window.setTimeout(() => {
+            isDiscoActive.value = false
+          }, 3500)
+        }
+        if (result.effect === 'flip') {
+          isFlipped.value = !isFlipped.value
+          sounds.playTallyTick(0.8)
+        }
+        if (result.effect === 'confetti') {
+          sounds.playMythicCollect()
+          confetti({
+            particleCount: 65,
+            spread: 60,
+            origin: { y: 0.15 },
+            colors: ['#38bdf8', '#facc15', '#a855f7', '#10b981']
+          })
+        }
+        if (result.bonusMatter) {
+          try {
+            store.matter = store.matter.plus(result.bonusMatter)
+            store.stats.totalMatterProduced = store.stats.totalMatterProduced.plus(result.bonusMatter)
+          } catch {
+            /* break_eternity koruması */
+          }
+        }
+      }
+      return
+    }
+  }
+
+  // Standart kuantum rezonans kütle ödülü (+%20 saniyelik üretim veya 10 taban kütle)
   try {
     const mps = store.matterPerSecond
     const reward = mps.gt(0) ? mps.times(0.2) : new Decimal(10)
@@ -102,75 +235,177 @@ function likeComment(e: MouseEvent) {
     /* break_eternity koruması */
   }
 
-  sounds.playTallyTick()
+  sounds.playTallyTick(0.6)
+}
+
+function handleVisibilityChange() {
+  if (!document.hidden && !isAnimating.value) {
+    startScroll()
+  }
 }
 
 onMounted(() => {
-  // Her 6.5 saniyede bir sonraki yoruma geç
-  rotateTimer = window.setInterval(() => {
-    nextComment()
-  }, 6500)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  if (typeof ResizeObserver !== 'undefined' && trackContainerRef.value) {
+    let lastWidth = trackContainerRef.value.clientWidth
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newWidth = entry.contentRect.width
+        if (Math.abs(newWidth - lastWidth) > 30) {
+          lastWidth = newWidth
+          startScroll()
+        }
+      }
+    })
+    resizeObserver.observe(trackContainerRef.value)
+  }
+
+  // İlk başlangıç
+  pickNextNews()
+  restartTimer = window.setTimeout(() => {
+    startScroll()
+  }, 100)
 })
 
 onUnmounted(() => {
-  if (rotateTimer !== null) clearInterval(rotateTimer)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (restartTimer !== null) {
+    clearTimeout(restartTimer)
+    restartTimer = null
+  }
+  if (discoTimeout !== null) {
+    clearTimeout(discoTimeout)
+    discoTimeout = null
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
 })
 </script>
 
 <template>
-  <div class="comment-ticker-wrap w-full max-w-5xl mx-auto px-2 sm:px-4 py-1 select-none">
+  <div class="w-full max-w-5xl mx-auto py-0.5 select-none mb-3">
     <div
-      class="ticker-bar flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xs text-xs transition-all hover:border-white/20"
+      class="flex items-center gap-2 sm:gap-3 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-[#0c1017]/85 backdrop-blur-md shadow-xs text-xs relative overflow-hidden transition-all hover:border-cyan-500/30 group"
+      :class="{ 'disco-mode': isDiscoActive }"
     >
-      <!-- Sol: İkon & Canlı Rozet -->
+      <!-- Sol: İkon & Canlı Yayın LED Rozeti (Antimatter Dimensions tarzı) -->
       <div class="flex items-center gap-1.5 shrink-0">
         <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
         </span>
-        <span class="text-[10px] font-bold tracking-wider text-rose-400 uppercase hidden sm:inline">
-          CANLI REELS SOHBETİ
-        </span>
-      </div>
-
-      <!-- Orta: Dinamik Yorum Metni -->
-      <div
-        class="ticker-content flex-1 overflow-hidden transition-opacity duration-200 cursor-pointer"
-        :class="{ 'opacity-0': isTransitioning, 'opacity-100': !isTransitioning }"
-        @click="nextComment"
-        title="Sonraki yorum için tıkla"
-      >
-        <div class="flex items-center gap-1.5 truncate">
-          <span
-            class="font-bold shrink-0 truncate max-w-[100px] sm:max-w-[130px]"
-            :style="{ color: activeComment.avatarColor }"
-          >
-            {{ activeComment.author }}:
-          </span>
-          <span class="text-slate-200 truncate font-medium">
-            "{{ activeComment.text }}"
-          </span>
+        <div class="flex items-center gap-1 text-[10px] font-mono font-bold tracking-wider text-cyan-300 uppercase">
+          <Radio class="w-3 h-3 text-cyan-400 shrink-0" />
+          <span class="hidden sm:inline">KOZMİK HABER</span>
         </div>
       </div>
 
-      <!-- Sağ: Beğeni / Kalp Aksiyon Butonu & İleri -->
-      <div class="flex items-center gap-1 shrink-0">
+      <div class="h-3.5 w-px bg-white/10 shrink-0 hidden sm:block"></div>
+
+      <!-- Orta: Sağdan Sola Kesintisiz Kayan Haber Bandı (Marquee Track) -->
+      <div
+        ref="trackContainerRef"
+        class="relative flex-1 overflow-hidden h-6 flex items-center min-w-0 cursor-pointer"
+        @mouseenter="isHovered = true"
+        @mouseleave="isHovered = false"
+        @click="handleTickerClick"
+        v-tip="'Kozmik haberi okumak için üzerine gel (duraklar); kütle rezonansı veya gizli ödüller için tıkla'"
+      >
+        <!-- Sol & Sağ Kenar Yumuşak Gradyan Maskeleri -->
+        <div class="pointer-events-none absolute left-0 inset-y-0 w-6 bg-gradient-to-r from-[#0c1017] to-transparent z-10"></div>
+        <div class="pointer-events-none absolute right-0 inset-y-0 w-6 bg-gradient-to-l from-[#0c1017] to-transparent z-10"></div>
+
+        <!-- Üzerine Gelindiğinde 'Duraklatıldı' İpucu Rozeti -->
+        <transition name="fade">
+          <div
+            v-if="isHovered"
+            class="pointer-events-none absolute right-8 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/80 border border-cyan-500/30 text-[9px] font-mono text-cyan-300 backdrop-blur-xs shadow-xs"
+          >
+            <Pause class="w-2.5 h-2.5 text-cyan-400" />
+            <span>DURAKLATILDI</span>
+          </div>
+        </transition>
+
+        <!-- Kayan Metin Elemanı -->
+        <div
+          ref="trackTextRef"
+          :class="[
+            'ticker-track',
+            {
+              'is-animating': isAnimating,
+              'is-paused': isHovered,
+              'is-flipped': isFlipped
+            }
+          ]"
+          @animationend="onAnimationEnd"
+        >
+          <div class="flex items-center gap-2 font-mono text-[11px] pr-8">
+            <!-- Yazar / Kaynak Rozeti -->
+            <span
+              v-if="currentNews.author"
+              class="font-bold shrink-0 tracking-wide text-[10px]"
+              :style="{ color: currentNews.authorColor || '#38bdf8' }"
+            >
+              {{ currentNews.author }}:
+            </span>
+
+            <!-- Özel Kategori İkonu -->
+            <Sparkles
+              v-if="currentNews.category === 'secret' || isDiscoActive"
+              class="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse"
+            />
+
+            <!-- Haber Metni -->
+            <span
+              class="text-slate-200 font-normal tracking-tight"
+              :class="{
+                'text-amber-300 font-semibold drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]': currentNews.category === 'secret',
+                'rainbow-text font-bold': isDiscoActive
+              }"
+            >
+              {{ activeText }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-3.5 w-px bg-white/10 shrink-0"></div>
+
+      <!-- Sağ: Hız Ayarı, Kuantum Rezonans Butonu & İleri Atlama -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Hız Düğmesi (1x / 1.6x) -->
         <button
           type="button"
-          class="like-btn flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 transition-all active:scale-90"
-          @click.stop="likeComment"
-          title="Yoruma enerji aktar (+Kütle)"
+          class="btn-tactile hidden xs:flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-slate-200 border border-white/[0.06] transition-all text-[9px] font-mono cursor-pointer"
+          @click.stop="toggleSpeed"
+          v-tip="'Kayıt akış hızını değiştir (1x / 1.6x)'"
+          aria-label="Akış hızını değiştir"
         >
-          <Heart class="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-          <span class="text-[11px] font-mono tabular-nums font-semibold">{{ currentLikes }}</span>
+          <Gauge class="w-2.5 h-2.5 text-slate-400" />
+          <span>{{ speedMultiplier }}x</span>
         </button>
 
+        <!-- Kütle Rezonans Butonu (+Kütle) -->
         <button
           type="button"
-          class="p-1 text-slate-400 hover:text-white transition-colors"
-          @click.stop="nextComment"
-          title="Sonraki yorum"
-          aria-label="Sonraki yorum"
+          class="btn-tactile flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border border-cyan-500/25 transition-all active:scale-95 cursor-pointer"
+          @click.stop="handleTickerClick"
+          v-tip="'Kozmik habere rezonans aktar (+Kütle kazan)'"
+        >
+          <Zap class="w-3 h-3 text-cyan-400 shrink-0" />
+          <span class="text-[10px] font-mono tabular-nums font-bold">{{ currentLikes }}</span>
+        </button>
+
+        <!-- Sonraki Habere Atla (Antimatter Dimensions Fast-Forward) -->
+        <button
+          type="button"
+          class="p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] transition-colors cursor-pointer"
+          @click.stop="skipNext"
+          aria-label="Sonraki habere geç"
+          v-tip="'Sonraki habere geç'"
         >
           <ChevronRight class="w-3.5 h-3.5" />
         </button>
@@ -180,11 +415,81 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.ticker-bar {
-  background: linear-gradient(90deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 27, 75, 0.6) 100%);
+@keyframes ticker-slide {
+  0% {
+    transform: translate3d(var(--start-x, 600px), 0, 0);
+  }
+  100% {
+    transform: translate3d(var(--end-x, -600px), 0, 0);
+  }
 }
 
-.like-btn:hover {
-  box-shadow: 0 0 10px rgba(244, 63, 94, 0.25);
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  transition: transform 0.2s ease;
+}
+
+.ticker-track.is-animating {
+  animation: ticker-slide var(--ticker-duration, 14s) linear forwards;
+}
+
+.ticker-track.is-paused {
+  animation-play-state: paused !important;
+}
+
+.ticker-track.is-flipped {
+  transform: rotate(180deg);
+}
+
+.disco-mode {
+  animation: disco-border 0.5s linear infinite;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
+}
+
+@keyframes disco-border {
+  0% {
+    border-color: #ef4444;
+  }
+  25% {
+    border-color: #facc15;
+  }
+  50% {
+    border-color: #10b981;
+  }
+  75% {
+    border-color: #38bdf8;
+  }
+  100% {
+    border-color: #c084fc;
+  }
+}
+
+.rainbow-text {
+  background: linear-gradient(to right, #ef4444, #f59e0b, #10b981, #38bdf8, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow-anim 1.5s linear infinite;
+}
+
+@keyframes rainbow-anim {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
