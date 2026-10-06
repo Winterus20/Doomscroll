@@ -90,6 +90,7 @@ Incremental/
 - **Sıfır Tembellik (Zero Laziness):** Kod bloklarında `// TODO`, `// existing code`, `/* rest of code */` gibi geçiştirici ifadeler KESİNLİKLE YASAKTIR. Dosyalar eksiksiz, çalışan gövdelerle güncellenmelidir.
 - **Cerrahi Düzenleme:** Dosyaları gereksiz yere baştan yazmak yerine en az 2-3 satır bağlam içeren hassas hedeflemeler yapılmalıdır.
 - **Doğrulama Zorunluluğu (Build & Verification):** Kod değişikliği yapıldıktan sonra `npm run build` (`vue-tsc && vite build`) komutu çalıştırılarak tip hatası (TS error) veya derleme hatası olmadığı **kanıtlanmalıdır**.
+- **Otomatik Commit Refleksi (Auto-Commit on Milestones):** Her büyük değişiklikte (yeni mekanik, kritik refaktör, kriz/katman entegrasyonu, mimari faz tamamlanması vb.), testler ve derleme (`npm run build`) doğrulandıktan hemen sonra kullanıcı hatırlatması beklenmeksizin otonom olarak anlamlı bir Conventional Commit (`feat:`, `fix:`, `refactor:`) oluşturulmalı ve push edilmelidir.
 - **Windows Uyumluluğu:** Terminal komutlarında tek tırnak (`'`) yerine her zaman çift tırnak (`"`) veya powershell escape kuralları kullanılmalıdır.
 
 ---
