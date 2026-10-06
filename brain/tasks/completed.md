@@ -1,4 +1,39 @@
-# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
+﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
+
+## [2026-10-06] — Kuantum Parçacık Reaktörü, Akı Matrisi & Kozmik Relikler (Lab Hibrit Reformu v0.38.0)
+
+### Kullanıcı Talebi ve Mimari Kararlar:
+- **Lab Bölümü Düşünce Ortaklığı:** Kullanıcıyla birlikte Lab sekmesinin oyunun genel kozmik bilimkurgu temasına (*UROBOROS: The Cosmic Feast*) nasıl uyarlanacağı tartışıldı; *Cookie Clicker Garden*, *Synergism Particle Accelerator* ve *Reactor Idle* devlerinden çıkarılan derslerle 3 büyük vizyon harmanlanarak en iyi hibrit sistem planlandı.
+- **Sıfır Geriye Dönük Uyumluluk:** Eski konseptten kalma tohum (*cat_audio*, *cheese_sizzle*, *subway_beat*, *sigma_phonk*, *mukbang_drama*, *cat_burger*, *brainrot_remix*) ve mod (*fyp*, *evergreen*, *mutation*) adları geriye dönük shim/zombi kod bırakılmaksızın tamamen tasfiye edildi.
+- **Kozmik Relik Kurbanı (Garden Sacrifice Felsefesi):** 4 temel ve 4 egzotik parçacığın tamamı sentezlendiğinde reaktörü tekilliğe feda edip kalıcı meta-ödüller (*Hz tabanı, Kriz süresi, SP kazancı, hücre başı boyut ivmesi*) kazanma döngüsü kuruldu.
+
+### Gerçekleştirilen Geliştirmeler:
+1. **Saf Kuantum Parçacık Kataloğu (src/models/types.ts & src/stores/game.ts):**
+   - Temel Parçacıklar: photon_resonator (⚡), heavy_nucleon (⚛️), gluon_binder (🌀), graviton_trap (🕳️).
+   - Egzotik Sentezler: dark_matter_core (🌌), magnetic_shield (🛡️), 	achyon_flux (💫), higgs_boson (💥).
+   - slackerLeechPercent: Manyetik Plazma Kalkanı parazit emişini %25 soğurur.
+   - Başarımlar: higgs_boson (Kozmik Mutasyon ve Saf Tekillik İzotopu) tetikleyicisi güncellendi.
+2. **Akı Devresi & Süperiletken Işın Hatları (src/components/LabTab.vue & src/stores/game.ts):**
+   - Merkez Hücre 4: Kuantum Odak Çekirdeği (×1.50, komşulara +%20 plazma).
+   - Süperiletken Işın Hatları: 3 hücre dolu satır/sütunlarda ×1.12, mono-izotopta ×1.20.
+   - Rejimler: overdrive (Aktif / %80 hızlı şarj, 2x boşalım), superconductor (AFK / 2.5x sabit pasif kütle), luctuation (Keşif / 3x sentez şansı).
+3. **Süperkritik Boşalım (Supercritical Venting):**
+   - 	riggerSupercriticalVent: Kritik kütle %100 olduğunda 60s kütle patlaması, 25s boyunca ×5 - ×25 canlı plazma katsayısı ve 3× Kozmik Kriz sağanağı.
+4. **Kozmik Relik Seviyeleri & Reaktör Çöküşü:**
+   - collapseReactor: Tüm parçacıklar sentezlendiğinde reaktörü tekilliğe kurban etme.
+   - Seviye 1: Çekim Hızı (Hz) tabanına kalıcı bonus.
+   - Seviye 2: Kozmik Kriz etki sürelerine kalıcı bonus.
+   - Seviye 3: Tekillik Çöküşü (Big Crunch) SP kazancına kalıcı çarpan.
+   - Seviye 4: Rezonanstaki hücre başına boyutlara evrensel ivme.
+   - Seviye 5+: Sınırsız ölçeklenen evrensel kütle çarpanı.
+5. **Özellik Merdiveni Senkronizasyonu (src/game/unlocks.ts):**
+   - seed_nucleon, seed_gluon, seed_graviton tanımlarıyla uyumlu ladder entegrasyonu.
+6. **Kalite Kapısı & Doğrulama:**
+   - 
+pm test: 188/188 test başarılı.
+   - 
+pm run build: 0 hata ile 1705 modül production bundle olarak derlendi.
+
 
 ## [2026-10-06] — SP İlerleme Eğrisi (1-1-1 Pre-Break & Üstel Post-Break), Başlangıç Kütlesi ve Kozmik Otonomi Kokpiti (v0.37.0)
 
@@ -1996,3 +2031,47 @@ Düz SP dükkânı seçim yaratmıyordu; aktif (tıklama) oyun geç oyunda anlam
    - `npm test -- --run` $\to$ 176/176 test geçti.
    - `npm run build` $\to$ Sıfır TypeScript hatası ile başarılı derleme kanıtlandı.
 - **[2026-10-06 Düzeltme & Sadeleştirme]**: Kullanıcı geri bildirimi doğrultusunda 3 modlu widget yapısı kaldırıldı; *Antimatter Dimensions* tarzı tekil, sade ve ferah bir telemetri kartına dönüştürüldü. Basamak yazma süresi ve kütle eşdeğerliği doğrudan tek kartta sunuldu.
+
+---
+
+## [2026-10-06] - Ölçek Sıçraması ve Kozmik Galaksi Matematiği Denetimi ve Pürüzsüzleştirme (v0.30.1)
+
+### Kök Neden Analizi:
+1. **Süreksizlik (Discontinuity):** `shiftRequirement` içinde `dimensionShifts = 5` iken istenen taban miktar 25 D8 idi; ancak 6. sıçramaya geçildiğinde (`dimensionShifts >= 6`) formül `22 + 16 * (shifts - 6)` olduğundan gereksinim geçici olarak 22 D8'e düşüyordu (25 -> 22 gerilemesi).
+2. **Terminoloji Çakışması:** `DimensionsTab.vue` içindeki Galaksi kartının başlığı "Kozmik Çöküş", butonu "Çöküş Yap" olarak etiketlenmişti. Oysa oyunun asıl prestiji $1.79e308 g eşiğindeki Tekillik Çöküşü (Cosmic Collapse / Big Crunch) idi. İki mekanizmanın aynı ismi paylaşması kavram kargaşası yaratıyordu.
+3. **UI Bildirimi Yanıltıcılığı:** Galaksi satın alımında ekranda çıkan `-%X FREKANS MALİYETİ` bildirimi, kodun gerçek mekanizmasıyla çelişiyordu. Kodda galaksiler maliyeti indirmiyor; `tickspeedMultiplier` taban hız çarpanını üssel olarak katlıyordu.
+
+### Uygulanan Çözümler:
+1. **Matematiksel Merdiven Pürüzsüzleştirme ([`src/stores/game.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts)):**
+   - 6+ sıçramalar için taban `22` yerine `26` olarak güncellendi (`26 + 16 * (state.dimensionShifts - 6)`).
+   - Böylece D8 gereksinimi monoton artan (monotonically increasing) bir diziye dönüştürüldü: Shift 5 (25 D8) -> Shift 6 (26 D8) -> Shift 7 (42 D8) -> Shift 8 (58 D8).
+2. **Terminoloji ve Arayüz Netliği ([`src/components/DimensionsTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue)):**
+   - Boyutlar sekmesindeki Galaksi kartı **"Kozmik Küme"** olarak yeniden adlandırıldı.
+   - Buton metni **"Küme Yarat"** olarak güncellendi.
+   - Böylece $1.79e308 g Tekillik Çöküşü ile olan kavram kargaşası bütünüyle giderildi.
+3. **Doğrulanmış Macro-Surge ve Telemetri Metinleri ([`src/stores/game.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/game.ts)):**
+   - Sıçrama bildirimi `ÖLÇEK SIÇRAMASI #X` olarak senkronize edildi.
+   - Galaksi bildirimi `KOZMİK GALAKSİ KÜMESİ #X` ve gerçek çarpan etkisi olan `×X.XX TABAN FREKANS GÜCÜ` olarak düzeltildi.
+   - Telemetri satırı "Kozmik Galaksi Kümeleri (Güçlendirilmiş Frekans İvmesi)" olarak güncellendi.
+4. **Birim Testleri ve Doğrulama ([`src/stores/balance.test.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/stores/balance.test.ts)):**
+   - Taban 26 ve D5 pasifi sonrası 25 adet D8 testleri güncellendi; monoton artış assertion'ı eklendi.
+   - `npx vitest run` -> 188/188 test yeşil.
+   - `npm run build` -> Sıfır hata ile production paketi derlendi.
+
+---
+
+## [2026-10-06] - Kozmik Parazit Kartı Otomatik Açılma (Auto-Expand on Spawn) (v0.30.2)
+
+### Kök Neden Analizi:
+- `DimensionsTab.vue` içinde parazit (slacker) kartı `slackersOpen = ref(false)` ile varsayılan olarak kapalı başlıyordu.
+- Parazit geldiğinde dahi panel kapalı kaldığından oyuncu paraziti yok etmek için önce başlığa tıklayıp açmak zorunda kalıyordu; bu durum taktil hızı kesiyor ve sürtünme yaratıyordu.
+
+### Uygulanan Çözüm:
+1. **Reaktif Başlangıç ve İzleyici ([`src/components/DimensionsTab.vue`](file:///c:/Users/Yigit/Documents/Incremental/src/components/DimensionsTab.vue)):**
+   - Panel başlangıç durumu `slackersOpen = ref(store.slackers.length > 0)` olarak bağlandı (parazit varsa doğrudan açık başlar).
+   - `watch(() => store.slackers.length)` izleyicisi eklendi: Yeni bir parazit doğduğunda (`newCount > 0 && newCount > oldCount`), kullanıcı daha önce paneli kapatmış olsa dahi panel **otomatik olarak açık (`slackersOpen.value = true`)** konuma geçer.
+2. **Playwright Canlı Tarayıcı Doğrulaması:**
+   - Sayfa canlı geliştirme ortamında açıldı; test paraziti enjekte edildiğinde butonun DOM'da anında görünür (`visible: true`, `rect.width: 310px`) olduğu ve kullanıcının elle açmasına gerek kalmadığı somut olarak kanıtlandı.
+3. **Doğrulama:**
+   - `npx vitest run` $\to$ 188/188 test yeşil.
+   - `npm run build` $\to$ 0 hata, başarılı derleme.

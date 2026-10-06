@@ -5,6 +5,12 @@ import { musicEngine } from '../core/music-engine'
 import { SaveSystem } from '../core/save'
 import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, SaveVersionError } from '../core/save-version'
 import confetti from 'canvas-confetti'
+
+function safeConfetti(opts?: confetti.Options) {
+  if (typeof document !== 'undefined') {
+    confetti(opts)
+  }
+}
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_CATEGORIES,
@@ -60,6 +66,10 @@ import type {
   LabSeedType,
   LabMode,
   CrisisSpellType,
+  ReactorPhase,
+  CrisisInterventionType,
+  CrisisDilemma,
+  CrisisDilemmaOption,
   AutobuyerConfig,
   AutobuyerMode,
   ResolutionMilestone,
@@ -243,10 +253,10 @@ const GUILT_NAMES = [
 
 export const LAB_SEEDS = [
   {
-    type: 'cat_audio' as LabSeedType,
-    name: 'Kedi Miyavlaması',
-    icon: '🐱',
-    desc: 'Hızlı ısınır. Komşularına +%15 rezonans yayar ve pasif kütle çekimini artırır.',
+    type: 'photon_resonator' as LabSeedType,
+    name: 'Foton Rezonatörü',
+    icon: '⚡',
+    desc: 'Yüksek frekanslı foton uyarımı. Komşularına +%15 rezonans yayar ve çekim akışını artırır.',
     cost: new Decimal(500),
     growthSeconds: 15,
     lifeSeconds: Infinity,
@@ -254,21 +264,21 @@ export const LAB_SEEDS = [
     harvestRewardDesc: '10 sn Kütle'
   },
   {
-    type: 'cheese_sizzle' as LabSeedType,
-    name: 'Eritme Kaşar Cızırtısı',
-    icon: '🧀',
-    desc: 'Kozmik açlığı tetikler. Yoğun pasif kütle çekim akışı sağlar.',
+    type: 'heavy_nucleon' as LabSeedType,
+    name: 'Ağır Nükleon Çekirdeği',
+    icon: '⚛️',
+    desc: 'Kararlı gravitasyonel kütleçekim çekirdeği. Yoğun pasif kütle üretimi sağlar.',
     cost: new Decimal(50000),
     growthSeconds: 25,
     lifeSeconds: Infinity,
-    matureBoostDesc: '+35% Pasif Kütle (Yemekle +%76)',
+    matureBoostDesc: '+35% Pasif Kütle (Yüksek Yoğunlukla +%76)',
     harvestRewardDesc: '20 sn Kütle'
   },
   {
-    type: 'subway_beat' as LabSeedType,
-    name: 'Subway Surfers Beat',
-    icon: '🛹',
-    desc: 'Hipnotik arka plan ritmi. Manuel yutma reflekslerini kamçılar.',
+    type: 'gluon_binder' as LabSeedType,
+    name: 'Gluon Bağlayıcı',
+    icon: '🌀',
+    desc: 'Kuvvetli nükleer kuvvet bağı. Kuantum çökertme ve manuel yutma darbesini ikiye katlar.',
     cost: new Decimal(5e6),
     growthSeconds: 35,
     lifeSeconds: Infinity,
@@ -276,10 +286,10 @@ export const LAB_SEEDS = [
     harvestRewardDesc: '30 sn Kütle'
   },
   {
-    type: 'sigma_phonk' as LabSeedType,
-    name: 'Gece 4 Sigma Phonk',
-    icon: '🗿',
-    desc: 'Ağır baslar uykuyu kaçırır. Kozmik Krizler daha sık gelir ve Bas Şoku yayar.',
+    type: 'graviton_trap' as LabSeedType,
+    name: 'Graviton Tuzağı',
+    icon: '🕳️',
+    desc: 'Mikro uzay-zaman eğriliği. Kozmik Krizler daha sık gelir ve Gravitasyonel Şok yayar.',
     cost: new Decimal(1e9),
     growthSeconds: 45,
     lifeSeconds: Infinity,
@@ -287,10 +297,10 @@ export const LAB_SEEDS = [
     harvestRewardDesc: '40 sn Kütle'
   },
   {
-    type: 'mukbang_drama' as LabSeedType,
-    name: 'Gece 3 Mukbang & Drama',
-    icon: '🍜',
-    desc: 'Kaşar + Subway sentezi. Hem pasif üretimi hem yutma gücünü harmanlar.',
+    type: 'dark_matter_core' as LabSeedType,
+    name: 'Karanlık Madde Çekirdeği',
+    icon: '🌌',
+    desc: 'Nükleon + Gluon egzotik sentezi. Hem pasif üretimi hem yutma gücünü katlar.',
     cost: new Decimal(1e11),
     growthSeconds: 50,
     lifeSeconds: Infinity,
@@ -299,10 +309,10 @@ export const LAB_SEEDS = [
     isMutationOnly: true
   },
   {
-    type: 'cat_burger' as LabSeedType,
-    name: 'Cheeseburger Kedi',
-    icon: '🍔',
-    desc: 'Kedi + Kaşar sentezi. Sevimliliğiyle Kozmik Parazitlerin emişini hafifletir.',
+    type: 'magnetic_shield' as LabSeedType,
+    name: 'Manyetik Plazma Kalkanı',
+    icon: '🛡️',
+    desc: 'Foton + Nükleon rezonansı. Olay ufkunu korur, Kozmik Parazitlerin kütle emişini -%25 soğurur.',
     cost: new Decimal(1e12),
     growthSeconds: 50,
     lifeSeconds: Infinity,
@@ -311,22 +321,22 @@ export const LAB_SEEDS = [
     isMutationOnly: true
   },
   {
-    type: 'drift_tok' as LabSeedType,
-    name: 'Tokyo Drift Dublajı',
-    icon: '🏎️',
-    desc: 'Phonk + Subway sentezi. Yüksek ritimle yutma gücünü ikiye katlar.',
+    type: 'tachyon_flux' as LabSeedType,
+    name: 'Takyon Akısı',
+    icon: '💫',
+    desc: 'Graviton + Gluon sentezi. Işık ötesi hız: Manuel yutma gücünü 2× ve Kriz sıklığını +%30 artırır.',
     cost: new Decimal(1e13),
     growthSeconds: 60,
     lifeSeconds: Infinity,
     matureBoostDesc: '×2.0 Yutma & +%30 Kriz',
-    harvestRewardDesc: '1,5 dk Kütle',
+    harvestRewardDesc: '1.5 dk Kütle',
     isMutationOnly: true
   },
   {
-    type: 'brainrot_remix' as LabSeedType,
-    name: 'Saf Nöron Çürütücü',
-    icon: '🧠',
-    desc: 'Kedi + Phonk efsanevi rezonansı. Kütle çekimini tekillik boyutuna taşır!',
+    type: 'higgs_boson' as LabSeedType,
+    name: 'Higgs Bozonu',
+    icon: '💥',
+    desc: 'Foton + Graviton efsanevi kuantum birleşimi. Tüm evrensel kütle üretimini kalıcı olarak üçe katlar!',
     cost: new Decimal(1e15),
     growthSeconds: 75,
     lifeSeconds: Infinity,
@@ -348,81 +358,88 @@ export interface LabRecipe {
 
 export const LAB_RECIPES: LabRecipe[] = [
   {
-    result: 'mukbang_drama',
-    parent1: 'cheese_sizzle',
-    parent2: 'subway_beat',
-    name: 'Gece 3 Mukbang & Drama',
-    icon: '🍜',
-    hint: 'Eritme Kaşar (🧀) ve Subway Surfers (🛹) komşuluğu ile sentezlenir.',
-    desc: 'Gece açlığıyla parkur gerilimi birleşir: Hem Pasif hem Tıklama katlanır.'
+    result: 'dark_matter_core',
+    parent1: 'heavy_nucleon',
+    parent2: 'gluon_binder',
+    name: 'Karanlık Madde Çekirdeği',
+    icon: '🌌',
+    hint: 'Ağır Nükleon (⚛️) ve Gluon Bağlayıcı (🌀) komşuluğu ile sentezlenir.',
+    desc: 'Nükleon ile gluonun yoğun füzyonu: Hem Pasif üretim hem Manuel Yutma gücü katlanır.'
   },
   {
-    result: 'cat_burger',
-    parent1: 'cat_audio',
-    parent2: 'cheese_sizzle',
-    name: 'Cheeseburger Kedi',
-    icon: '🍔',
-    hint: 'Kedi Miyavlaması (🐱) ve Eritme Kaşar (🧀) komşuluğu ile sentezlenir.',
-    desc: 'Nostaljik sevimli meme: Vicdan Azaplarını sakinleştirip emişini düşürür.'
+    result: 'magnetic_shield',
+    parent1: 'photon_resonator',
+    parent2: 'heavy_nucleon',
+    name: 'Manyetik Plazma Kalkanı',
+    icon: '🛡️',
+    hint: 'Foton Rezonatörü (⚡) ve Ağır Nükleon (⚛️) komşuluğu ile sentezlenir.',
+    desc: 'Foton dalgasıyla nükleer manyetizma: Olay Ufkuna dadanan Kozmik Parazitlerin emişini %25 soğurur.'
   },
   {
-    result: 'drift_tok',
-    parent1: 'sigma_phonk',
-    parent2: 'subway_beat',
-    name: 'Tokyo Drift Dublajı',
-    icon: '🏎️',
-    hint: 'Sigma Phonk (🗿) ve Subway Surfers (🛹) komşuluğu ile sentezlenir.',
-    desc: 'Yüksek desibel ve hız: Manuel kaydırma ve Anomali ivmesi tavan yapar.'
+    result: 'tachyon_flux',
+    parent1: 'graviton_trap',
+    parent2: 'gluon_binder',
+    name: 'Takyon Akısı',
+    icon: '💫',
+    hint: 'Graviton Tuzağı (🕳️) ve Gluon Bağlayıcı (🌀) komşuluğu ile sentezlenir.',
+    desc: 'Işık ötesi hız: Manuel yutma gücü ikiye katlanır ve Kozmik Kriz sıklığı %30 artar.'
   },
   {
-    result: 'brainrot_remix',
-    parent1: 'cat_audio',
-    parent2: 'sigma_phonk',
-    name: 'Saf Nöron Çürütücü',
-    icon: '🧠',
-    hint: 'Kedi Miyavlaması (🐱) ve Sigma Phonk (🗿) komşuluğu ile sentezlenir.',
-    desc: 'Kozmik tekillik: Tüm küresel kütle üretimini kalıcı olarak üçe katlar!'
+    result: 'higgs_boson',
+    parent1: 'photon_resonator',
+    parent2: 'graviton_trap',
+    name: 'Higgs Bozonu',
+    icon: '💥',
+    hint: 'Foton Rezonatörü (⚡) ve Graviton Tuzağı (🕳️) komşuluğu ile sentezlenir.',
+    desc: 'Kozmik tekillik çekirdeği: Tüm küresel kütle üretimini kalıcı olarak üçe katlar!'
   }
 ]
 
-export const CRISIS_SPELLS = [
+export const CRISIS_INTERVENTIONS = [
   {
-    id: 'fast_charge' as CrisisSpellType,
-    name: 'Kuantum Alan Uyarımı',
+    id: 'quantum_compression' as CrisisInterventionType,
+    name: 'Kuantum Sıkıştırma',
     icon: '⚡',
-    desc: 'Anında ekrana 1 adet ışıltılı Kozmik Dalgalanma (Altın Anomali) fırlatır.',
-    energyCost: 30,
-    backfireChance: 0.15,
-    backfireDesc: '%15 Risk: Manyetik dalgalanma! (15 sn %50 hız kaybı)'
+    heatChange: 25,
+    desc: 'Olay ufkunda kuantum tekilliği sıkıştırır; ekrana anında 1 adet Altın Kozmik Dalgalanma (Anomali) fırlatır.',
+    tacticalTip: 'Hızlı anomali zincirleri ve kombo çarpanlarını başlatmak için idealdir.'
   },
   {
-    id: 'espresso_shot' as CrisisSpellType,
-    name: 'Aşırı Yüklü Plazma Akışı',
-    icon: '☕',
-    desc: 'Çekirdeği aşırı yükler; 30 saniye boyunca Çekim Hızını (Hz) 3× katlar.',
-    energyCost: 45,
-    backfireChance: 0.1,
-    backfireDesc: '%10 Risk: Rezonans aşırı yüklenmesi! Enerji barı sıfırlanır.'
+    id: 'time_dilation' as CrisisInterventionType,
+    name: 'Zaman Genleşmesi',
+    icon: '⏳',
+    heatChange: 20,
+    desc: 'Gravitasyonel zaman kuyusu oluşturur; ekranda aktif tüm geçici güçlendirmelerin süresine +15 saniye ekler.',
+    tacticalTip: 'Süpernova (7×) ve Kütle Patlaması (300×/777×) zirvelerini dondurup uzatır!'
   },
   {
-    id: 'noise_cancelling' as CrisisSpellType,
-    name: 'Manyetik Koruma Kalkanı',
-    icon: '🎧',
-    desc: 'Mevcut tüm Kozmik Parazitleri (Wrinklers) anında temizler ve %150 primle bozdurur.',
-    energyCost: 35,
-    backfireChance: 0.0,
-    backfireDesc: 'Risk yok! Tam sessizlik ve odaklanma.'
+    id: 'magnetic_vent' as CrisisInterventionType,
+    name: 'Manyetik Tahliye',
+    icon: '🧲',
+    heatChange: -35,
+    desc: 'Reaktör plazmasını tahliye ederek ısıyı 35 puan soğutur; tüm Kozmik Parazitleri temizler ve %175 primle bozdurur.',
+    tacticalTip: 'Aşırı ısınmayı önlemek ve birikmiş parazit kütlesini nakde çevirmek için soğutma valfidir.'
   },
   {
-    id: 'sleep_denial' as CrisisSpellType,
-    name: 'Kararsız Bozon İnfüzyonu',
-    icon: '🛌',
-    desc: 'Olay ufkunu anında besler; 1 dakikalık Kütle Patlaması verir.',
-    energyCost: 60,
-    backfireChance: 0.2,
-    backfireDesc: '%20 Risk: Kuantum dengesizliği! Olay ufkuna 3 yeni Kozmik Parazit dadanır.'
+    id: 'planck_surge' as CrisisInterventionType,
+    name: 'Planck Patlaması',
+    icon: '💥',
+    heatChange: 45,
+    desc: 'Planck ölçeğindeki vakum enerjisini serbest bırakır; 20 sn boyunca Çekim Hızını 4× ve Manuel Yutma gücünü 10× yapar.',
+    tacticalTip: 'Yüksek risk, devasa getiri! Isı sınırına dikkat edin; Tatlı Noktada patlatın.'
   }
 ]
+
+/** Geriye dönük uyumluluk takma listesi */
+export const CRISIS_SPELLS = CRISIS_INTERVENTIONS.map((intv) => ({
+  id: intv.id as CrisisSpellType,
+  name: intv.name,
+  icon: intv.icon,
+  desc: intv.desc,
+  energyCost: Math.abs(intv.heatChange),
+  backfireChance: 0,
+  backfireDesc: ''
+}))
 
 export const SINGULARITY_UPGRADES = [
   {
@@ -1164,7 +1181,9 @@ function dimMultCacheKey(
   formatBuffTier: number,
   formatBuffUntil: number,
   challengeTimeMult: number,
-  formatBuffActive: boolean
+  formatBuffActive: boolean,
+  relicCount = 0,
+  matureCellsCount = 0
 ): string {
   // NOT (ADR-0029): formatBuffActive ve challengeTimeMult TÜREV alanlardır. Ham
   // formatBuffUntil zaman damgası tek başına yeterli değildir: süre dolduğunda damga
@@ -1176,7 +1195,8 @@ function dimMultCacheKey(
     tier + '|' + bought + '|' + shifts + '|' + eyeLvl + '|' + sac + '|' + partnerBought + '|' +
     neuralProd + '|' + offlineBoost + '|' + (activeChallenge || '') + '|' +
     dim1Growth + '|' + completedJoin + '|' + capFloor + '|' + peakShifts + '|' + formatBuffTier +
-    '|' + formatBuffUntil + '|' + challengeTimeMult + '|' + (formatBuffActive ? 'A' : 'X')
+    '|' + formatBuffUntil + '|' + challengeTimeMult + '|' + (formatBuffActive ? 'A' : 'X') +
+    '|' + relicCount + '|' + matureCellsCount
   )
 }
 
@@ -1264,14 +1284,19 @@ export const useGameStore = defineStore('game', {
       isMature: false
     })),
     labHype: 0,
-    labMode: 'fyp' as LabMode,
-    discoveredFormulas: ['cat_audio'] as LabSeedType[],
+    labMode: 'overdrive' as LabMode,
+    discoveredFormulas: ['photon_resonator'] as LabSeedType[],
+    reactorCollapseCount: 0,
     isViralActive: false,
     viralTimeRemaining: 0,
     viralViews: 0,
 
-    // Mini-Oyun 2: Gece Yarısı Kriz Yönetimi (Kafein & Enerji Barı)
-    caffeineEnergy: 50,
+    // Mini-Oyun 2: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi (Crisis 2.0)
+    reactorHeat: 0,
+    reactorMeltdownTimer: 0,
+    activeCrisisDilemma: null as CrisisDilemma | null,
+    dilemmaCooldown: 0,
+    caffeineEnergy: 0, // Geriye dönük uyumluluk state alanı
     maxCaffeineEnergy: 100,
     crisisBackfireDebuff: 0, // saniye cinsinden debuff sayacı
 
@@ -1433,7 +1458,8 @@ export const useGameStore = defineStore('game', {
       labHarvests: 0,
       spellsCast: 0,
       seedsPlanted: 0,
-      challengesCompleted: 0
+      challengesCompleted: 0,
+      reactorCollapses: 0
     } as PlayerStats
   }),
 
@@ -1487,8 +1513,8 @@ export const useGameStore = defineStore('game', {
     // C2 ödülü (Şarj Aleti Temassızlığı): frekans etkisi +%15 (kalıcı).
     tickspeedMultiplier(state): Decimal {
       const chargerBonus = (state.singularityUpgrades?.fast_charger || 0) * 0.02
-      const baseReduction = Math.max(0.7, 0.89 - chargerBonus)
-      // Denge: Taban 0.08 yerine 0.35 ile sınırlandırılır (azami ~2.85x/alım); 12.5x kaçak patlamasını önler
+      const relicBase = this.reactorRelicBonuses.tickspeedBase
+      const baseReduction = Math.max(0.7, 0.89 - chargerBonus - relicBase)
       const galaxyBonus = Math.max(0.35, baseReduction - state.galaxies * 0.008)
       const activeMods = state.activeChallenge ? getChallengeById(state.activeChallenge)?.modifiers : undefined
       const buyScale = activeMods?.tickspeedBuyMultScale ?? 1
@@ -1497,6 +1523,13 @@ export const useGameStore = defineStore('game', {
       const espresso = state.activeBuffs.find((b) => b.type === 'espresso')
       if (espresso) {
         mult = mult.times(espresso.multiplier)
+      }
+      if (this.reactorTickRateMult !== 1) {
+        mult = mult.times(this.reactorTickRateMult)
+      }
+      const planckSurge = state.activeBuffs.find((b) => b.type === 'planck_surge')
+      if (planckSurge) {
+        mult = mult.times(planckSurge.multiplier)
       }
       const challengeEff = memoChallengeEffects(state.completedChallenges)
       if (challengeEff.tickspeedEffectMult !== 1) {
@@ -1651,7 +1684,7 @@ export const useGameStore = defineStore('game', {
         }
       }
       if (cap === undefined || 8 <= cap) {
-        let amount = new Decimal(22 + 16 * (state.dimensionShifts - 6)).times(shiftMult).floor()
+        let amount = new Decimal(26 + 16 * (state.dimensionShifts - 6)).times(shiftMult).floor()
         if (amount.lt(1)) amount = D_1
         return {
           tier: 8,
@@ -2029,7 +2062,8 @@ export const useGameStore = defineStore('game', {
       const logMatter = state.matter.log10().toNumber()
       const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
       const spMult = memoChallengeEffects(state.completedChallenges).spMult
-      const totalMult = dawnSpeedMult * spMult
+      const relicSpMult = this.reactorRelicBonuses.spGainMult
+      const totalMult = dawnSpeedMult * spMult * relicSpMult
 
       const logDiff = Math.max(0, logMatter - 308)
       const rawGain = Decimal.pow(10, logDiff / 45).times(3).times(totalMult)
@@ -2054,12 +2088,15 @@ export const useGameStore = defineStore('game', {
       // cache anahtarına da girmeli (yoksa süresi dolan bonus bayat kalır).
       const formatBuffActive = state.formatUnlockBuffUntil > Date.now() && state.formatUnlockBuffTier > 0
       const challengeTimeMult = state.activeChallenge ? challengeTimeTierMult(state.challengeBestTimes) : 1
+      const relicCount = state.reactorCollapseCount || 0
+      const matureCellsCount = relicCount >= 4 ? state.labCells.filter((c) => c.isMature && c.seedType !== null).length : 0
       const cacheKey = dimMultCacheKey(
         tier, dim.bought, state.dimensionShifts, eyeDropsLvl, sacStr,
         partnerBought, neuralProd, 1,
         state.activeChallenge, dim1GrowthStr, completedJoin,
         state.dimensionCapFloor, state.lifetimePeakShifts, state.formatUnlockBuffTier,
-        state.formatUnlockBuffUntil, challengeTimeMult, formatBuffActive
+        state.formatUnlockBuffUntil, challengeTimeMult, formatBuffActive,
+        relicCount, matureCellsCount
       )
       const cached = _dimMultCache.get(tier)
       if (cached && cached.key === cacheKey) return cached.val
@@ -2099,6 +2136,12 @@ export const useGameStore = defineStore('game', {
       // Algoritmik Ayna Sinerjisi (D1 <-> D8, D2 <-> D7, D3 <-> D6, D4 <-> D5 yakıt pompası)
       if (partnerDim && partnerBought > 0) {
         mult = mult.times(1 + Math.sqrt(partnerBought) * 0.15)
+      }
+
+      // Kozmik Relik Seviye 4: Rezonanstaki hücre başına boyutlara evrensel ivme
+      if (relicCount >= 4 && matureCellsCount > 0) {
+        const boostPerCell = 0.10 + (relicCount - 4) * 0.05
+        mult = mult.times(1 + matureCellsCount * boostPerCell)
       }
 
       // Nöral Ağaç pasif dalı: kalıcı üretim çarpanı (tüm istasyonlar)
@@ -2284,10 +2327,10 @@ export const useGameStore = defineStore('game', {
       const immunityLvl = state.singularityUpgrades?.guilt_immunity || 0
       const factor = Math.max(0.2, 1 - immunityLvl * 0.25)
       const achFactor = hasAchievementReward(state.achievements, 'leech_reduction') ? 0.85 : 1
-      const hasCatBurger = state.labCells.some((c) => c.isMature && c.seedType === 'cat_burger')
-      const burgerFactor = hasCatBurger ? 0.75 : 1.0
+      const hasMagneticShield = state.labCells.some((c) => c.isMature && c.seedType === 'magnetic_shield')
+      const shieldFactor = hasMagneticShield ? 0.75 : 1.0
       const d3Leech = tierSlackerLeechMult(state.dimensions, this.unlockedDimensionsCount)
-      return baseLeech * factor * achFactor * burgerFactor * d3Leech
+      return baseLeech * factor * achFactor * shieldFactor * d3Leech
     },
 
     // ---- Özellik Merdiveni (v0.11.0) ----
@@ -2316,6 +2359,35 @@ export const useGameStore = defineStore('game', {
 
     crisisUnlocked(): boolean {
       return this.isFeatureUnlocked('crisis')
+    },
+
+    // Crisis 2.0: Olay Ufku Kararsızlık Reaktörü Getter'ları
+    reactorPhase(state): ReactorPhase {
+      if (state.reactorMeltdownTimer > 0) return 'meltdown'
+      if (state.reactorHeat <= 30) return 'dormant'
+      if (state.reactorHeat <= 60) return 'resonance'
+      if (state.reactorHeat < 100) return 'sweet_spot'
+      return 'meltdown'
+    },
+
+    reactorMassMult(): number {
+      const phase = this.reactorPhase
+      if (phase === 'sweet_spot') return 8.0
+      if (phase === 'meltdown') return 0.5
+      return 1.0
+    },
+
+    reactorTickRateMult(): number {
+      const phase = this.reactorPhase
+      if (phase === 'resonance' || phase === 'sweet_spot') return 1.5
+      return 1.0
+    },
+
+    reactorAnomalyRateMult(): number {
+      const phase = this.reactorPhase
+      if (phase === 'sweet_spot') return 2.0
+      if (phase === 'resonance') return 1.3
+      return 1.0
     },
 
     autobuyersUnlocked(): boolean {
@@ -2451,21 +2523,21 @@ export const useGameStore = defineStore('game', {
       return new Decimal(gain)
     },
 
-    // Algoritma Stüdyosu: Viral Matris Pasif Çarpanı (Sinerjiler, Merkez Çip, Satır/Sütun ve Zeminler)
+    // Kuantum Sentez Reaktörü: Akı Matrisi Pasif Çarpanı (Sinerjiler, Merkez Çekirdek, Satır/Sütun ve Rejimler)
     labPassiveMultiplier(state): Decimal {
       let mult = D_1
-      const isFood = (t: LabSeedType | null) => t === 'cheese_sizzle' || t === 'mukbang_drama' || t === 'cat_burger'
+      const isHeavy = (t: LabSeedType | null) => t === 'heavy_nucleon' || t === 'dark_matter_core' || t === 'magnetic_shield'
 
       // Hücre bazlı temel çarpan ve komşuluk sinerjileri
       state.labCells.forEach((c, idx) => {
         if (!c.isMature || !c.seedType) return
 
         let cellBoost = 1.0
-        if (c.seedType === 'cat_audio') cellBoost = 1.1
-        else if (c.seedType === 'cheese_sizzle') cellBoost = 1.18
-        else if (c.seedType === 'mukbang_drama') cellBoost = 1.25
-        else if (c.seedType === 'cat_burger') cellBoost = 1.18
-        else if (c.seedType === 'brainrot_remix') cellBoost = 2.0
+        if (c.seedType === 'photon_resonator') cellBoost = 1.20
+        else if (c.seedType === 'heavy_nucleon') cellBoost = 1.35
+        else if (c.seedType === 'dark_matter_core') cellBoost = 1.50
+        else if (c.seedType === 'magnetic_shield') cellBoost = 1.40
+        else if (c.seedType === 'higgs_boson') cellBoost = 3.00
 
         // Komşuları bul (3x3 grid)
         const row = Math.floor(idx / 3)
@@ -2478,22 +2550,22 @@ export const useGameStore = defineStore('game', {
 
         const matureNeighbors = neighborCells.filter((n) => n.isMature && n.seedType)
 
-        // 1. Kedi Komşuluğu: +%15 rezonans
-        if (matureNeighbors.some((n) => n.seedType === 'cat_audio')) {
+        // 1. Foton Komşuluğu: +%15 rezonans
+        if (matureNeighbors.some((n) => n.seedType === 'photon_resonator')) {
           cellBoost *= 1.15
         }
 
-        // 2. Phonk Komşuluğu: Bas Şoku (×1.25)
-        if (matureNeighbors.some((n) => n.seedType === 'sigma_phonk')) {
+        // 2. Graviton Komşuluğu: Gravitasyonel Şok (×1.25)
+        if (matureNeighbors.some((n) => n.seedType === 'graviton_trap')) {
           cellBoost *= 1.25
         }
 
-        // 3. Yemek Komşuluğu: Ziyafet Sinerjisi (+%30)
-        if (isFood(c.seedType) && matureNeighbors.some((n) => isFood(n.seedType))) {
+        // 3. Kararlı Nükleer Sinerji: İki kararlı parçacık (+%30)
+        if (isHeavy(c.seedType) && matureNeighbors.some((n) => isHeavy(n.seedType))) {
           cellBoost *= 1.30
         }
 
-        // 4. Merkez Çip Bonusu (Hücre 4): Nöral Çekirdek (kendisi 1.5×, komşularına +%20 yayar)
+        // 4. Merkez Odak Çekirdeği (Hücre 4): Kendisi 1.5×, komşularına +%20 yayar
         if (idx === 4) {
           cellBoost *= 1.50
         } else if (matureNeighbors.some((n) => n.id === 4)) {
@@ -2508,7 +2580,7 @@ export const useGameStore = defineStore('game', {
         const rowCells = [state.labCells[r * 3], state.labCells[r * 3 + 1], state.labCells[r * 3 + 2]]
         if (rowCells.every((c) => c.isMature && c.seedType !== null)) {
           mult = mult.times(1.12)
-          // Mono-format uyumu (3'ü de aynı)
+          // Mono-izotop uyumu (3'ü de aynı)
           if (rowCells[0].seedType === rowCells[1].seedType && rowCells[1].seedType === rowCells[2].seedType) {
             mult = mult.times(1.2)
           }
@@ -2523,38 +2595,38 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // Algoritma Zemin Modu (Evergreen: Pasife odaklanma)
-      if (state.labMode === 'evergreen') {
-        mult = mult.times(1.8)
+      // Plazma Besleme Rejimi (Superconductor: Sabit 2.5× Pasif Kütle)
+      if (state.labMode === 'superconductor') {
+        mult = mult.times(2.5)
       }
 
-      // Viral Kodeks Keşif Bonusu (Her keşfedilen formül kalıcı +%3)
+      // Parçacık Atlası Keşif Bonusu (Her keşfedilen formül kalıcı +%3)
       const recipeResults = new Set(LAB_RECIPES.map((recipe) => recipe.result))
       const codexCount = (state.discoveredFormulas || []).filter((id) => recipeResults.has(id)).length
       mult = mult.times(1 + codexCount * 0.03)
 
-      // Canlı Viral Akış Dalgası (Reaktör patlaması aktifken)
+      // Canlı Süperkritik Boşalım Dalgası
       if (state.isViralActive) {
         const matureCount = state.labCells.filter((c) => c.isMature && !!c.seedType).length
-        const viralSurge = (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.2 : 1.0)
+        const viralSurge = (5.0 + matureCount * 1.0) * (state.labMode === 'overdrive' ? 2.0 : 1.0)
         mult = mult.times(viralSurge)
       }
 
       return mult
     },
 
-    // Algoritma Stüdyosu: Tıklama Çarpanı (Subway, Mukbang, DriftTok)
+    // Kuantum Matrisi: Manuel Yutma Çarpanı (Gluon, Karanlık Madde, Takyon)
     labClickMultiplier(state): Decimal {
       let mult = D_1
       state.labCells.forEach((c, idx) => {
         if (!c.isMature || !c.seedType) return
 
-        if (c.seedType === 'subway_beat') mult = mult.times(2.0)
-        else if (c.seedType === 'mukbang_drama') mult = mult.times(1.5)
-        else if (c.seedType === 'drift_tok') mult = mult.times(2.0)
+        if (c.seedType === 'gluon_binder') mult = mult.times(2.0)
+        else if (c.seedType === 'dark_matter_core') mult = mult.times(1.5)
+        else if (c.seedType === 'tachyon_flux') mult = mult.times(2.0)
 
         // Merkez hücre bonusu
-        if (idx === 4 && (c.seedType === 'subway_beat' || c.seedType === 'drift_tok' || c.seedType === 'mukbang_drama')) {
+        if (idx === 4 && (c.seedType === 'gluon_binder' || c.seedType === 'tachyon_flux' || c.seedType === 'dark_matter_core')) {
           mult = mult.times(1.3)
         }
       })
@@ -2566,14 +2638,14 @@ export const useGameStore = defineStore('game', {
       return mult
     },
 
-    // Algoritma Stüdyosu: Gece Krizi Anomali Sıklığı
+    // Kuantum Matrisi: Kozmik Dalgalanma / Kriz Sıklığı (Graviton, Takyon, Higgs)
     labAnomalyMultiplier(state): number {
       let bonus = 1.0
       state.labCells.forEach((c) => {
         if (c.isMature && c.seedType) {
-          if (c.seedType === 'sigma_phonk') bonus *= 1.5
-          else if (c.seedType === 'drift_tok') bonus *= 1.3
-          else if (c.seedType === 'brainrot_remix') bonus *= 1.4
+          if (c.seedType === 'graviton_trap') bonus *= 1.5
+          else if (c.seedType === 'tachyon_flux') bonus *= 1.3
+          else if (c.seedType === 'higgs_boson') bonus *= 1.4
         }
       })
 
@@ -2584,13 +2656,13 @@ export const useGameStore = defineStore('game', {
       return bonus
     },
 
-    // Reaktörün Viral Drop Çarpanı
+    // Reaktörün Süperkritik Boşalım Çarpanı
     labViralMultiplier(state): number {
       const matureCount = state.labCells.filter((c) => c.isMature && !!c.seedType).length
-      return (5.0 + matureCount * 1.0) * (state.labMode === 'fyp' ? 1.2 : 1.0)
+      return (5.0 + matureCount * 1.0) * (state.labMode === 'overdrive' ? 2.0 : 1.0)
     },
 
-    // Viral Kodeks Keşif Yüzdesi / Global Çarpanı
+    // Parçacık Atlası Keşif Yüzdesi / Global Çarpanı
     labCodexDiscoveredCount(state): number {
       const recipeResults = new Set(LAB_RECIPES.map((recipe) => recipe.result))
       return (state.discoveredFormulas || []).filter((id) => recipeResults.has(id)).length
@@ -2598,6 +2670,34 @@ export const useGameStore = defineStore('game', {
 
     labCodexBonusPercent(): number {
       return this.labCodexDiscoveredCount * 3
+    },
+
+    // Kozmik Relik ve Reaktör Çöküşü Getters
+    canCollapseReactor(state): boolean {
+      const exoticFormulas: LabSeedType[] = ['dark_matter_core', 'magnetic_shield', 'tachyon_flux', 'higgs_boson']
+      return exoticFormulas.every((formula) => state.discoveredFormulas.includes(formula))
+    },
+
+    reactorRelicBonuses(state): {
+      tickspeedBase: number
+      crisisDuration: number
+      spGainMult: number
+      dimensionalBoostPerCell: number
+      universalMassMult: Decimal
+    } {
+      const count = state.reactorCollapseCount || 0
+      return {
+        // Seviye 1: Çekim Hızı (Hz) tabanına kalıcı bonus
+        tickspeedBase: count >= 1 ? Math.min(0.15, count * 0.03) : 0,
+        // Seviye 2: Kozmik Kriz etki sürelerine kalıcı bonus (saniye)
+        crisisDuration: count >= 2 ? (count - 1) * 5 : 0,
+        // Seviye 3: Tekillik Çöküşü (Big Crunch) SP kazancına kalıcı çarpan
+        spGainMult: count >= 3 ? 1 + (count - 2) * 0.5 : 1,
+        // Seviye 4: Rezonanstaki hücre başına boyutlara evrensel ivme
+        dimensionalBoostPerCell: count >= 4 ? 0.10 + (count - 4) * 0.05 : 0,
+        // Seviye 5+: Sınırsız ölçeklenen evrensel kütle relik çarpanı
+        universalMassMult: count >= 5 ? Decimal.pow(2, count - 4) : D_1
+      }
     },
 
     // Nöral Ağaç: satın alınan düğümlerin toplanmış sayısal etkileri (tek kaynak)
@@ -2659,6 +2759,11 @@ export const useGameStore = defineStore('game', {
         .times(this.achievementClickMult)
         .times(this.neuralEffects.clickMult)
         .times(this.comboMultiplier)
+
+      const planckSurge = state.activeBuffs.find((b) => b.type === 'planck_surge')
+      if (planckSurge) {
+        power = power.times(10)
+      }
 
       return power
     },
@@ -2785,6 +2890,7 @@ export const useGameStore = defineStore('game', {
       const stanceMult = this.stanceMultipliers.production
       const buffMult = this.productionBuffMultiplier
       const labMult = this.labPassiveMultiplier
+      const reactorMult = this.reactorMassMult
       const debuffMult = state.crisisBackfireDebuff > 0 ? 0.5 : 1.0
       const netRatio = Math.max(0.01, 1 - this.slackerLeechPercent)
 
@@ -2794,6 +2900,8 @@ export const useGameStore = defineStore('game', {
         .times(labMult)
         .times(this.achievementMultiplier)
         .times(this.achievementProductionMult)
+        .times(reactorMult)
+        .times(this.reactorRelicBonuses.universalMassMult)
         .times(debuffMult)
         .times(netRatio)
         .times(this.challengeProdMult)
@@ -3186,8 +3294,8 @@ export const useGameStore = defineStore('game', {
       this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(gain)
       this.stats.totalManualDopamine = this.stats.totalManualDopamine.plus(gain)
 
-      // Algoritma Lab Hype Şarjı (Evergreen modu hariç ve canlı akışta değilken)
-      if (this.isFeatureUnlocked('lab') && this.labMode !== 'evergreen' && !this.isViralActive) {
+      // Kuantum Reaktör Plazma Şarjı (Superconductor modu hariç ve canlı akışta değilken)
+      if (this.isFeatureUnlocked('lab') && this.labMode !== 'superconductor' && !this.isViralActive) {
         this.labHype = Math.min(100, this.labHype + 0.4)
       }
 
@@ -3614,21 +3722,21 @@ export const useGameStore = defineStore('game', {
       const currentPerSec = this.matterPerSecond
       const clickPwr = this.manualClickPower
 
-      if (cell.seedType === 'cat_audio') {
+      if (cell.seedType === 'photon_resonator') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(10) : clickPwr.times(50)
-      } else if (cell.seedType === 'cheese_sizzle') {
+      } else if (cell.seedType === 'heavy_nucleon') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(20) : clickPwr.times(200)
-      } else if (cell.seedType === 'subway_beat') {
+      } else if (cell.seedType === 'gluon_binder') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(30) : clickPwr.times(500)
-      } else if (cell.seedType === 'sigma_phonk') {
+      } else if (cell.seedType === 'graviton_trap') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(40) : clickPwr.times(1500)
-      } else if (cell.seedType === 'mukbang_drama') {
+      } else if (cell.seedType === 'dark_matter_core') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(50) : clickPwr.times(2500)
-      } else if (cell.seedType === 'cat_burger') {
+      } else if (cell.seedType === 'magnetic_shield') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(60) : clickPwr.times(3500)
-      } else if (cell.seedType === 'drift_tok') {
+      } else if (cell.seedType === 'tachyon_flux') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(90) : clickPwr.times(4500)
-      } else if (cell.seedType === 'brainrot_remix') {
+      } else if (cell.seedType === 'higgs_boson') {
         reward = currentPerSec.gt(0) ? currentPerSec.times(120) : clickPwr.times(10000)
       }
 
@@ -3638,8 +3746,8 @@ export const useGameStore = defineStore('game', {
       this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(reward)
       this.stats.labHarvests = (this.stats.labHarvests || 0) + 1
 
-      // Hype barına +2.5% taktil katkı
-      if (this.labMode !== 'evergreen' && !this.isViralActive) {
+      // Plazma barına +2.5% taktil katkı (Superconductor modunda durur)
+      if (this.labMode !== 'superconductor' && !this.isViralActive) {
         this.labHype = Math.min(100, this.labHype + 2.5)
       }
 
@@ -3667,14 +3775,18 @@ export const useGameStore = defineStore('game', {
       sounds.playGuiltClick()
     },
 
-    // Algoritma Stüdyosu: Algoritma Zemin Modunu Değiştir
+    // Algoritma Stüdyosu: Plazma Besleme Rejimini Değiştir
     setLabMode(mode: LabMode): void {
       if (this.labMode === mode) return
       this.labMode = mode
       sounds.playHapticTap()
     },
 
-    // Trend Reaktörü: Akışa Fırlat! (Viral Drop)
+    triggerSupercriticalVent(): boolean {
+      return this.triggerViralDrop()
+    },
+
+    // Kuantum Reaktörü: Süperkritik Boşalım! (Supercritical Venting)
     triggerViralDrop(): boolean {
       if (this.labHype < 100 || this.isViralActive) return false
 
@@ -3682,7 +3794,7 @@ export const useGameStore = defineStore('game', {
         ? this.matterPerSecond.times(60)
         : this.manualClickPower.times(200)
 
-      if (this.labMode === 'fyp') {
+      if (this.labMode === 'overdrive') {
         reward = reward.times(2.0)
       }
       reward = reward.times(this.achievementLabYield)
@@ -3701,85 +3813,272 @@ export const useGameStore = defineStore('game', {
         particleCount: 160,
         spread: 110,
         origin: { y: 0.55 },
-        colors: ['#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ffffff']
+        colors: ['#00d2ff', '#9d4edd', '#10b981', '#f59e0b', '#ffffff']
       })
       return true
     },
 
-    // Gece Kriz Yönetimi: Kriz Kararı Al
-    castSpell(spellId: CrisisSpellType): boolean {
-      const spell = CRISIS_SPELLS.find((s) => s.id === spellId)
-      if (!spell) return false
-      if (spellId === 'fast_charge' && this.floatingAnomalies.length >= 2) return false
-      if (this.caffeineEnergy < spell.energyCost) return false
+    // Meta-İlerleme: Reaktör Çöküşü & Kozmik Relikler (Reactor Collapse)
+    collapseReactor(): boolean {
+      if (!this.canCollapseReactor) return false
 
-      this.caffeineEnergy -= spell.energyCost
+      this.reactorCollapseCount = (this.reactorCollapseCount || 0) + 1
+      this.stats.reactorCollapses = (this.stats.reactorCollapses || 0) + 1
+
+      // Matrisi temizle
+      this.labCells.forEach((c) => {
+        c.seedType = null
+        c.age = 0
+        c.isMature = false
+      })
+      this.labHype = 0
+      this.isViralActive = false
+      this.viralTimeRemaining = 0
+      // Formülleri sıfırla (sadece temel foton rezonatörü kalsın)
+      this.discoveredFormulas = ['photon_resonator']
+
+      if (typeof window !== 'undefined') {
+        sounds.playSingularity()
+        confetti({
+          particleCount: 200,
+          spread: 140,
+          origin: { y: 0.5 },
+          colors: ['#00d2ff', '#9d4edd', '#f59e0b', '#ffffff']
+        })
+      }
+
+      return true
+    },
+
+    // Crisis 2.0: Olay Ufku Reaktörü Meltdown Tetiklemesi
+    triggerReactorMeltdown(): void {
+      this.reactorMeltdownTimer = 10
+      this.reactorHeat = 100
+      this.caffeineEnergy = 100
+      sounds.playMeltdownWarning()
+    },
+
+    // Crisis 2.0: 4 Taktiksel Müdahale (Grimoire 2.0)
+    castCrisisIntervention(interventionType: CrisisInterventionType): boolean {
+      if (this.reactorMeltdownTimer > 0) return false // Meltdown kilitlenmesi
+
       this.stats.spellsCast = (this.stats.spellsCast || 0) + 1
 
-      // Backfire Kontrolü
-      if (Math.random() < spell.backfireChance) {
-        sounds.playBackfire()
-        if (spellId === 'fast_charge') {
-          this.crisisBackfireDebuff = 15
-        } else if (spellId === 'espresso_shot') {
-          this.caffeineEnergy = 0
-        } else if (spellId === 'sleep_denial') {
-          for (let i = 0; i < 3; i++) {
-            this.spawnSlacker()
-          }
+      if (interventionType === 'quantum_compression') {
+        this.spawnAnomaly(true)
+        this.reactorHeat = Math.min(100, this.reactorHeat + 25)
+        sounds.playCrisisDecision()
+      } else if (interventionType === 'time_dilation') {
+        this.activeBuffs.forEach((b) => {
+          b.remaining += 15
+          b.duration += 15
+        })
+        this.reactorHeat = Math.min(100, this.reactorHeat + 20)
+        sounds.playCrisisDecision()
+      } else if (interventionType === 'magnetic_vent') {
+        this.reactorHeat = Math.max(0, this.reactorHeat - 35)
+        if (this.slackers.length > 0) {
+          this.slackers.forEach((s) => {
+            const refund = s.leechedDopamine.times(1.75)
+            this.matter = this.matter.plus(refund)
+            this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(refund)
+            this.stats.slackersFired++
+          })
+          this.slackers = []
         }
-        return false
-      }
-
-      // Başarılı Karar Etkileri
-      sounds.playCrisisDecision()
-      if (spellId === 'fast_charge') {
-        if (!this.spawnAnomaly()) {
-          this.caffeineEnergy += spell.energyCost
-          this.stats.spellsCast--
-          return false
-        }
-      } else if (spellId === 'espresso_shot') {
-        const espressoSecs = Math.floor(30 * this.achievementBuffDuration)
-        const existing = this.activeBuffs.find((b) => b.type === 'espresso')
+        sounds.playVentCooling()
+      } else if (interventionType === 'planck_surge') {
+        const existing = this.activeBuffs.find((b) => b.type === 'planck_surge')
         if (existing) {
-          existing.remaining += espressoSecs
-          existing.duration += espressoSecs
+          existing.remaining += 20
+          existing.duration += 20
         } else {
           this.activeBuffs.push({
-            id: `buff-espresso-${Date.now()}`,
-            type: 'espresso',
-            name: '☕ Çift Espresso (3× Frekans)',
-            duration: espressoSecs,
-            remaining: espressoSecs,
-            multiplier: 3
+            id: `buff-planck-${Date.now()}`,
+            type: 'planck_surge',
+            name: '💥 Planck Patlaması (4× Hz, 10× Yutma)',
+            duration: 20,
+            remaining: 20,
+            multiplier: 4
           })
         }
-      } else if (spellId === 'noise_cancelling') {
-        const immunityLvl = this.singularityUpgrades?.guilt_immunity || 0
-        const refundRatio = Math.max(1.2, (1.05 + immunityLvl * 0.15) * this.neuralEffects.crisisRewardMult)
-        this.slackers.forEach((s) => {
-          const refund = s.leechedDopamine.times(refundRatio)
-          this.matter = this.matter.plus(refund)
-          this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(refund)
-          this.stats.slackersFired++
-        })
-        this.slackers = []
-        sounds.playSilenceGuilt()
-      } else if (spellId === 'sleep_denial') {
-        const curSec = this.matterPerSecond
-        const blast = curSec.gt(0) ? curSec.times(60) : this.manualClickPower.times(2000)
-        this.matter = this.matter.plus(blast)
-        this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(blast)
+        this.reactorHeat = Math.min(100, this.reactorHeat + 45)
+        sounds.playCrisisDecision()
       }
 
-      confetti({
+      this.caffeineEnergy = this.reactorHeat
+
+      if (this.reactorHeat >= 100) {
+        this.triggerReactorMeltdown()
+      }
+
+      safeConfetti({
         particleCount: 70,
         spread: 80,
         origin: { y: 0.5 },
         colors: ['#a855f7', '#06b6d4', '#ec4899', '#f59e0b']
       })
       return true
+    },
+
+    // Geriye dönük uyumluluk takma metodu
+    castSpell(spellId: CrisisSpellType): boolean {
+      const aliasMap: Record<string, CrisisInterventionType> = {
+        fast_charge: 'quantum_compression',
+        espresso_shot: 'time_dilation',
+        noise_cancelling: 'magnetic_vent',
+        sleep_denial: 'planck_surge'
+      }
+      const targetType = (aliasMap[spellId] || spellId) as CrisisInterventionType
+      return this.castCrisisIntervention(targetType)
+    },
+
+    // Crisis 2.0: Canlı Fırsat İkilemi (Dilemma) Tetikle
+    triggerCrisisDilemma(): void {
+      if (this.activeCrisisDilemma) return
+      const dilemmaList: Array<{
+        id: string
+        title: string
+        desc: string
+        options: CrisisDilemmaOption[]
+      }> = [
+        {
+          id: 'plasma_surge',
+          title: '⚠️ Plazma Kararsızlık Sızıntısı',
+          desc: 'Reaktör çekirdeğinde kontrolsüz gravitasyonel basınç birikiyor. Alanı stabilize et veya aşırı rezonansa sürükle!',
+          options: [
+            {
+              id: 'vent',
+              label: 'Tahliye Valfini Aç',
+              desc: '-25 Isı düşür ve anında 30 saniyelik kütle üretimi çek.',
+              effect: 'vent'
+            },
+            {
+              id: 'overcharge',
+              label: 'Aşırı Rezonans Besle',
+              desc: '+20 Isı yükselt ve 20 sn boyunca Çekim Hızını 2× katla.',
+              effect: 'overcharge'
+            }
+          ]
+        },
+        {
+          id: 'quantum_foam_rupture',
+          title: '🌌 Kuantum Köpüğü Yırtılması',
+          desc: 'Olay ufkunda mikro-tekillik yarıkları oluştu! Nasıl karşılık vereceksin?',
+          options: [
+            {
+              id: 'stabilize',
+              label: 'Alanı Sabitle',
+              desc: '-20 Isı düşür ve ekrana anında 1 Altın Anomali fırlat.',
+              effect: 'stabilize'
+            },
+            {
+              id: 'collapse',
+              label: 'Yırtığı Genişlet',
+              desc: '+25 Isı ekle ve 30 sn boyunca Çekim Boyutlarını 5× katla.',
+              effect: 'collapse'
+            }
+          ]
+        },
+        {
+          id: 'event_horizon_split',
+          title: '⚡ Olay Ufku Rezonans Tepe Noktası',
+          desc: 'Termal enerji kritik sınıra ulaştı. Kütle akışını optimize et.',
+          options: [
+            {
+              id: 'absorb_parasites',
+              label: 'Parazitleri Sentezle',
+              desc: '-15 Isı soğut ve mevcut tüm parazitleri %200 primle temizle.',
+              effect: 'absorb_parasites'
+            },
+            {
+              id: 'hyper_surge',
+              label: 'Hiper Dalga Patlaması',
+              desc: '+20 Isı yükselt ve anında 2 dakikalık kütle patlaması kazan.',
+              effect: 'hyper_surge'
+            }
+          ]
+        }
+      ]
+      const chosen = dilemmaList[Math.floor(Math.random() * dilemmaList.length)]
+      this.activeCrisisDilemma = {
+        id: chosen.id + '_' + Date.now(),
+        title: chosen.title,
+        desc: chosen.desc,
+        duration: 15,
+        timeLeft: 15,
+        options: chosen.options
+      }
+      sounds.playCrisisDecision()
+    },
+
+    // Crisis 2.0: Canlı İkilem Seçeneği Uygula
+    chooseCrisisDilemmaOption(optionId: string): void {
+      if (!this.activeCrisisDilemma) return
+      const opt = this.activeCrisisDilemma.options.find((o) => o.id === optionId)
+      if (!opt) return
+
+      if (opt.effect === 'vent') {
+        this.reactorHeat = Math.max(0, this.reactorHeat - 25)
+        const gain = this.matterPerSecond.times(30)
+        if (gain.gt(0)) {
+          this.matter = this.matter.plus(gain)
+          this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(gain)
+        }
+      } else if (opt.effect === 'overcharge') {
+        this.reactorHeat = Math.min(100, this.reactorHeat + 20)
+        this.activeBuffs.push({
+          id: `buff-dilemma-overcharge-${Date.now()}`,
+          type: 'espresso',
+          name: '⚡ Aşırı Rezonans (2× Frekans)',
+          duration: 20,
+          remaining: 20,
+          multiplier: 2
+        })
+      } else if (opt.effect === 'stabilize') {
+        this.reactorHeat = Math.max(0, this.reactorHeat - 20)
+        this.spawnAnomaly(true)
+      } else if (opt.effect === 'collapse') {
+        this.reactorHeat = Math.min(100, this.reactorHeat + 25)
+        this.activeBuffs.push({
+          id: `buff-dilemma-collapse-${Date.now()}`,
+          type: 'resonance_boost',
+          name: '🌌 Boyut Sıkışması (5× Boyutlar)',
+          duration: 30,
+          remaining: 30,
+          multiplier: 5
+        })
+      } else if (opt.effect === 'absorb_parasites') {
+        this.reactorHeat = Math.max(0, this.reactorHeat - 15)
+        if (this.slackers.length > 0) {
+          this.slackers.forEach((s) => {
+            const refund = s.leechedDopamine.times(2.0)
+            this.matter = this.matter.plus(refund)
+            this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(refund)
+            this.stats.slackersFired++
+          })
+          this.slackers = []
+        }
+      } else if (opt.effect === 'hyper_surge') {
+        this.reactorHeat = Math.min(100, this.reactorHeat + 20)
+        const blast = this.matterPerSecond.gt(0) ? this.matterPerSecond.times(120) : this.manualClickPower.times(2000)
+        this.matter = this.matter.plus(blast)
+        this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(blast)
+      }
+
+      this.caffeineEnergy = this.reactorHeat
+      if (this.reactorHeat >= 100) {
+        this.triggerReactorMeltdown()
+      }
+
+      this.activeCrisisDilemma = null
+      this.dilemmaCooldown = 60
+      sounds.playCrisisDecision()
+      safeConfetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 }
+      })
     },
 
     // Otomatik Bot Aç/Kapa
@@ -3971,17 +4270,23 @@ export const useGameStore = defineStore('game', {
     },
 
     // Gece Krizi Doğur (Spawn Anomaly) — ağırlıklı RNG + pity + mobil güvenli konum
-    spawnAnomaly(): boolean {
-      if (this.floatingAnomalies.length >= 2) {
+    spawnAnomaly(forceGolden: boolean = false): boolean {
+      if (!forceGolden && this.floatingAnomalies.length >= 2) {
         // Ekran doygunken timer'ı sıfırla; slot açılınca anlık pop-up yağmuru başlamasın
         this.anomalyTimer = 0
+        return false
+      }
+      if (forceGolden && this.floatingAnomalies.length >= 4) {
         return false
       }
 
       // Ağırlıklı tablo: fyp %42 / heart %32 / sponsor %21 / void %5
       // Pity: 25 void'suz spawn sonrası void garanti (koleksiyon hissi korunur)
       let chosenType: AnomalyType
-      if ((this.mythicPity || 0) >= 25) {
+      if (forceGolden) {
+        const roll = Math.random()
+        chosenType = roll < 0.45 ? 'fyp' : roll < 0.8 ? 'heart_frenzy' : 'void'
+      } else if ((this.mythicPity || 0) >= 25) {
         chosenType = 'void'
       } else {
         const roll = Math.random() * 100
@@ -4267,8 +4572,8 @@ export const useGameStore = defineStore('game', {
         neuralBots: this.neuralBots,
         napCount: this.napCount,
         matureCells: this.labCells.filter((c) => c.isMature && !!c.seedType).length,
-        hasBrainrot: this.labCells.some((c) => c.seedType === 'brainrot_remix'),
-        hasMatureBrainrot: this.labCells.some((c) => c.seedType === 'brainrot_remix' && c.isMature),
+        hasBrainrot: this.labCells.some((c) => c.seedType === 'higgs_boson'),
+        hasMatureBrainrot: this.labCells.some((c) => c.seedType === 'higgs_boson' && c.isMature),
         activeSlackers: this.slackers.length,
         leechedTotal: this.slackers.reduce((a, s) => a.plus(s.leechedDopamine), D_0),
         wallHour: new Date().getHours(),
@@ -4427,9 +4732,9 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // 4. Anomali Doğurma Sayacı (Gece Krizleri: 100 Dopamin ile açılır)
+      // 4. Anomali Doğurma Sayacı (Gece Krizleri: 100 Dopamin ile açılır, Reaktör hızıyla ölçeklenir)
       if (this.isFeatureUnlocked('crisis_spawn')) {
-        this.anomalyTimer += deltaSeconds
+        this.anomalyTimer += deltaSeconds * this.reactorAnomalyRateMult
         if (this.anomalyTimer >= this.nextAnomalyInterval) {
           this.spawnAnomaly()
         }
@@ -4459,17 +4764,17 @@ export const useGameStore = defineStore('game', {
       if (this.isFeatureUnlocked('lab')) {
         const matureCount = this.labCells.filter((c) => c.isMature && !!c.seedType).length
 
-        // Hype Şarjı (Evergreen modu hariç ve canlı akışta değilken)
-        if (this.labMode !== 'evergreen' && !this.isViralActive) {
-          const modeMult = this.labMode === 'fyp' ? 1.8 : 1.0
+        // Plazma Şarjı (Superconductor modu hariç ve canlı akışta değilken)
+        if (this.labMode !== 'superconductor' && !this.isViralActive) {
+          const modeMult = this.labMode === 'overdrive' ? 1.8 : 1.0
           const rate = (0.35 + matureCount * 0.3) * modeMult
           this.labHype = Math.min(100, this.labHype + deltaSeconds * rate)
         }
 
-        // Canlı Viral Akış Dalgası
+        // Canlı Süperkritik Boşalım Dalgası
         if (this.isViralActive) {
           this.viralTimeRemaining -= deltaSeconds
-          const viewsPerSec = 45000 + matureCount * 35000 + (this.labMode === 'fyp' ? 40000 : 0)
+          const viewsPerSec = 45000 + matureCount * 35000 + (this.labMode === 'overdrive' ? 40000 : 0)
           this.viralViews += Math.floor(viewsPerSec * deltaSeconds)
 
           if (this.viralTimeRemaining <= 0) {
@@ -4478,8 +4783,8 @@ export const useGameStore = defineStore('game', {
           }
         }
 
-        // Hibrit Formül Sentezleme & Mutasyon Kontrolü
-        const synthChance = (this.labMode === 'mutation' ? 0.12 : 0.04) * (this.isViralActive ? 3.0 : 1.0) * deltaSeconds
+        // Hibrit Formül Sentezleme & Kuantum Dalgalanma Kontrolü
+        const synthChance = (this.labMode === 'fluctuation' ? 0.12 : 0.04) * (this.isViralActive ? 3.0 : 1.0) * deltaSeconds
 
         // A. Boş hücreye yeni format filizlenmesi
         this.labCells.forEach((cell, idx) => {
@@ -4560,10 +4865,39 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // 7. Gece Kriz Enerji Yenilenmesi & Debuff
-      this.caffeineEnergy = Math.min(this.maxCaffeineEnergy, this.caffeineEnergy + deltaSeconds * 1.2 * this.achievementCaffeineRegen)
+      // 7. Crisis 2.0: Olay Ufku Kararsızlık Reaktörü Isı Fiziği & İkilem Döngüsü
+      if (this.reactorMeltdownTimer > 0) {
+        this.reactorMeltdownTimer -= deltaSeconds
+        if (this.reactorMeltdownTimer <= 0) {
+          this.reactorMeltdownTimer = 0
+          this.reactorHeat = 25 // Meltdown bittiğinde 25'e stabilizasyon
+        }
+      } else {
+        // Doğal Soğuma: saniyede -1.2 ısı
+        this.reactorHeat = Math.max(0, this.reactorHeat - 1.2 * deltaSeconds)
+      }
+      this.caffeineEnergy = this.reactorHeat
+
       if (this.crisisBackfireDebuff > 0) {
         this.crisisBackfireDebuff = Math.max(0, this.crisisBackfireDebuff - deltaSeconds)
+      }
+
+      // Canlı İkilem (Dilemma) sayacı ve tetiklemesi
+      if (this.activeCrisisDilemma) {
+        this.activeCrisisDilemma.timeLeft -= deltaSeconds
+        if (this.activeCrisisDilemma.timeLeft <= 0) {
+          this.activeCrisisDilemma = null
+          this.dilemmaCooldown = 45 // Zaman aşımında 45 sn cooldown
+        }
+      } else {
+        if (this.dilemmaCooldown > 0) {
+          this.dilemmaCooldown = Math.max(0, this.dilemmaCooldown - deltaSeconds)
+        } else if (this.reactorPhase === 'sweet_spot' && !this.offlineSimActive) {
+          // Tatlı Noktadayken ara sıra (%2.5/sn şansla) tetiklenir
+          if (Math.random() < 0.025 * deltaSeconds) {
+            this.triggerCrisisDilemma()
+          }
+        }
       }
 
       // 8. Otomatik Kaydırma Botları (Autobuyer - tekli/toplu/max)
@@ -5078,7 +5412,10 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           leechedDopamine: s.leechedDopamine.toString(),
           leechedKpi: s.leechedDopamine.toString()
         })),
-        caffeineEnergy: this.caffeineEnergy,
+        caffeineEnergy: this.reactorHeat,
+        reactorHeat: this.reactorHeat,
+        reactorMeltdownTimer: this.reactorMeltdownTimer,
+        dilemmaCooldown: this.dilemmaCooldown,
         // ADR-0029: bu dört alan v12'de kaydedilmiyordu. maxCaffeineEnergy yükleme
         // sırasında clamp tavanı olarak kullanıldığı için (clampSavedNumber) kayıp
         // her zaman 100'e düşüyordu; viral üçlüsü ise canlı koşu ilerlemesiydi.
@@ -5096,6 +5433,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         labHype: this.labHype,
         labMode: this.labMode,
         discoveredFormulas: [...this.discoveredFormulas],
+        reactorCollapseCount: this.reactorCollapseCount || 0,
         autobuyers: serializedAutobuyers,
         autobuyerBulkUnlocked: this.autobuyerBulkUnlocked,
         autobuyerMaxUnlocked: this.autobuyerMaxUnlocked,
@@ -5149,7 +5487,8 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           labHarvests: this.stats.labHarvests || 0,
           spellsCast: this.stats.spellsCast || 0,
           seedsPlanted: this.stats.seedsPlanted || 0,
-          challengesCompleted: this.stats.challengesCompleted || 0
+          challengesCompleted: this.stats.challengesCompleted || 0,
+          reactorCollapses: this.stats.reactorCollapses || 0
         }
       }
     },
@@ -5291,19 +5630,30 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           }))
         }
 
-        if (typeof data.caffeineEnergy === 'number') {
-          // ADR-0029: tavan ÖNCE yüklenmeli — aşağıdaki clamp bunun tavanını kullanıyor.
-        // v12 ve öncesi kayıtlarda alan yok, o durumda varsayılan 100 korunur.
+        if (typeof data.reactorHeat === 'number') {
+          this.reactorHeat = clampSavedNumber(data.reactorHeat, 0, 0, 100)
+        } else if (typeof data.caffeineEnergy === 'number') {
+          this.reactorHeat = clampSavedNumber(data.caffeineEnergy, 0, 0, 100)
+        } else {
+          this.reactorHeat = 0
+        }
+        this.caffeineEnergy = this.reactorHeat
+
+        this.reactorMeltdownTimer = typeof data.reactorMeltdownTimer === 'number'
+          ? Math.max(0, data.reactorMeltdownTimer)
+          : 0
+        this.dilemmaCooldown = typeof data.dilemmaCooldown === 'number'
+          ? Math.max(0, data.dilemmaCooldown)
+          : 0
+
         if (typeof data.maxCaffeineEnergy === 'number') {
           this.maxCaffeineEnergy = clampSavedNumber(data.maxCaffeineEnergy, 100, 1, 100000)
         }
-        this.caffeineEnergy = clampSavedNumber(data.caffeineEnergy, 50, 0, this.maxCaffeineEnergy)
 
         // Viral Zirve koşu ilerlemesi (daha önce kaydedilmiyordu)
         this.isViralActive = data.isViralActive === true
         this.viralTimeRemaining = clampSavedNumber(data.viralTimeRemaining, 0, 0, 3600)
         this.viralViews = clampSavedNumber(data.viralViews, 0, 0, 1e15)
-        }
 
         if (Array.isArray(data.labCells)) {
           data.labCells.forEach((savedCell, i) => {
@@ -5328,15 +5678,20 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         if (typeof data.labHype === 'number') {
           this.labHype = clampSavedNumber(data.labHype, 0, 0, 100)
         }
-        if (data.labMode === 'fyp' || data.labMode === 'evergreen' || data.labMode === 'mutation') {
+        if (data.labMode === 'overdrive' || data.labMode === 'superconductor' || data.labMode === 'fluctuation') {
           this.labMode = data.labMode
+        } else {
+          this.labMode = 'overdrive'
         }
         if (Array.isArray(data.discoveredFormulas) && data.discoveredFormulas.length > 0) {
           const validFormulas = data.discoveredFormulas.filter((id): id is LabSeedType => isValidLabSeedType(id))
-          this.discoveredFormulas = Array.from(new Set(['cat_audio', ...validFormulas]))
+          this.discoveredFormulas = Array.from(new Set(['photon_resonator', ...validFormulas]))
         } else {
           const present = this.labCells.map((c) => c.seedType).filter((s): s is LabSeedType => s !== null)
-          this.discoveredFormulas = Array.from(new Set(['cat_audio', ...present]))
+          this.discoveredFormulas = Array.from(new Set(['photon_resonator', ...present]))
+        }
+        if (typeof data.reactorCollapseCount === 'number') {
+          this.reactorCollapseCount = Math.max(0, data.reactorCollapseCount)
         }
 
         if (data.autobuyers) {
@@ -5564,7 +5919,8 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
             labHarvests: data.stats.labHarvests || 0,
             spellsCast: data.stats.spellsCast || 0,
             seedsPlanted: data.stats.seedsPlanted || 0,
-            challengesCompleted: data.stats.challengesCompleted || 0
+            challengesCompleted: data.stats.challengesCompleted || 0,
+            reactorCollapses: data.stats.reactorCollapses || 0
           }
           // Eski kayıt göçü (v9-): yukarıdaki version kancası atlandıysa (bozuk versiyon alanı) yine de güvence altına al
           if (typeof this.singularities !== 'number' || Number.isNaN(this.singularities)) {

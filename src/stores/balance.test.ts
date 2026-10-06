@@ -151,18 +151,23 @@ describe('Denge ve Mimari Doğrulama Testleri', () => {
     expect(store.shiftPowerMultiplier.toNumber()).toBeCloseTo(1.9 * 1.9, 2)
   })
 
-  it('shiftRequirement 6+ sıçramalarda D5 pasifini uygular ve her zaman tamsayı döner', () => {
+  it('shiftRequirement 6+ sıçramalarda D5 pasifini uygular, taban 26 ile pürüzsüz artar ve her zaman tamsayı döner', () => {
     const store = useGameStore()
-    store.dimensionShifts = 6
+    store.dimensionShifts = 5
     store.dimensionCapFloor = 8
-    // D5 henüz satın alınmamışken taban: 22 + 16 * 0 = 22
-    const reqWithoutD5 = store.shiftRequirement
-    expect(reqWithoutD5.amount.toNumber()).toBe(22)
+    const reqShift5 = store.shiftRequirement
+    expect(reqShift5.amount.toNumber()).toBe(25) // Shift 5 gereksinimi: 25 D8
 
-    // D5 satın alınınca %3 indirim: floor(22 * 0.97) = floor(21.34) = 21
+    store.dimensionShifts = 6
+    // D5 henüz satın alınmamışken taban: 26 + 16 * 0 = 26 (25->22 gerilemesi önlenmiştir)
+    const reqWithoutD5 = store.shiftRequirement
+    expect(reqWithoutD5.amount.toNumber()).toBe(26)
+    expect(reqWithoutD5.amount.toNumber()).toBeGreaterThanOrEqual(reqShift5.amount.toNumber())
+
+    // D5 satın alınınca %3 indirim: floor(26 * 0.97) = floor(25.22) = 25
     store.dimensions[4].bought = 10
     const reqWithD5 = store.shiftRequirement
-    expect(reqWithD5.amount.toNumber()).toBe(21)
+    expect(reqWithD5.amount.toNumber()).toBe(25)
     expect(Number.isInteger(reqWithD5.amount.toNumber())).toBe(true)
   })
 

@@ -3,7 +3,7 @@ import type { NotationType } from '../core/format'
 
 export type StanceType = 'trend' | 'spam' | 'private_mode'
 export type AnomalyType = 'fyp' | 'heart_frenzy' | 'sponsor' | 'void'
-export type BuffType = AnomalyType | 'espresso'
+export type BuffType = AnomalyType | 'espresso' | 'planck_surge' | 'resonance_boost'
 
 export interface DimensionData {
   tier: number
@@ -59,16 +59,16 @@ export interface AutobuyerConfig {
 }
 
 export type LabSeedType =
-  | 'cat_audio'
-  | 'cheese_sizzle'
-  | 'subway_beat'
-  | 'sigma_phonk'
-  | 'mukbang_drama'
-  | 'cat_burger'
-  | 'drift_tok'
-  | 'brainrot_remix'
+  | 'photon_resonator'
+  | 'heavy_nucleon'
+  | 'gluon_binder'
+  | 'graviton_trap'
+  | 'dark_matter_core'
+  | 'magnetic_shield'
+  | 'tachyon_flux'
+  | 'higgs_boson'
 
-export type LabMode = 'fyp' | 'evergreen' | 'mutation'
+export type LabMode = 'overdrive' | 'superconductor' | 'fluctuation'
 
 export interface LabCell {
   id: number
@@ -79,7 +79,39 @@ export interface LabCell {
   isMature: boolean
 }
 
-export type CrisisSpellType = 'fast_charge' | 'espresso_shot' | 'noise_cancelling' | 'sleep_denial'
+/** Crisis 2.0: Olay Ufku Kararsızlık Reaktörü Fazları */
+export type ReactorPhase = 'dormant' | 'resonance' | 'sweet_spot' | 'meltdown'
+
+/** Crisis 2.0: 4 Taktiksel Müdahale Türü */
+export type CrisisInterventionType =
+  | 'quantum_compression'
+  | 'time_dilation'
+  | 'magnetic_vent'
+  | 'planck_surge'
+
+export interface CrisisDilemmaOption {
+  id: string
+  label: string
+  desc: string
+  effect: string
+}
+
+export interface CrisisDilemma {
+  id: string
+  title: string
+  desc: string
+  duration: number
+  timeLeft: number
+  options: CrisisDilemmaOption[]
+}
+
+/** Geriye dönük uyumluluk takma adı (Crisis 2.0) */
+export type CrisisSpellType =
+  | CrisisInterventionType
+  | 'fast_charge'
+  | 'espresso_shot'
+  | 'noise_cancelling'
+  | 'sleep_denial'
 
 export type AutobuyerMode = 'single' | 'bulk' | 'max'
 
@@ -230,6 +262,7 @@ export interface PlayerStats {
   spellsCast: number // Alınan Gece Kararları
   seedsPlanted: number // Ekilen Lab Trend/Ses Formatları
   challengesCompleted: number // Tamamlanan Gece Kriz Meydan Okumaları
+  reactorCollapses?: number // Reaktör Kuantum Çöküş Sayısı (Kozmik Relik Seviyesi)
 }
 
 export type AchievementCategoryId =
@@ -340,6 +373,10 @@ export interface SerializedPlayerState {
     leechedKpi?: string // Eski kayıt geriye dönük uyumluluk
   }>
   caffeineEnergy?: number
+  /** Crisis 2.0: Olay Ufku Reaktörü Isı Seviyesi (0-100) */
+  reactorHeat?: number
+  reactorMeltdownTimer?: number
+  dilemmaCooldown?: number
   /** v13: enerji tavanı (v12'de kaydedilmiyordu, yüklemede clamp tavanı olarak kullanılıyordu) */
   maxCaffeineEnergy?: number
   /** v13: Viral Zirve koşu ilerlemesi (daha önce kaydedilmiyordu) */
@@ -356,6 +393,7 @@ export interface SerializedPlayerState {
   labHype?: number
   labMode?: LabMode
   discoveredFormulas?: LabSeedType[]
+  reactorCollapseCount?: number
   autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number }>
   autobuyerBulkUnlocked?: boolean
   autobuyerMaxUnlocked?: boolean
@@ -392,6 +430,7 @@ export interface SerializedPlayerState {
     spellsCast?: number
     seedsPlanted?: number
     challengesCompleted?: number
+    reactorCollapses?: number
     highestDps?: string
     totalManualDopamine?: string
   }

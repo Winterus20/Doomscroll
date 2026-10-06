@@ -230,12 +230,12 @@ function plantBrainrot() {
     flash('Boş hücre yok!')
     return
   }
-  empty.seedType = 'brainrot_remix'
+  empty.seedType = 'higgs_boson'
   empty.age = 90
   empty.matureAge = 90
   empty.maxAge = 360
   empty.isMature = true
-  flash('🧠 Nöron Çürütücü ekildi')
+  flash('💥 Higgs Bozonu ekildi')
 }
 
 function clearLab() {
@@ -456,7 +456,7 @@ function hardReset() {
             <button @click="fillCaffeine" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">Kafein Full</button>
             <button @click="matureLab" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">Lab Olgunlaştır</button>
             <button @click="fillHype" class="px-2 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-500/40 cursor-pointer font-bold">Hype %100</button>
-            <button @click="plantBrainrot" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">🧠 Ekle</button>
+            <button @click="plantBrainrot" class="px-2 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 cursor-pointer">💥 Higgs Ekle</button>
             <button @click="clearLab" class="px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer">Lab Temizle</button>
           </div>
           <div class="flex flex-wrap gap-1.5">

@@ -1000,6 +1000,50 @@ class SoundManager {
     osc.stop(ctx.currentTime + 0.15)
   }
 
+  // Crisis 2.0: Olay Ufku Reaktörü Meltdown Siren Sesi
+  playMeltdownWarning() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    // İki tonlu siren alarmı
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.2)
+    osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.4)
+
+    gain.gain.setValueAtTime(this.volume * 0.55, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.45)
+  }
+
+  // Crisis 2.0: Reaktör Manyetik Tahliye & Soğutma Sesi
+  playVentCooling() {
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(600, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.35)
+
+    gain.gain.setValueAtTime(this.volume * 0.4, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    this.registerCleanup(osc, gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.35)
+  }
+
   // Otomatik Bot Açma/Kapama Tıkı
   playToggleBot() {
     const ctx = this.getContext()

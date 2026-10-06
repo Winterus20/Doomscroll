@@ -288,29 +288,29 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   },
   {
     id: 'lab',
-    name: 'Algoritma Laboratuvarı Sekmesi',
-    hint: '1e65 Dopamin biriktir',
+    name: 'Kuantum Parçacık Reaktörü Sekmesi',
+    hint: '1e65 Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(65) },
     order: 650
   },
   {
-    id: 'seed_cheese',
-    name: 'Eritme Kaşar Cızırtısı Tohumu',
-    hint: '1e80 Dopamin biriktir',
+    id: 'seed_nucleon',
+    name: 'Ağır Nükleon Çekirdeği (⚛️)',
+    hint: '1e80 Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(80) },
     order: 800
   },
   {
-    id: 'seed_subway',
-    name: 'Subway Surfers Beat Tohumu',
-    hint: '1e100 Dopamin biriktir',
+    id: 'seed_gluon',
+    name: 'Gluon Bağlayıcı (🌀)',
+    hint: '1e100 Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(100) },
     order: 1000
   },
   {
-    id: 'seed_phonk',
-    name: 'Gece 4 Sigma Phonk Tohumu',
-    hint: '1e125 Dopamin biriktir',
+    id: 'seed_graviton',
+    name: 'Graviton Tuzağı (🕳️)',
+    hint: '1e125 Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(125) },
     order: 1250
   },
