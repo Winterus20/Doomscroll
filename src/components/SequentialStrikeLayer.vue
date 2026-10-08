@@ -20,10 +20,6 @@ interface MacroSurgePayload {
   multiplierText: string
 }
 
-interface ActiveMacroSurge extends MacroSurgePayload {
-  activeStep: number
-}
-
 const STAGE_STEP_MS = 40
 const GROUP_LIFETIME_MS = 760
 const MAX_ACTIVE_GROUPS = 3
@@ -33,7 +29,6 @@ const BADGE_HALF_WIDTH = 96
 const store = useGameStore()
 
 const activeGroups = ref<ActiveStrikeGroup[]>([])
-const macroSurge = ref<ActiveMacroSurge | null>(null)
 
 let nextGroupId = 0
 let macroToken = 0
@@ -117,18 +112,15 @@ function handleMacroSurge(e: Event) {
   const detail = (e as CustomEvent<MacroSurgePayload>).detail
   if (!detail) return
 
-  // Yeni sıçrama eskisini iptal eder; eski zamanlayıcılar yeni barı bozamaz
+  // Üst popup kaldırıldı: yalnızca kademeli ses + final sarsıntı çalınır, görsel bar yok.
   clearMacroTimers()
   const token = ++macroToken
   const total = Math.min(Math.max(detail.unlockedDims || 3, 1), 8)
 
-  macroSurge.value = { ...detail, unlockedDims: total, activeStep: 0 }
-
   for (let i = 0; i <= total; i++) {
     macroTimers.push(
       window.setTimeout(() => {
-        if (token !== macroToken || !macroSurge.value) return
-        macroSurge.value.activeStep = i
+        if (token !== macroToken) return
         if (i < total) {
           sounds.playMacroSurge(i, total)
         } else {
@@ -137,12 +129,6 @@ function handleMacroSurge(e: Event) {
       }, i * MACRO_STEP_MS)
     )
   }
-
-  macroTimers.push(
-    window.setTimeout(() => {
-      if (token === macroToken) macroSurge.value = null
-    }, (total + 1) * MACRO_STEP_MS + 700)
-  )
 }
 
 onMounted(() => {
@@ -189,44 +175,6 @@ onUnmounted(() => {
       </template>
     </div>
 
-    <!-- Makro Sıçrama Barı -->
-    <transition
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="opacity-0 -translate-y-4 scale-95"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 -translate-y-2 scale-95"
-    >
-      <div
-        v-if="macroSurge"
-        class="absolute top-20 left-1/2 -translate-x-1/2 max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2 px-4 sm:px-6 py-3 rounded-2xl border border-purple-500/50 bg-[#08090d]/90 shadow-[0_0_40px_rgba(168,85,247,0.4)] backdrop-blur-md"
-      >
-        <div class="flex flex-wrap items-center justify-center gap-2">
-          <span class="text-sm font-mono font-black tracking-wider text-purple-300 uppercase">
-            {{ macroSurge.title }}
-          </span>
-          <span class="text-xs font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30">
-            {{ macroSurge.multiplierText }}
-          </span>
-        </div>
-
-        <div class="flex items-center gap-1.5">
-          <div
-            v-for="d in macroSurge.unlockedDims"
-            :key="d"
-            class="flex items-center justify-center w-7 h-8 rounded-md font-mono text-xs font-bold transition-all duration-150 border"
-            :class="
-              d <= macroSurge.activeStep
-                ? 'bg-gradient-to-t from-purple-600 to-cyan-400 text-white shadow-[0_0_12px_rgba(192,132,252,0.8)] scale-110 border-white/60'
-                : 'bg-black/60 text-slate-500 border-white/10'
-            "
-          >
-            D{{ d }}
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 

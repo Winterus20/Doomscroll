@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGameStore, BASE_UNLOCKED_DIMENSIONS } from '../stores/game'
 import { format } from '../core/format'
 import { D_0 } from '../core/math'
@@ -19,6 +19,14 @@ import {
 const store = useGameStore()
 // P2 cila: Vicdan kartı katlanabilir — alt scroll zorunluluğu kalkar, ceza rozeti üstte kalır
 const slackersOpen = ref(false)
+
+// Parazit doğduğu an kart otomatik açılır (kullanıcı yine elle kapatabilir)
+watch(
+  () => store.slackers.length,
+  (n, old) => {
+    if (n > 0 && (old ?? 0) === 0) slackersOpen.value = true
+  }
+)
 
 // Bağlamsal pasif rozetleri — etki ettiği mekanikte gösterilir (satırlar temiz kalır)
 const d3Passive = computed(() => {
