@@ -1,4 +1,13 @@
 # UROBOROS (THE COSMIC FEAST)
+> **DURUM İNDEKSİ (Eki 2026)** — güncel durum: `brain/tasks/todo.md` · mimari: ADR-0031
+> - Faz0 (Kuantumdan Galaksiye, 0→1.79e308 g): ✅ çalışıyor
+> - D1-D8 boyutlar + Çekim Hızı (Hz): ✅
+> - Ölçek Sıçraması + Galaksi: ✅
+> - Faz1 (Kozmik Çöküş / SP): ✅
+> - Faz2: ❌ tek bayrak kaldı (`nightWatchUnlocked`)
+> - Faz3: ❌ henüz yok
+> - Bu dosya tasarım referansıdır; uygulama durumu todo.md'dedir.
+
 ## Oyun Tasarım Dokümanı (GDD) & Kozmik Tekillik Kılavuzu
 ### (Antimatter Dimensions + Tasty Planet + Cookie Clicker Hibrit Sentezi)
 

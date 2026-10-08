@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import { format, formatTime } from '../core/format'
 import { CHALLENGES } from '../game/challenges'
@@ -103,7 +103,12 @@ const hoverIndex = ref<number | null>(null)
 const sparkMax = computed(() => {
   const hist = store.dpsHistory
   if (hist.length < 2) return 0
-  const m = Math.max(...hist)
+  // Spread (Math.max(...hist)) büyük dizide yığın taşırır; for döngüsü güvenli.
+  let m = -Infinity
+  for (let i = 0; i < hist.length; i++) {
+    const v = hist[i]
+    if (v > m) m = v
+  }
   return Number.isFinite(m) && m > 0 ? m : 0
 })
 
@@ -195,6 +200,15 @@ const challengeList = computed(() => {
 // ---- 5. TEKİLLİK TELEMETRİSİ & PAYLAŞIM ----
 const bio = computed(() => store.biometrics)
 const copied = ref(false)
+// setTimeout sızıntısı: kopyalama geri bildirimi unmount'ta temizlenir.
+let copiedTimer: number | null = null
+
+onUnmounted(() => {
+  if (copiedTimer !== null) {
+    clearTimeout(copiedTimer)
+    copiedTimer = null
+  }
+})
 
 async function copyReport() {
   const b = bio.value
@@ -232,8 +246,10 @@ async function copyReport() {
       document.body.removeChild(ta)
     }
     copied.value = true
-    setTimeout(() => {
+    if (copiedTimer !== null) clearTimeout(copiedTimer)
+    copiedTimer = window.setTimeout(() => {
       copied.value = false
+      copiedTimer = null
     }, 2200)
   } catch (err) {
     console.error('Kopyalama başarısız:', err)
@@ -286,10 +302,12 @@ async function copyReport() {
     </TabHero>
 
     <!-- Alt Sekme Navigasyonu (Segmented Pill Bar) -->
-    <div class="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/[0.08] overflow-x-auto no-scrollbar">
+    <div role="tablist" aria-label="İstatistik alt sekmeleri" class="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/[0.08] overflow-x-auto no-scrollbar">
       <button
         v-for="tab in subTabs"
         :key="tab.id"
+        role="tab"
+        :aria-selected="activeSubTab === tab.id"
         class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer"
         :class="
           activeSubTab === tab.id
@@ -302,7 +320,7 @@ async function copyReport() {
         <span>{{ tab.label }}</span>
         <span
           v-if="tab.id === 'past10' && pastRuns.length > 0"
-          class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-500/20 text-purple-300"
+          class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-purple-500/20 text-purple-300"
         >
           {{ pastRuns.length }}
         </span>
@@ -397,6 +415,9 @@ async function copyReport() {
 
         <div
           v-if="sparkPoints"
+          tabindex="0"
+          role="img"
+          :aria-label="`Saniyelik üretim grafiği: ${store.dpsHistory.length} örnek, zirve ${format(sparkMax, 2, store.settings.notation)} bölü saniye`"
           class="relative w-full h-24 rounded-lg bg-black/50 border border-white/[0.05] overflow-hidden cursor-crosshair select-none"
           @mousemove="onChartMouseMove"
           @mouseleave="onChartMouseLeave"
@@ -647,13 +668,13 @@ async function copyReport() {
                     </span>
                     <span
                       v-if="run.challengeId"
-                      class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30"
                     >
                       Meydan Okuma: {{ run.challengeId.toUpperCase() }}
                     </span>
                     <span
                       v-else
-                      class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                      class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30"
                     >
                       Standart Çöküş
                     </span>
@@ -949,6 +970,7 @@ async function copyReport() {
         </div>
 
         <button
+          aria-label="Tekillik raporunu panoya kopyala"
           class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-lg shrink-0"
           :class="
             copied

@@ -1,6 +1,7 @@
 import LZString from 'lz-string'
 import type { SerializedPlayerState, SaveSlotMeta } from '../models/types'
 import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, readSaveVersion } from './save-version'
+import { Decimal } from './math'
 
 const SAVE_KEY_PREFIX = 'DOOMSCROLL_SAVE_SLOT_'
 const LEGACY_MAIN_KEY = 'DOOMSCROLL_SAVE_V1'
@@ -8,9 +9,16 @@ const LEGACY_OLD_KEY = 'QUANTUM_HORIZON_SAVE_V1'
 const BACKUP_KEY = 'DOOMSCROLL_SAVE_V1_BAK'
 const ACTIVE_SLOT_KEY = 'DOOMSCROLL_ACTIVE_SLOT'
 const BACKUP_EVERY_N_SAVES = 6 // 10 sn'lik kayıt ritminde ~1 dakikada bir yedek rotasyonu
+/** Fazla büyük girdi (LZ ham veya sıkıştırılmış) reddedilir — bellek şişirme koruması. */
+const MAX_SAVE_STRING_LENGTH = 500_000
+/** Ayrıştırılmış kaydın üst seviye anahtar sayısı üst sınırı. */
+const MAX_SAVE_TOP_LEVEL_KEYS = 200
+/** Ayrıştırılmış kayıttaki herhangi bir dizinin uzunluk üst sınırı. */
+const MAX_SAVE_ARRAY_LENGTH = 5000
 
 let saveSuppressed = false
-let saveCounter = 0
+/** Slot başına periyodik yedek sayacı (tek global sayaç slot 2/3 rotasyonunu bozuyordu). */
+const saveCounters = new Map<number, number>()
 let lastSaveOk = true
 let lastSaveTime = Date.now()
 
@@ -78,12 +86,52 @@ export function hasQuarantinedSave(slot?: number): boolean {
   }
 }
 
+/** Yalnızca ilgili slotu temizler — diğer slotlara dokunmaz (eski-sürüm wipe için). */
+function clearSingleSlot(slot: number): void {
+  try {
+    localStorage.removeItem(resolveSlotKey(slot))
+    localStorage.removeItem(resolveBackupKey(slot))
+    localStorage.removeItem(resolveSlotKey(slot) + QUARANTINE_SUFFIX)
+    if (slot === 1) {
+      localStorage.removeItem(LEGACY_OLD_KEY)
+    }
+  } catch {
+    // Temizlik yolunda sessiz geç
+  }
+}
+
+/** Ayrıştırılmış kaydın şekil sınırlarını denetler (şişirilmiş/bozuk veri koruması). */
+function isShapeSane(parsed: unknown): boolean {
+  if (!parsed || typeof parsed !== 'object') return false
+  const obj = parsed as Record<string, unknown>
+  const keys = Object.keys(obj)
+  if (keys.length > MAX_SAVE_TOP_LEVEL_KEYS) return false
+  for (const k of keys) {
+    const v = obj[k]
+    if (Array.isArray(v) && v.length > MAX_SAVE_ARRAY_LENGTH) return false
+  }
+  return true
+}
+
 function tryParseRaw(raw: string | null): SerializedPlayerState | null {
   if (!raw) return null
+  if (raw.length > MAX_SAVE_STRING_LENGTH) {
+    console.error('Kayıt dizesi çok büyük, reddedildi.')
+    return null
+  }
   try {
     let json = LZString.decompressFromBase64(raw)
     if (!json) json = raw
-    return JSON.parse(json) as SerializedPlayerState
+    if (json.length > MAX_SAVE_STRING_LENGTH) {
+      console.error('Kayıt içeriği çok büyük, reddedildi.')
+      return null
+    }
+    const parsed = JSON.parse(json) as SerializedPlayerState
+    if (!isShapeSane(parsed)) {
+      console.error('Kayıt şekli sınır dışı, reddedildi.')
+      return null
+    }
+    return parsed
   } catch (e) {
     console.error('Kayıt ayrıştırılamadı:', e)
     return null
@@ -124,10 +172,12 @@ export const SaveSystem = {
       const json = JSON.stringify(state)
       const compressed = LZString.compressToBase64(json)
 
-      // Periyodik yedek rotasyonu — ARTIK TÜM SLOTLAR için.
-      // Önceden yalnızca slot 1 yedekleniyordu; slot 2/3 bozulunca kalıcı kayıptı.
-      saveCounter++
-      if (saveCounter % BACKUP_EVERY_N_SAVES === 0) {
+      // Periyodik yedek rotasyonu — slot başına sayaçla (TÜM SLOTLAR için).
+      // Önceden tek global sayaç vardı; slot 2/3 kaydı sayacı ilerletemeyince
+      // yedek rotasyonu slotlar arası kayıyordu.
+      const nextCount = (saveCounters.get(slot) ?? 0) + 1
+      saveCounters.set(slot, nextCount)
+      if (nextCount % BACKUP_EVERY_N_SAVES === 0) {
         const current = localStorage.getItem(key)
         if (current) localStorage.setItem(resolveBackupKey(slot), current)
       }
@@ -176,10 +226,11 @@ export const SaveSystem = {
           futureVersion: { found, supported: SAVE_VERSION }
         }
       }
-      // Global Wipe: Asgari sürümün altındaki eski kayıtlar temizlenir (tüm ilerlemeler sıfırlanır)
+      // Global Wipe: Asgari sürümün altındaki eski kayıt yalnızca İLGİLİ slotta
+      // temizlenir (diğer slotlara dokunulmaz).
       if (found < MIN_SUPPORTED_SAVE_VERSION) {
         console.warn(`Slot ${slot} kaydı v${found} (asgari v${MIN_SUPPORTED_SAVE_VERSION} gerekli). İlerleme sıfırlandı.`)
-        this.hardReset()
+        clearSingleSlot(slot)
         return { state: null, fromBackup: false, corrupted: false, quarantined: false, futureVersion: null }
       }
     }
@@ -196,7 +247,7 @@ export const SaveSystem = {
         const found = readSaveVersion(backup)
         if (found < MIN_SUPPORTED_SAVE_VERSION) {
           console.warn(`Slot ${slot} yedeği eski sürüm (v${found}). Sıfırlanıyor.`)
-          this.hardReset()
+          clearSingleSlot(slot)
           return { state: null, fromBackup: false, corrupted: false, quarantined: false, futureVersion: null }
         }
         console.warn(`Slot ${slot} ana kayıt bozuk; yedekten yüklendi.`)
@@ -214,7 +265,7 @@ export const SaveSystem = {
         if (legacy && typeof legacy.matter === 'string') {
           const found = readSaveVersion(legacy)
           if (found < MIN_SUPPORTED_SAVE_VERSION) {
-            this.hardReset()
+            clearSingleSlot(slot)
             return { state: null, fromBackup: false, corrupted: false, quarantined: false, futureVersion: null }
           }
           return { state: legacy, fromBackup: false, corrupted: false, quarantined: false, futureVersion: null }
@@ -315,14 +366,27 @@ export const SaveSystem = {
     return [1, 2, 3].map((s) => this.getSlotMeta(s))
   },
 
-  /** Bir slottaki veriyi başka bir slota kopyalar */
+  /** Bir slottaki veriyi başka bir slota kopyalar (kaynak doğrulanır). */
   copySlot(fromSlot: number, toSlot: number): boolean {
     if (fromSlot === toSlot) return false
+    if (![1, 2, 3].includes(fromSlot) || ![1, 2, 3].includes(toSlot)) return false
     const fromKey = resolveSlotKey(fromSlot)
     const toKey = resolveSlotKey(toSlot)
     const raw = localStorage.getItem(fromKey)
     if (!raw) return false
     try {
+      const parsed = tryParseRaw(raw)
+      if (!parsed || typeof parsed.matter !== 'string') return false
+      if (!isShapeSane(parsed)) return false
+      const found = readSaveVersion(parsed)
+      if (found > SAVE_VERSION || found < MIN_SUPPORTED_SAVE_VERSION) return false
+      let probe: Decimal
+      try {
+        probe = new Decimal(parsed.matter)
+      } catch {
+        return false
+      }
+      if (probe.isNan() || Number.isNaN(probe.mag)) return false
       localStorage.setItem(toKey, raw)
       return true
     } catch {
@@ -330,12 +394,18 @@ export const SaveSystem = {
     }
   },
 
-  /** Belirtilen slotu temizler */
+  /** Belirtilen slotu temizler (ana + yedek + karantina anahtarları). */
   deleteSlot(slot: number): void {
-    const key = resolveSlotKey(slot)
-    localStorage.removeItem(key)
-    if (slot === 1) {
-      localStorage.removeItem(LEGACY_OLD_KEY)
+    try {
+      const key = resolveSlotKey(slot)
+      localStorage.removeItem(key)
+      localStorage.removeItem(resolveBackupKey(slot))
+      localStorage.removeItem(key + QUARANTINE_SUFFIX)
+      if (slot === 1) {
+        localStorage.removeItem(LEGACY_OLD_KEY)
+      }
+    } catch {
+      // Temizlik yolunda sessiz geç
     }
   },
 
@@ -351,11 +421,21 @@ export const SaveSystem = {
    * sırasında yeni alanlar sessizce düşerdi.
    */
   importSave(saveString: string): SerializedPlayerState | null {
+    if (!saveString || saveString.length > MAX_SAVE_STRING_LENGTH) {
+      console.error('İçe aktarma reddedildi: girdi boş veya çok büyük.')
+      return null
+    }
     try {
       let json = LZString.decompressFromBase64(saveString.trim())
       if (!json) json = saveString.trim()
+      if (json.length > MAX_SAVE_STRING_LENGTH) {
+        throw new Error('Kayıt içeriği çok büyük')
+      }
 
       const parsed = JSON.parse(json) as SerializedPlayerState
+      if (!isShapeSane(parsed)) {
+        throw new Error('Kayıt şekli sınır dışı')
+      }
       if (!parsed || typeof parsed.matter !== 'string') {
         throw new Error('Geçersiz kayıt formatı')
       }
@@ -382,10 +462,19 @@ export const SaveSystem = {
     if (!saveString || !saveString.trim()) {
       return { valid: false, error: 'Kayıt dizesi boş!' }
     }
+    if (saveString.length > MAX_SAVE_STRING_LENGTH) {
+      return { valid: false, error: 'Kayıt dizesi çok büyük!' }
+    }
     try {
       let json = LZString.decompressFromBase64(saveString.trim())
       if (!json) json = saveString.trim()
+      if (json.length > MAX_SAVE_STRING_LENGTH) {
+        return { valid: false, error: 'Kayıt içeriği çok büyük!' }
+      }
       const parsed = JSON.parse(json) as SerializedPlayerState
+      if (!isShapeSane(parsed)) {
+        return { valid: false, error: 'Kayıt şekli sınır dışı.' }
+      }
       if (!parsed || typeof parsed.matter !== 'string') {
         return { valid: false, error: 'Geçersiz kayıt formatı (dopamin verisi bulunamadı).' }
       }
@@ -410,18 +499,22 @@ export const SaveSystem = {
 
   /** Tüm kayıtları ve slotları kalıcı olarak temizler */
   hardReset(): void {
+    const prevSuppressed = saveSuppressed
     saveSuppressed = true
-    localStorage.removeItem(LEGACY_MAIN_KEY)
-    localStorage.removeItem(LEGACY_OLD_KEY)
-    localStorage.removeItem(ACTIVE_SLOT_KEY)
-    ;[1, 2, 3].forEach((slot) => {
-      localStorage.removeItem(resolveSlotKey(slot))
-      localStorage.removeItem(resolveBackupKey(slot))
-      localStorage.removeItem(resolveSlotKey(slot) + QUARANTINE_SUFFIX)
-      localStorage.removeItem(`DOOMSCROLL_MOCK_CLOUD_SAVE_${slot}`)
-      localStorage.removeItem(`DOOMSCROLL_CLOUD_REV_SLOT_${slot}`)
-    })
-    saveSuppressed = false
+    try {
+      localStorage.removeItem(LEGACY_MAIN_KEY)
+      localStorage.removeItem(LEGACY_OLD_KEY)
+      localStorage.removeItem(ACTIVE_SLOT_KEY)
+      ;[1, 2, 3].forEach((slot) => {
+        localStorage.removeItem(resolveSlotKey(slot))
+        localStorage.removeItem(resolveBackupKey(slot))
+        localStorage.removeItem(resolveSlotKey(slot) + QUARANTINE_SUFFIX)
+        localStorage.removeItem(`DOOMSCROLL_MOCK_CLOUD_SAVE_${slot}`)
+        localStorage.removeItem(`DOOMSCROLL_CLOUD_REV_SLOT_${slot}`)
+      })
+    } finally {
+      saveSuppressed = prevSuppressed
+    }
   },
 
   /** Kayıt yazımını geçici olarak bastırır (import gibi işlemler için). */

@@ -388,13 +388,14 @@ export interface SerializedPlayerState {
     seedType: LabSeedType | null
     age: number
     matureAge: number
-    maxAge: number
+    // JSON Infinity'yi taşıyamaz: çürümesiz hücre kayda null düşer, yüklemede null->Infinity olur
+    maxAge: number | null
   }>
   labHype?: number
   labMode?: LabMode
   discoveredFormulas?: LabSeedType[]
   reactorCollapseCount?: number
-  autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number }>
+  autobuyers?: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number; customRule?: { maxGalaxies?: number } }>
   autobuyerBulkUnlocked?: boolean
   autobuyerMaxUnlocked?: boolean
   singularities?: number // Tekillik sayısı (v10: bot unlock koşulu için kalıcı)
@@ -405,6 +406,12 @@ export interface SerializedPlayerState {
   activeChallenge?: string | null // Aktif Gece Krizi (v10)
   completedChallenges?: string[] // Tamamlanan Gece Krizleri (v10)
   challengeBestTimes?: Record<string, number> // Challenge en iyi süreleri, sn (v10)
+  /** Aktif challenge koşu-içi sayaçları (koşuya özel geçici durum; yüklemede clamp'lenir) */
+  challengeElapsed?: number
+  challengeHaltUntil?: number
+  challengeCostInflation?: number
+  challengeNotificationDoom?: number
+  challengeDim1Growth?: string
   mythicPity?: number // Void Reel garanti sayacı (v11: 25 spawn'da 1 garanti)
   claimedBounties?: number[] // Hayat boyu açılan dekad basamakları (ADR-0032)
   decadeSurgeMult?: number // Koşu içi Dekad Yükselişi çarpanı (ADR-0034, v14)

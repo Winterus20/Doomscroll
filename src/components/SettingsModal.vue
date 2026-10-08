@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, useId } from 'vue'
+import { ref, computed, onMounted, onUnmounted, useId, watch } from 'vue'
 import { useGameStore } from '../stores/game'
 import { SaveSystem, type InspectResult } from '../core/save'
 import { useFocusTrap } from '../core/focus-trap'
@@ -63,7 +63,22 @@ const activeTab = ref<TabType>('gameplay')
 
 // Bildirimler ve Geri Bildirimler
 const copyFeedback = ref(false)
+const saveFeedback = ref(false)
 const downloadFeedback = ref(false)
+// setTimeout sızıntısı: tüm geri bildirim zamanlayıcıları takip edilip unmount'ta temizlenir.
+const pendingFeedbackTimers: number[] = []
+function later(fn: () => void, ms: number): number {
+  const id = window.setTimeout(() => {
+    const idx = pendingFeedbackTimers.indexOf(id)
+    if (idx !== -1) pendingFeedbackTimers.splice(idx, 1)
+    fn()
+  }, ms)
+  pendingFeedbackTimers.push(id)
+  return id
+}
+// İçe aktarma/dosya güvenlik sınırları: 1MB dosya, 500k karakter metin.
+const MAX_SAVE_FILE_BYTES = 1_000_000
+const MAX_IMPORT_CHARS = 500_000
 const importString = ref('')
 const importError = ref('')
 const importSuccess = ref('')
@@ -82,6 +97,13 @@ const lastSavedAgoSeconds = ref(0)
 let saveTimerInterval: number | null = null
 
 const customUrlInput = ref(store.settings.customAudioUrl || '')
+// Modal açıkken store değişirse (başka sekme/senkron) input bayatlamasın.
+watch(
+  () => store.settings.customAudioUrl,
+  (v) => {
+    customUrlInput.value = v || ''
+  }
+)
 
 const notations: Array<{ id: NotationType; label: string; example: string }> = [
   { id: 'standard', label: 'Standart (Harf)', example: '1.23 Qa' },
@@ -104,6 +126,8 @@ function updateLastSavedCounter() {
 onMounted(() => {
   refreshSlots()
   updateLastSavedCounter()
+  // Modal her açıldığında güncel store değerini yansıt (tek kopya bayatlığı düzeltmesi).
+  customUrlInput.value = store.settings.customAudioUrl || ''
   saveTimerInterval = window.setInterval(() => {
     updateLastSavedCounter()
   }, 1000)
@@ -113,6 +137,8 @@ onUnmounted(() => {
   if (saveTimerInterval !== null) {
     clearInterval(saveTimerInterval)
   }
+  for (const id of pendingFeedbackTimers) clearTimeout(id)
+  pendingFeedbackTimers.length = 0
 })
 
 // --- Oynanış Ayarları ---
@@ -261,8 +287,8 @@ function saveCustomUrl() {
 // --- Kayıt & Slot Yönetimi ---
 function manualSave() {
   const ok = SaveSystem.save(store.serialize(), store.settings.activeSlot)
-  copyFeedback.value = true
-  setTimeout(() => (copyFeedback.value = false), 2000)
+  saveFeedback.value = true
+  later(() => (saveFeedback.value = false), 2000)
   if (!ok) {
     importError.value = 'Kayıt yazılamadı (depolama kotası dolu olabilir)!'
   } else {
@@ -279,9 +305,9 @@ function downloadSaveFile(saveStr: string) {
   a.href = url
   a.download = `uroboros-save-slot${store.settings.activeSlot}-${new Date().toISOString().slice(0, 10)}.txt`
   a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  later(() => URL.revokeObjectURL(url), 1000)
   downloadFeedback.value = true
-  setTimeout(() => (downloadFeedback.value = false), 2500)
+  later(() => (downloadFeedback.value = false), 2500)
 }
 
 function exportSave() {
@@ -292,7 +318,7 @@ function exportSave() {
       .then(() => {
         importSuccess.value = 'Kayıt kodu panoya kopyalandı!'
         copyFeedback.value = true
-        setTimeout(() => (copyFeedback.value = false), 2000)
+        later(() => (copyFeedback.value = false), 2000)
         sounds.playClick()
       })
       .catch(() => {
@@ -313,13 +339,42 @@ function handleFileSelect(e: Event) {
   const file = target.files?.[0]
   if (!file) return
 
+  // Güvenlik: devasa dosya + yanlış tip/uzantı elenir.
+  const nameOk = /\.(txt|json)$/i.test(file.name)
+  const typeOk = file.type === '' || file.type === 'text/plain' || file.type === 'application/json'
+  if (!nameOk || !typeOk) {
+    importError.value = 'Yalnızca .txt / .json kayıt dosyası seçin!'
+    importSuccess.value = ''
+    target.value = ''
+    return
+  }
+  if (file.size > MAX_SAVE_FILE_BYTES) {
+    importError.value = 'Dosya çok büyük (sınır 1MB)!'
+    importSuccess.value = ''
+    target.value = ''
+    return
+  }
+
   const reader = new FileReader()
+  reader.onerror = () => {
+    importError.value = 'Dosya okunamadı, tekrar deneyin!'
+    importSuccess.value = ''
+    target.value = ''
+  }
   reader.onload = (event) => {
     const content = event.target?.result as string
     if (content) {
-      importString.value = content.trim()
+      const trimmed = content.trim()
+      if (trimmed.length > MAX_IMPORT_CHARS) {
+        importError.value = 'Kayıt metni çok uzun (sınır 500k karakter)!'
+        importSuccess.value = ''
+        target.value = ''
+        return
+      }
+      importString.value = trimmed
       onImportInputChanged()
     }
+    target.value = ''
   }
   reader.readAsText(file)
 }
@@ -331,6 +386,12 @@ function onImportInputChanged() {
     importInspection.value = null
     return
   }
+  // Textarea yapıştırma yolu da aynı 500k sınırına tabidir (bellek şişmesini önler).
+  if (importString.value.length > MAX_IMPORT_CHARS) {
+    importInspection.value = null
+    importError.value = 'Kayıt metni çok uzun (sınır 500k karakter)!'
+    return
+  }
   importInspection.value = SaveSystem.inspectSaveString(importString.value)
   if (!importInspection.value.valid) {
     importError.value = importInspection.value.error || 'Geçersiz kayıt dizesi'
@@ -339,6 +400,10 @@ function onImportInputChanged() {
 
 function requestImport() {
   if (!importString.value.trim()) return
+  if (importString.value.length > MAX_IMPORT_CHARS) {
+    importError.value = 'Kayıt metni çok uzun (sınır 500k karakter)!'
+    return
+  }
   onImportInputChanged()
   if (!importInspection.value?.valid) return
 
@@ -382,7 +447,7 @@ function copyCurrentSlotTo(targetSlot: number) {
   if (ok) {
     slotActionSuccess.value = `Slot ${store.settings.activeSlot}, Slot ${targetSlot}'e başarıyla kopyalandı!`
     refreshSlots()
-    setTimeout(() => (slotActionSuccess.value = ''), 3000)
+    later(() => (slotActionSuccess.value = ''), 3000)
     sounds.playClick()
   }
 }
@@ -478,11 +543,12 @@ function executeHardReset() {
         <div class="flex items-center gap-2">
           <button
             @click="manualSave"
+            aria-label="Oyunu hemen kaydet"
             class="btn-tactile px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
             v-tip="'Anında kaydet'"
           >
             <Save class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">{{ copyFeedback ? 'Kaydedildi!' : 'Kaydet' }}</span>
+            <span class="hidden sm:inline">{{ saveFeedback ? 'Kaydedildi!' : 'Kaydet' }}</span>
           </button>
 
           <button
@@ -1236,6 +1302,7 @@ function executeHardReset() {
                   <button
                     v-if="store.settings.activeSlot !== s"
                     @click="switchSlot(s)"
+                    :aria-label="`Slot ${s}'e geç`"
                     class="btn-tactile flex-1 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold transition-all cursor-pointer"
                   >
                     Geç
@@ -1243,6 +1310,7 @@ function executeHardReset() {
                   <button
                     v-if="store.settings.activeSlot !== s"
                     @click="copyCurrentSlotTo(s)"
+                    :aria-label="`Mevcut slotu Slot ${s}'e kopyala`"
                     class="btn-tactile px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1"
                     v-tip="`Mevcut slotu Slot ${s}'e kopyala`"
                   >
@@ -1253,12 +1321,13 @@ function executeHardReset() {
             </div>
           </div>
 
-          <!-- Dışa Aktarma (Export) -->
+          <!-- Dışa Aktarma (Export) — panel zemini glass-panel-card (--ds-panel); quantum-* kullanılmıyor -->
           <div class="glass-panel-card p-3.5 rounded-xl space-y-2">
             <div class="text-xs font-mono font-semibold text-slate-200">Kayıt Dışa Aktarma (Yedekleme)</div>
             <div class="grid grid-cols-2 gap-2">
               <button
                 @click="exportSave"
+                aria-label="Kayıt kodunu panoya kopyala"
                 class="btn-tactile p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <Copy class="w-4 h-4 text-cyan-300" />
@@ -1266,7 +1335,8 @@ function executeHardReset() {
               </button>
 
               <button
-                @click="exportSave"
+                @click="downloadSaveFile(SaveSystem.exportSave(store.serialize()))"
+                aria-label="Kaydı metin dosyası olarak indir"
                 class="btn-tactile p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <Download class="w-4 h-4 text-emerald-400" />
@@ -1281,6 +1351,7 @@ function executeHardReset() {
               <span class="text-xs font-mono font-semibold text-slate-200">Kayıt İçe Aktarma</span>
               <button
                 @click="triggerFileInput"
+                aria-label="Kayıt dosyası seç (.txt veya .json)"
                 class="btn-tactile px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold flex items-center gap-1 transition-all cursor-pointer"
               >
                 <FolderOpen class="w-3 h-3" />
@@ -1306,6 +1377,7 @@ function executeHardReset() {
               <button
                 @click="requestImport"
                 :disabled="!importInspection?.valid"
+                aria-label="Kayıt kodunu içe aktar"
                 class="btn-tactile px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center gap-1 cursor-pointer"
                 :class="importInspection?.valid
                   ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40'
@@ -1346,6 +1418,7 @@ function executeHardReset() {
             </div>
             <button
               @click="restoreBackup"
+              aria-label="Otomatik yedekten geri yükle"
               class="btn-tactile px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <RotateCcw class="w-3.5 h-3.5" />
@@ -1363,6 +1436,7 @@ function executeHardReset() {
             <div v-if="!showHardResetConfirm">
               <button
                 @click="showHardResetConfirm = true"
+                aria-label="Sıfırlama onayını göster"
                 class="btn-tactile w-full py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Tüm İlerlemeyi ve Kayıtları Kalıcı Olarak Sıfırla
@@ -1374,15 +1448,19 @@ function executeHardReset() {
                 Bu işlem tüm slotları, başarımları ve ayarları geri dönülemez biçimde silecektir! Onaylamak için aşağıdaki kutuya <strong class="text-white font-mono uppercase underline">RESET</strong> yazın:
               </p>
               <div class="flex gap-2">
+                <label for="hard-reset-confirm" class="sr-only">Onay için RESET yazın</label>
                 <input
+                  id="hard-reset-confirm"
                   v-model="hardResetConfirmInput"
                   type="text"
                   placeholder="RESET yazın..."
+                  autocomplete="off"
                   class="flex-1 bg-black/60 border border-rose-500/50 rounded-xl px-3 py-1.5 text-xs font-mono text-white uppercase focus:outline-none focus:border-rose-400"
                 />
                 <button
                   @click="executeHardReset"
                   :disabled="!canHardReset"
+                  aria-label="Tüm ilerlemeyi kalıcı olarak sıfırla"
                   class="btn-tactile px-4 py-1.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer"
                   :class="canHardReset
                     ? 'bg-rose-600 hover:bg-rose-500 text-white'
@@ -1392,6 +1470,7 @@ function executeHardReset() {
                 </button>
                 <button
                   @click="showHardResetConfirm = false; hardResetConfirmInput = ''"
+                  aria-label="Sıfırlamayı iptal et"
                   class="btn-tactile px-3 py-1.5 rounded-xl bg-white/[0.06] text-slate-300 text-xs font-semibold cursor-pointer"
                 >
                   İptal

@@ -15,6 +15,8 @@ export class GameLoop {
   private animFrameId: number | null = null
   // QoL: sekme gizlenirken anında kayıt (rAF durduğunda son durum korunur)
   private handleVisibility: (() => void) | null = null
+  private handlePageHide: (() => void) | null = null
+  private handleBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null
 
   start() {
     if (this.isRunning) return
@@ -39,6 +41,8 @@ export class GameLoop {
         this.accumulator = 0
       } else {
         this.accumulator += rawDelta
+        // Spiral-of-death koruması: birikimi TICK_RATE*5 ile clamp'la.
+        this.accumulator = Math.min(this.accumulator, this.TICK_RATE * 5)
         // Ticksel simülasyon: sabit adımlı accumulator pattern (spiral-of-death korumalı: kare başına max 5 tick)
         let steps = 0
         while (this.accumulator >= this.TICK_RATE) {
@@ -46,7 +50,7 @@ export class GameLoop {
           this.accumulator -= this.TICK_RATE
           steps++
           if (steps >= 5) {
-            this.accumulator = 0
+            this.accumulator = Math.min(this.accumulator, this.TICK_RATE * 5)
             break
           }
         }
@@ -78,6 +82,24 @@ export class GameLoop {
       }
     }
     document.addEventListener('visibilitychange', this.handleVisibility)
+    // Kapanış koruması: visibilitychange mobilde her zaman ateşlenmez;
+    // pagehide + beforeunload ile son durum diske yazılır.
+    this.handlePageHide = () => {
+      try {
+        SaveSystem.save(useGameStore().serialize())
+      } catch {
+        // Kapanış yolunda sessiz geç
+      }
+    }
+    this.handleBeforeUnload = () => {
+      try {
+        SaveSystem.save(useGameStore().serialize())
+      } catch {
+        // Kapanış yolunda sessiz geç
+      }
+    }
+    document.addEventListener('pagehide', this.handlePageHide)
+    window.addEventListener('beforeunload', this.handleBeforeUnload)
 
     this.animFrameId = requestAnimationFrame(loop)
   }
@@ -91,6 +113,19 @@ export class GameLoop {
     if (this.handleVisibility) {
       document.removeEventListener('visibilitychange', this.handleVisibility)
       this.handleVisibility = null
+    }
+    if (this.handlePageHide) {
+      document.removeEventListener('pagehide', this.handlePageHide)
+      this.handlePageHide = null
+    }
+    if (this.handleBeforeUnload) {
+      window.removeEventListener('beforeunload', this.handleBeforeUnload)
+      this.handleBeforeUnload = null
+    }
+    try {
+      SaveSystem.save(useGameStore().serialize())
+    } catch {
+      // Durdurma yolunda sessiz geç
     }
   }
 }

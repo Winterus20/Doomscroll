@@ -1,7 +1,17 @@
 class SoundManager {
   private ctx: AudioContext | null = null
   public enabled = true
-  public volume = 0.2
+  private _volume = 0.2
+  public get volume(): number {
+    return this._volume
+  }
+  public set volume(v: number) {
+    if (!Number.isFinite(v)) {
+      this._volume = 0.5
+      return
+    }
+    this._volume = Math.min(1, Math.max(0, v))
+  }
   public suppressed = false
   private suppressTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -28,6 +38,7 @@ class SoundManager {
   }
 
   suppressFor(ms: number) {
+    if (!Number.isFinite(ms) || ms < 0) return
     this.suppressed = true
     if (this.suppressTimer !== null) {
       clearTimeout(this.suppressTimer)
@@ -40,8 +51,18 @@ class SoundManager {
     }
   }
 
+  /** Çağrı başında kelepçelenmiş ses seviyesi (NaN → 0.5, aralık 0..1). */
+  private safeVolume(): number {
+    if (!Number.isFinite(this._volume)) return 0.5
+    return Math.min(1, Math.max(0, this._volume))
+  }
+
   private getContext(): AudioContext | null {
     if (!this.enabled || this.suppressed) return null
+    // Çağrı başında volume sanitize — sonraki tüm setValueAtTime kazançları
+    // sonlu olur (NaN sızarsa Web Audio TypeError atardı).
+    if (!Number.isFinite(this._volume)) this._volume = 0.5
+    else this._volume = Math.min(1, Math.max(0, this._volume))
     if (typeof document !== 'undefined' && document.hidden) return null
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -50,7 +71,7 @@ class SoundManager {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume()
+      void this.ctx.resume().catch(() => {})
     }
     return this.ctx
   }
@@ -80,7 +101,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(1200, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 0.018)
 
-    gain.gain.setValueAtTime(this.volume * 0.25, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.25, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.018)
 
     osc.connect(gain)
@@ -105,7 +126,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(freq, startTime)
 
       gain.gain.setValueAtTime(0.001, startTime)
-      gain.gain.exponentialRampToValueAtTime(this.volume * 0.35, startTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(this.safeVolume() * 0.35, startTime + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.45)
 
       osc.connect(gain)
@@ -143,7 +164,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(startFreq, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + 0.055)
 
-    gain.gain.setValueAtTime(this.volume * 0.42, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.42, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.055)
 
     osc.connect(gain)
@@ -156,7 +177,7 @@ class SoundManager {
     popOsc.frequency.setValueAtTime(140 * pitchMultiplier, ctx.currentTime)
     popOsc.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.035)
 
-    popGain.gain.setValueAtTime(this.volume * 0.28, ctx.currentTime)
+    popGain.gain.setValueAtTime(this.safeVolume() * 0.28, ctx.currentTime)
     popGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035)
 
     popOsc.connect(popGain)
@@ -209,7 +230,7 @@ class SoundManager {
       osc.frequency.exponentialRampToValueAtTime(noteFreq * 1.04, startTime + 0.045)
 
       // Üst basamaklara doğru artan rezonans
-      const stageVol = this.volume * (0.28 + i * 0.06)
+      const stageVol = this.safeVolume() * (0.28 + i * 0.06)
       gain.gain.setValueAtTime(stageVol, startTime)
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.05)
 
@@ -229,7 +250,7 @@ class SoundManager {
     slamOsc.frequency.setValueAtTime(isCrit ? 90 : 65, finalTime)
     slamOsc.frequency.exponentialRampToValueAtTime(isCrit ? 25 : 32, finalTime + 0.06)
 
-    const slamVol = this.volume * (isCrit ? 0.65 : 0.38)
+    const slamVol = this.safeVolume() * (isCrit ? 0.65 : 0.38)
     slamGain.gain.setValueAtTime(slamVol, finalTime)
     slamGain.gain.exponentialRampToValueAtTime(0.001, finalTime + 0.06)
 
@@ -248,7 +269,7 @@ class SoundManager {
       critOsc.frequency.setValueAtTime(1046.5, finalTime) // C6
       critOsc.frequency.exponentialRampToValueAtTime(1567.98, finalTime + 0.12) // G6
 
-      critGain.gain.setValueAtTime(this.volume * 0.35, finalTime)
+      critGain.gain.setValueAtTime(this.safeVolume() * 0.35, finalTime)
       critGain.gain.exponentialRampToValueAtTime(0.001, finalTime + 0.14)
 
       critOsc.connect(critGain)
@@ -278,7 +299,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(baseFreq, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.15, ctx.currentTime + 0.065)
 
-    gain.gain.setValueAtTime(this.volume * (0.3 + normalized * 0.2), ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * (0.3 + normalized * 0.2), ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07)
 
     osc.connect(gain)
@@ -303,7 +324,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(baseFreq, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.45, ctx.currentTime + 0.075)
 
-    gain.gain.setValueAtTime(this.volume * 0.45, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.45, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.075)
 
     osc.connect(gain)
@@ -319,7 +340,7 @@ class SoundManager {
     bassOsc.frequency.setValueAtTime(150, ctx.currentTime)
     bassOsc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.05)
 
-    bassGain.gain.setValueAtTime(this.volume * 0.32, ctx.currentTime)
+    bassGain.gain.setValueAtTime(this.safeVolume() * 0.32, ctx.currentTime)
     bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
 
     bassOsc.connect(bassGain)
@@ -340,7 +361,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(420, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12)
 
-    gain.gain.setValueAtTime(this.volume * 0.28, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.28, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14)
 
     osc.connect(gain)
@@ -365,7 +386,7 @@ class SoundManager {
     osc.type = 'sine'
     osc.frequency.setValueAtTime(620 + l * 760, ctx.currentTime)
 
-    gain.gain.setValueAtTime(this.volume * (0.12 + l * 0.14), ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * (0.12 + l * 0.14), ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035)
 
     osc.connect(gain)
@@ -389,7 +410,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(freq, startTime)
 
       gain.gain.setValueAtTime(0.001, startTime)
-      gain.gain.exponentialRampToValueAtTime(this.volume * 0.4, startTime + 0.012)
+      gain.gain.exponentialRampToValueAtTime(this.safeVolume() * 0.4, startTime + 0.012)
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4)
 
       osc.connect(gain)
@@ -412,7 +433,7 @@ class SoundManager {
     osc1.frequency.setValueAtTime(900, ctx.currentTime)
     osc1.frequency.exponentialRampToValueAtTime(130, ctx.currentTime + 0.045)
 
-    gain1.gain.setValueAtTime(this.volume * 0.45, ctx.currentTime)
+    gain1.gain.setValueAtTime(this.safeVolume() * 0.45, ctx.currentTime)
     gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045)
 
     osc1.connect(gain1)
@@ -428,7 +449,7 @@ class SoundManager {
     osc2.frequency.setValueAtTime(320, ctx.currentTime + 0.04)
     osc2.frequency.exponentialRampToValueAtTime(1350, ctx.currentTime + 0.26)
 
-    gain2.gain.setValueAtTime(this.volume * 0.55, ctx.currentTime + 0.04)
+    gain2.gain.setValueAtTime(this.safeVolume() * 0.55, ctx.currentTime + 0.04)
     gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.26)
 
     osc2.connect(gain2)
@@ -444,7 +465,7 @@ class SoundManager {
     bassOsc.frequency.setValueAtTime(115, ctx.currentTime + 0.02)
     bassOsc.frequency.exponentialRampToValueAtTime(42, ctx.currentTime + 0.22)
 
-    bassGain.gain.setValueAtTime(this.volume * 0.38, ctx.currentTime + 0.02)
+    bassGain.gain.setValueAtTime(this.safeVolume() * 0.38, ctx.currentTime + 0.02)
     bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22)
 
     bassOsc.connect(bassGain)
@@ -466,7 +487,7 @@ class SoundManager {
     subOsc.frequency.setValueAtTime(85, ctx.currentTime)
     subOsc.frequency.exponentialRampToValueAtTime(36, ctx.currentTime + 0.45)
 
-    subGain.gain.setValueAtTime(this.volume * 0.65, ctx.currentTime)
+    subGain.gain.setValueAtTime(this.safeVolume() * 0.65, ctx.currentTime)
     subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
 
     subOsc.connect(subGain)
@@ -484,7 +505,7 @@ class SoundManager {
       const noteStart = ctx.currentTime + idx * 0.07
       osc.frequency.setValueAtTime(freq, noteStart)
 
-      gain.gain.setValueAtTime(this.volume * 0.5, noteStart)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.5, noteStart)
       gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.35)
 
       osc.connect(gain)
@@ -507,7 +528,7 @@ class SoundManager {
     boomOsc.frequency.setValueAtTime(130, ctx.currentTime)
     boomOsc.frequency.exponentialRampToValueAtTime(32, ctx.currentTime + 0.7)
 
-    boomGain.gain.setValueAtTime(this.volume * 0.7, ctx.currentTime)
+    boomGain.gain.setValueAtTime(this.safeVolume() * 0.7, ctx.currentTime)
     boomGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7)
 
     boomOsc.connect(boomGain)
@@ -526,7 +547,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(freq, chirpStart)
       osc.frequency.exponentialRampToValueAtTime(freq * 1.25, chirpStart + 0.04)
 
-      gain.gain.setValueAtTime(this.volume * 0.38, chirpStart)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.38, chirpStart)
       gain.gain.exponentialRampToValueAtTime(0.001, chirpStart + 0.05)
 
       osc.connect(gain)
@@ -544,7 +565,7 @@ class SoundManager {
       osc.type = 'triangle'
       const noteStart = ctx.currentTime + 0.28 + i * 0.08
       osc.frequency.setValueAtTime(freq, noteStart)
-      gain.gain.setValueAtTime(this.volume * 0.55, noteStart)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.55, noteStart)
       gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.65)
 
       osc.connect(gain)
@@ -568,7 +589,7 @@ class SoundManager {
       const noteTime = ctx.currentTime + index * 0.045
       osc.frequency.setValueAtTime(freq, noteTime)
 
-      gain.gain.setValueAtTime(this.volume * 0.55, noteTime)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.55, noteTime)
       gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.3)
 
       osc.connect(gain)
@@ -596,7 +617,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(freq, startTime)
 
       gain.gain.setValueAtTime(0.001, startTime)
-      gain.gain.exponentialRampToValueAtTime(this.volume * (type === 'void' ? 0.34 : 0.28), startTime + 0.015)
+      gain.gain.exponentialRampToValueAtTime(this.safeVolume() * (type === 'void' ? 0.34 : 0.28), startTime + 0.015)
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + (type === 'void' ? 0.5 : 0.38))
 
       osc.connect(gain)
@@ -617,7 +638,7 @@ class SoundManager {
     riser.type = 'sawtooth'
     riser.frequency.setValueAtTime(110, ctx.currentTime)
     riser.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3)
-    riserGain.gain.setValueAtTime(this.volume * 0.3, ctx.currentTime)
+    riserGain.gain.setValueAtTime(this.safeVolume() * 0.3, ctx.currentTime)
     riserGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32)
     riser.connect(riserGain)
     riserGain.connect(ctx.destination)
@@ -630,7 +651,7 @@ class SoundManager {
     sub.type = 'sine'
     sub.frequency.setValueAtTime(90, ctx.currentTime + 0.26)
     sub.frequency.exponentialRampToValueAtTime(34, ctx.currentTime + 0.7)
-    subGain.gain.setValueAtTime(this.volume * 0.7, ctx.currentTime + 0.26)
+    subGain.gain.setValueAtTime(this.safeVolume() * 0.7, ctx.currentTime + 0.26)
     subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7)
     sub.connect(subGain)
     subGain.connect(ctx.destination)
@@ -646,7 +667,7 @@ class SoundManager {
       const t = ctx.currentTime + 0.28 + i * 0.045
       osc.frequency.setValueAtTime(f, t)
       g.gain.setValueAtTime(0.001, t)
-      g.gain.exponentialRampToValueAtTime(this.volume * 0.4, t + 0.012)
+      g.gain.exponentialRampToValueAtTime(this.safeVolume() * 0.4, t + 0.012)
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
       osc.connect(g)
       g.connect(ctx.destination)
@@ -671,7 +692,7 @@ class SoundManager {
       kick.type = 'triangle'
       kick.frequency.setValueAtTime(160, ctx.currentTime)
       kick.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.18)
-      kickGain.gain.setValueAtTime(this.volume * 0.7, ctx.currentTime)
+      kickGain.gain.setValueAtTime(this.safeVolume() * 0.7, ctx.currentTime)
       kickGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18)
       kick.connect(kickGain)
       kickGain.connect(ctx.destination)
@@ -685,7 +706,7 @@ class SoundManager {
       kick2.type = 'triangle'
       kick2.frequency.setValueAtTime(140, ctx.currentTime + 0.1)
       kick2.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.24)
-      kick2Gain.gain.setValueAtTime(this.volume * 0.6, ctx.currentTime + 0.1)
+      kick2Gain.gain.setValueAtTime(this.safeVolume() * 0.6, ctx.currentTime + 0.1)
       kick2Gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24)
       kick2.connect(kick2Gain)
       kick2Gain.connect(ctx.destination)
@@ -701,7 +722,7 @@ class SoundManager {
         osc.type = 'sawtooth'
         const t = ctx.currentTime + i * 0.035
         osc.frequency.setValueAtTime(f, t)
-        g.gain.setValueAtTime(this.volume * 0.22, t)
+        g.gain.setValueAtTime(this.safeVolume() * 0.22, t)
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
         osc.connect(g)
         g.connect(ctx.destination)
@@ -719,7 +740,7 @@ class SoundManager {
         const t = ctx.currentTime + i * 0.04
         osc.frequency.setValueAtTime(f, t)
         g.gain.setValueAtTime(0.001, t)
-        g.gain.exponentialRampToValueAtTime(this.volume * 0.45, t + 0.01)
+        g.gain.exponentialRampToValueAtTime(this.safeVolume() * 0.45, t + 0.01)
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.45)
         osc.connect(g)
         g.connect(ctx.destination)
@@ -745,7 +766,7 @@ class SoundManager {
     kickOsc.frequency.setValueAtTime(150, ctx.currentTime)
     kickOsc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.35)
 
-    kickGain.gain.setValueAtTime(this.volume * 0.75, ctx.currentTime)
+    kickGain.gain.setValueAtTime(this.safeVolume() * 0.75, ctx.currentTime)
     kickGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
 
     kickOsc.connect(kickGain)
@@ -762,7 +783,7 @@ class SoundManager {
       osc.type = 'triangle'
       osc.frequency.setValueAtTime(freq, ctx.currentTime)
 
-      gain.gain.setValueAtTime(this.volume * 0.6, ctx.currentTime)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.6, ctx.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.85)
 
       osc.connect(gain)
@@ -784,7 +805,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(240, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(95, ctx.currentTime + 0.055)
 
-    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.055)
 
     osc.connect(gain)
@@ -815,7 +836,7 @@ class SoundManager {
     osc2.frequency.setValueAtTime(1567.98, ctx.currentTime + 0.06)
     osc2.frequency.exponentialRampToValueAtTime(2093.00, ctx.currentTime + 0.38)
 
-    gain.gain.setValueAtTime(this.volume * 0.65, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.65, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
 
     osc1.connect(gain)
@@ -847,7 +868,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(400, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.08)
 
-    gain.gain.setValueAtTime(this.volume * 0.3, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.3, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08)
 
     osc.connect(gain)
@@ -868,7 +889,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(440, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.07)
 
-    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07)
 
     osc.connect(gain)
@@ -891,7 +912,7 @@ class SoundManager {
       const noteTime = ctx.currentTime + idx * 0.04
       osc.frequency.setValueAtTime(freq, noteTime)
 
-      gain.gain.setValueAtTime(this.volume * 0.45, noteTime)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.45, noteTime)
       gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.2)
 
       osc.connect(gain)
@@ -913,7 +934,7 @@ class SoundManager {
     sweepOsc.type = 'sawtooth'
     sweepOsc.frequency.setValueAtTime(220, ctx.currentTime)
     sweepOsc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.28)
-    sweepGain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    sweepGain.gain.setValueAtTime(this.safeVolume() * 0.35, ctx.currentTime)
     sweepGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
     sweepOsc.connect(sweepGain)
     sweepGain.connect(ctx.destination)
@@ -927,7 +948,7 @@ class SoundManager {
     bassOsc.type = 'sine'
     bassOsc.frequency.setValueAtTime(180, ctx.currentTime + 0.25)
     bassOsc.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.8)
-    bassGain.gain.setValueAtTime(this.volume * 0.85, ctx.currentTime + 0.25)
+    bassGain.gain.setValueAtTime(this.safeVolume() * 0.85, ctx.currentTime + 0.25)
     bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
     bassOsc.connect(bassGain)
     bassGain.connect(ctx.destination)
@@ -943,7 +964,7 @@ class SoundManager {
       osc.type = 'triangle'
       const startT = ctx.currentTime + 0.28 + i * 0.03
       osc.frequency.setValueAtTime(freq, startT)
-      gain.gain.setValueAtTime(this.volume * 0.5, startT)
+      gain.gain.setValueAtTime(this.safeVolume() * 0.5, startT)
       gain.gain.exponentialRampToValueAtTime(0.001, startT + 0.6)
       osc.connect(gain)
       gain.connect(ctx.destination)
@@ -964,7 +985,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(300, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.2)
 
-    gain.gain.setValueAtTime(this.volume * 0.5, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.5, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25)
 
     osc.connect(gain)
@@ -990,7 +1011,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(150, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15)
 
-    gain.gain.setValueAtTime(this.volume * 0.5, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.5, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
 
     osc.connect(gain)
@@ -1013,7 +1034,7 @@ class SoundManager {
     osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.2)
     osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.4)
 
-    gain.gain.setValueAtTime(this.volume * 0.55, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.55, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
 
     osc.connect(gain)
@@ -1034,7 +1055,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(600, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.35)
 
-    gain.gain.setValueAtTime(this.volume * 0.4, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.4, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
 
     osc.connect(gain)
@@ -1055,7 +1076,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(900, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(450, ctx.currentTime + 0.03)
 
-    gain.gain.setValueAtTime(this.volume * 0.25, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.25, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03)
 
     osc.connect(gain)
@@ -1076,7 +1097,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(80, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.35)
 
-    gain.gain.setValueAtTime(this.volume * 0.45, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.45, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
 
     osc.connect(gain)
@@ -1097,7 +1118,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(400, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.12)
 
-    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12)
 
     osc.connect(gain)
@@ -1121,7 +1142,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(freq, startTime)
 
       gain.gain.setValueAtTime(0.001, startTime)
-      gain.gain.exponentialRampToValueAtTime(this.volume * 0.3, startTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(this.safeVolume() * 0.3, startTime + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25)
 
       osc.connect(gain)
@@ -1143,7 +1164,7 @@ class SoundManager {
     osc.frequency.setValueAtTime(600, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.1)
 
-    gain.gain.setValueAtTime(this.volume * 0.35, ctx.currentTime)
+    gain.gain.setValueAtTime(this.safeVolume() * 0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
 
     osc.connect(gain)

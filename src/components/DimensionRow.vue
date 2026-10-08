@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import { format } from '../core/format'
 import { Decimal, D_0 } from '../core/math'
@@ -117,9 +117,12 @@ const partnerInfo = computed(() => store.getPartnerInfo(props.dimension.tier))
 const cost = computed(() => store.getDimensionCost(props.dimension.tier))
 const multiplier = computed(() => store.getDimensionMultiplier(props.dimension.tier))
 
-// Manuel alım ad bazlı maks: buton, tıklanıldığında alınacak adetlerin TOPLAM fiyatını gösterir
+// Manuel alım ad bazlı maks: buton, tıklanıldığında alınacak adetlerin TOPLAM fiyatını gösterir.
+// getDimensionCost 10 birimlik paketin TOPLAM fiyatıdır (birim fiyat = paket / 10).
+// preview null iken (tek birim bile alınamıyor) cost.div(10) birim fiyat göstermek
+// yanıltıcıydı: buton o fiyata bile kapalıydı. Bu yüzden gerçek fiyat (paket toplamı) gösterilir.
 const preview = computed(() => store.previewDimensionBuy(props.dimension.tier))
-const displayCost = computed(() => (preview.value ? preview.value.cost : cost.value.div(10)))
+const displayCost = computed(() => (preview.value ? preview.value.cost : cost.value))
 const canAfford = computed(() => preview.value !== null)
 
 // Paket bölmeleri: mevcut 10'luk kovada kaçıncı adetteyiz (0 - 9 arası)
@@ -142,6 +145,34 @@ const flowRate = computed(() => {
 
 const flowRateFormatted = computed(() => format(flowRate.value.value, 2, store.settings.notation))
 const showFlowRate = computed(() => flowRate.value.value.gt(0))
+
+// 20TPS yükü: akış/fiyat metinleri ~4-5Hz anlık değerle beslenir (ham computed mantıkta kalır).
+const displayCostText = ref('')
+const displayFlowText = ref('')
+const displayMultText = ref('')
+let textThrottleInterval: number | null = null
+
+function refreshDisplayText() {
+  displayCostText.value = format(displayCost.value, 2, store.settings.notation)
+  displayFlowText.value = flowRateFormatted.value
+  displayMultText.value = format(multiplier.value, 2, store.settings.notation)
+}
+
+onMounted(() => {
+  refreshDisplayText()
+  textThrottleInterval = window.setInterval(refreshDisplayText, 220)
+})
+
+onUnmounted(() => {
+  if (bounceTimer !== null) {
+    clearTimeout(bounceTimer)
+    bounceTimer = null
+  }
+  if (textThrottleInterval !== null) {
+    clearInterval(textThrottleInterval)
+    textThrottleInterval = null
+  }
+})
 
 // Tier renk ve stil temaları (Hard Sci-Fi HUD)
 const TIER_ACCENT_COLORS: Record<number, { bar: string; badge: string; text: string }> = {
@@ -262,16 +293,16 @@ function buy(e?: MouseEvent) {
 
           <!-- Toplam Çarpan -->
           <span
-            class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 tabular-nums shrink-0 cursor-help select-none"
-            v-tip="`D${props.dimension.tier} Çarpanı: Toplam ×${format(multiplier, 2, store.settings.notation)} kat çekim gücü`"
+            class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 tabular-nums shrink-0 cursor-help select-none"
+            v-tip="`D${props.dimension.tier} Çarpanı: Toplam ×${displayMultText} kat çekim gücü`"
           >
-            ×{{ format(multiplier, 2, store.settings.notation) }}
+            ×{{ displayMultText }}
           </span>
 
           <!-- Sinerji Bağlantısı -->
           <span
             v-if="partnerInfo.partnerBought > 0 && partnerInfo.mult > 1"
-            class="hidden lg:inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tabular-nums shrink-0 cursor-help select-none"
+            class="hidden lg:inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tabular-nums shrink-0 cursor-help select-none"
             v-tip="`Kuantum Rezonans Bağı: ${partnerInfo.label} (${partnerInfo.partnerBought} adet) bu boyuta ×${partnerInfo.mult.toFixed(2)} çarpan sağlıyor`"
           >
             <Link class="w-2.5 h-2.5 text-cyan-400" />
@@ -297,7 +328,7 @@ function buy(e?: MouseEvent) {
         class="text-[10px] font-medium text-emerald-400/90"
         v-tip="flowRate.hint"
       >
-        +{{ flowRateFormatted }}{{ flowRate.suffix }}
+        +{{ displayFlowText }}{{ flowRate.suffix }}
       </span>
     </div>
 
@@ -307,6 +338,7 @@ function buy(e?: MouseEvent) {
         @click="buy($event)"
         v-hold="buy"
         :disabled="!canAfford"
+        :aria-label="`D${props.dimension.tier} boyutu satın al`"
         class="btn-tactile hit-44 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex flex-col items-end justify-center border shrink-0 relative overflow-hidden min-w-[88px] sm:min-w-[104px]"
         :class="[
           canAfford
@@ -314,10 +346,10 @@ function buy(e?: MouseEvent) {
             : 'bg-black/30 text-slate-600 border-white/[0.04] cursor-not-allowed opacity-40',
           completesPack && canAfford ? 'ring-1 ring-emerald-400/40' : ''
         ]"
-        v-tip="canAfford ? `+${affordableUnits} adet için ${format(displayCost, 2, store.settings.notation)} (bu alımla ${packProgress + affordableUnits} adet olur)` : 'Yetersiz Kütle'"
+        v-tip="canAfford ? `+${affordableUnits} adet için ${displayCostText} (bu alımla ${packProgress + affordableUnits} adet olur)` : 'Yetersiz Kütle'"
       >
         <div class="flex items-center gap-1 leading-none z-10">
-          <span class="tabular-nums font-bold text-xs">{{ format(displayCost, 2, store.settings.notation) }}</span>
+          <span class="tabular-nums font-bold text-xs">{{ displayCostText }}</span>
         </div>
 
         <div class="flex items-center gap-1 text-[9px] font-mono leading-none mt-1 z-10 tabular-nums">

@@ -1,5 +1,20 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Full Codebase Review Fix Pass (v0.38.1-dev)
+
+### Kapsam:
+- 5 paralel subagent review bulgularının tamamı düzeltildi (core/store/UI/güvenlik/mimari).
+- core: slot-wipe→tek slot temizliği, copySlot doğrulama, deleteSlot yetim anahtar temizliği, saveSuppressed restore, slot başına sayaç, 500K import guard, accumulator clamp, pagehide/beforeunload, precision clamp, e12.35 regex, 999.5 format, badge negatif guard + D() sabitleri, audio resume catch + volume clamp, D_0 freeze, D() guard.
+- store: dim-cost cache anahtarı + clear, buff isValid listesi + deserialize süreleri, challenge sayaç serialize, settings whitelist, customRule serialize, maxAge null, sayısal clampSavedNumber, neural maxLevel + 40 cap, strict boolean, FEATURE_IDS filtre + slice cap, mag>1e9 fallback, customAudioUrl https allowlist, singularity 8 id, offline 8k→1.8k iterasyon + log, growth yorumu, buyUnits guard yorumu.
+- UI: indir butonu gerçek download, file 1MB guard, import 500K guard, aria-live off + 5sn SR özeti, rAF 2Hz, tipli emits, displayCost gerçek fiyat, 4.5Hz throttled metinler, for-max, confirm payload, customUrl watch, py-0.2→py-0.5, saveFeedback ayrımı, timeout cleanup, aria-label/tab rolleri/label, godmode SELECT+contentEditable.
+- config/docs: package 0.26.0→0.38.0, news NewsStoreView + resetNewsState, vite-env any→union, vite/vitest __dirname→fileURLToPath, README Quantum Horizon→UROBOROS, tech-context §3 (firebase/vitest/music/cloud), AGENTS §4 harita, GDD durum indexi.
+
+### Doğrulama:
+- npm run build: 1705 modül, 0 hata.
+- npm test: 11 dosya, 199/199 yeşil.
+
+## Eski Kayıtlar (Önceki Günlükler)
+
 ## [2026-10-06] — Kuantum Parçacık Reaktörü, Akı Matrisi & Kozmik Relikler (Lab Hibrit Reformu v0.38.0)
 
 ### Kullanıcı Talebi ve Mimari Kararlar:

@@ -1,7 +1,7 @@
 # AI & DEVELOPER SECOND BRAIN (İKİNCİ BEYİN)
-## Quantum Horizon Geliştirme Yönetim Merkezi
+## UROBOROS (The Cosmic Feast) Geliştirme Yönetim Merkezi
 
-Bu klasör, **Quantum Horizon** projesinin yaşayan hafıza bankasıdır (Living Memory Bank). Yapılan araştırmalar, mimari kararlar (ADR), aktif görevler, yol haritası ve geçici düşünce notları burada tek bir standart altında tutulur.
+Bu klasör, **UROBOROS (The Cosmic Feast)** projesinin yaşayan hafıza bankasıdır (Living Memory Bank). Yapılan araştırmalar, mimari kararlar (ADR), aktif görevler, yol haritası ve geçici düşünce notları burada tek bir standart altında tutulur.
 
 ---
 

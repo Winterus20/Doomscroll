@@ -292,6 +292,8 @@ function handleTouchEnd(e: TouchEvent) {
     >
       <button
         @click="slackersOpen = !slackersOpen"
+        :aria-expanded="slackersOpen"
+        aria-label="Kozmik parazit listesini aç veya kapat"
         class="w-full flex items-center justify-between text-xs font-mono py-0.5 cursor-pointer"
         v-tip="slackersOpen ? 'Vicdan chiplerini gizle' : 'Vicdan chiplerini göster'"
       >
@@ -301,7 +303,7 @@ function handleTouchEnd(e: TouchEvent) {
           <span class="text-[10px] font-normal text-slate-500">({{ store.slackers.length }})</span>
           <span
             v-if="d3Passive"
-            class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
+            class="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
             v-tip="`D3 Nükleer Çekirdek Pasifi: ${d3Passive.desc}`"
           >
             {{ d3Passive.label }}
@@ -318,13 +320,14 @@ function handleTouchEnd(e: TouchEvent) {
           v-for="slacker in store.slackers"
           :key="slacker.id"
           @click="handleSlackerClick($event, slacker.id)"
+          :aria-label="`${slacker.name} parazitini etkisizleştir`"
           class="btn-tactile px-3 py-1.5 rounded-lg border border-rose-800/40 bg-rose-950/20 hover:border-rose-500/60 cursor-pointer flex items-center gap-2 text-xs font-mono text-slate-200"
           v-tip="'Tıklayarak yok et'"
         >
           <EyeOff class="w-3 h-3 text-rose-400" />
           <span>{{ slacker.name }}</span>
           <span class="text-rose-400 tabular-nums">({{ format(slacker.leechedDopamine, 1, store.settings.notation) }})</span>
-          <span class="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-bold text-[10px]">
+          <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold text-[10px]">
             {{ slacker.clicksRemaining }}
           </span>
         </button>
@@ -375,7 +378,7 @@ function handleTouchEnd(e: TouchEvent) {
               <span class="text-[10px] font-mono text-purple-400">Sv: {{ store.dimensionShifts }}</span>
               <span
                 v-if="d5Passive"
-                class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
+                class="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0 cursor-help select-none"
                 v-tip="`D5 Laboratuvar & Şehir Pasifi: ${d5Passive.desc}`"
               >
                 {{ d5Passive.label }}
@@ -393,6 +396,7 @@ function handleTouchEnd(e: TouchEvent) {
         <button
           @click="triggerShift($event)"
           :disabled="!store.canShift"
+          aria-label="Ölçek sıçraması yap"
           class="btn-tactile px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all border shrink-0"
           :class="store.canShift
             ? 'bg-purple-600/25 hover:bg-purple-600/35 text-purple-200 border-purple-500/40 cursor-pointer'
@@ -431,6 +435,7 @@ function handleTouchEnd(e: TouchEvent) {
         <button
           @click="triggerGalaxy($event)"
           :disabled="!store.canBuyGalaxy"
+          aria-label="Kozmik çöküş yap"
           class="btn-tactile px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all border shrink-0"
           :class="store.canBuyGalaxy
             ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-500/40 cursor-pointer'
@@ -469,6 +474,7 @@ function handleTouchEnd(e: TouchEvent) {
         <button
           @click="triggerSacrifice($event)"
           :disabled="!store.canSacrifice"
+          aria-label="Tekillik besle"
           class="btn-tactile px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border shrink-0 uppercase"
           :class="store.canSacrifice
             ? 'bg-rose-500/25 hover:bg-rose-500/35 text-rose-200 border-rose-500/50 cursor-pointer shadow-sm animate-pulse'
@@ -485,7 +491,7 @@ function handleTouchEnd(e: TouchEvent) {
         message="D1-D7 katmanların sıfırlanır; biriken D1 miktarına göre D8 Samanyolu & Karadelik katmanına kalıcı çarpan eklenir. Devam edilsin mi?"
         confirm-label="Besle"
         :danger="true"
-        @confirm="showSacrificeConfirm = false; doSacrifice($event)"
+        @confirm="showSacrificeConfirm = false; doSacrifice()"
         @cancel="showSacrificeConfirm = false"
       />
     </div>

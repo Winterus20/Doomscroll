@@ -7,29 +7,30 @@ declare module '*.vue' {
 }
 
 declare module 'break_eternity.js' {
+  type DecimalSource = Decimal | number | string
   export default class Decimal {
     sign: number
     mag: number
     layer: number
-    constructor(value?: string | number | Decimal)
+    constructor(value?: DecimalSource)
     static fromDecimal(value: Decimal): Decimal
-    static pow(base: any, exponent: any): Decimal
-    static floor(value: any): Decimal
-    plus(other: any): Decimal
-    minus(other: any): Decimal
-    times(other: any): Decimal
-    div(other: any): Decimal
+    static pow(base: DecimalSource, exponent: DecimalSource): Decimal
+    static floor(value: DecimalSource): Decimal
+    plus(other: DecimalSource): Decimal
+    minus(other: DecimalSource): Decimal
+    times(other: DecimalSource): Decimal
+    div(other: DecimalSource): Decimal
     neg(): Decimal
     abs(): Decimal
-    pow(exp: any): Decimal
+    pow(exp: DecimalSource): Decimal
     log10(): Decimal
     floor(): Decimal
-    eq(other: any): boolean
-    neq(other: any): boolean
-    lt(other: any): boolean
-    lte(other: any): boolean
-    gt(other: any): boolean
-    gte(other: any): boolean
+    eq(other: DecimalSource): boolean
+    neq(other: DecimalSource): boolean
+    lt(other: DecimalSource): boolean
+    lte(other: DecimalSource): boolean
+    gt(other: DecimalSource): boolean
+    gte(other: DecimalSource): boolean
     isNan(): boolean
     isFinite(): boolean
     toNumber(): number

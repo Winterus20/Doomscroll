@@ -318,9 +318,9 @@ function handleGodmode(e: KeyboardEvent) {
       return
     }
   }
-  // Yazı alanlarında kısayol çalışmaz (import/export textarea, admin input'ları)
+  // Yazı alanlarında kısayol çalışmaz (import/export textarea, admin input'ları, seçim kutuları, düzenlenebilir alanlar)
   const target = e.target as HTMLElement | null
-  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
 
   // GODMODE gizli kodu kısayollardan ÖNCE kontrol edilir — yoksa 'm' (Max All)
   // kodu böler ve panel asla açılmaz. Kodun öneki yazılırken kısayol tetiklenmez.

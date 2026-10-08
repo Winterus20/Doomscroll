@@ -1,5 +1,5 @@
 import { Decimal } from '../core/math'
-import { formatNumber } from '../core/format'
+import { formatNumber, type NotationType } from '../core/format'
 
 export interface NewsClickResult {
   updatedText?: string
@@ -8,14 +8,25 @@ export interface NewsClickResult {
   customMessage?: string
 }
 
+export interface NewsStoreView {
+  matter: Decimal
+  matterPerSecond: Decimal
+  settings: { notation: NotationType; decimalPlaces: number }
+  unlockedDimensionsCount: number
+  tickspeedBought: number
+  dimensionShifts: number
+  galaxies: number
+  stats?: { anomaliesClicked?: number; manualClicks?: number }
+}
+
 export interface NewsItem {
   id: string
-  text: string | ((store: any) => string)
+  text: string | ((store: NewsStoreView) => string)
   author?: string
   authorColor?: string
   category: 'ad_classic' | 'lore' | 'physics' | 'meta' | 'dynamic' | 'secret' | 'dark_humor'
-  unlocked?: (store: any) => boolean
-  onClick?: (store: any) => NewsClickResult | string | void
+  unlocked?: (store: NewsStoreView) => boolean
+  onClick?: (store: NewsStoreView) => NewsClickResult | string | void
   dynamic?: boolean
 }
 
@@ -25,6 +36,15 @@ let isFlippedState = false
 let discoClickCount = 0
 let blackHoleTickles = 0
 let redButtonPushes = 0
+
+// HMR / test izolasyonu için module-level closure state'ini sıfırlar.
+export function resetNewsState(): void {
+  uselessClicks = 0
+  isFlippedState = false
+  discoClickCount = 0
+  blackHoleTickles = 0
+  redButtonPushes = 0
+}
 
 export const NEWS_DATABASE: NewsItem[] = [
   // =========================================================================

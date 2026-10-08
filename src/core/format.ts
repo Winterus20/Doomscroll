@@ -16,8 +16,14 @@ const STANDARD_SUFFIXES = [
   'Ce'
 ]
 
+function clampPrecision(p: number): number {
+  if (!Number.isFinite(p)) return 2
+  return Math.min(10, Math.max(0, Math.floor(p)))
+}
+
 export function format(value: DecimalSource, precision = 2, notation: NotationType = 'scientific'): string {
   const dec = D(value)
+  const safePrecision = clampPrecision(precision)
 
   if (dec.isNan() || Number.isNaN(dec.mag)) return 'NaN'
   if (!dec.isFinite()) return 'Sonsuz'
@@ -25,10 +31,10 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
   if (dec.eq(0)) return '0'
   if (dec.layer >= 2) return dec.toString()
 
-  // Ones/tens/hundreds: whole numbers only (tr-TR grouping, no fractional part)
+  // Ones/tens/hundreds: ondalığı koru (999.5 → "1.000" yuvarlama hatası vermez)
   if (dec.lt(1000)) {
     return dec.toNumber().toLocaleString('tr-TR', {
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 1,
       minimumFractionDigits: 0
     })
   }
@@ -40,10 +46,10 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
 
     if (suffixIndex < STANDARD_SUFFIXES.length) {
       const mantissa = dec.div(Decimal.pow(10, suffixIndex * 3)).toNumber()
-      return `${mantissa.toFixed(precision)} ${STANDARD_SUFFIXES[suffixIndex]}`
+      return `${mantissa.toFixed(safePrecision)} ${STANDARD_SUFFIXES[suffixIndex]}`
     }
     // Suffix bittiğinde scientific'e düş
-    return formatScientific(dec, precision)
+    return formatScientific(dec, safePrecision)
   }
 
   // Mühendislik Notasyonu (Üsler daima 3'ün katı)
@@ -51,17 +57,17 @@ export function format(value: DecimalSource, precision = 2, notation: NotationTy
     const exp = dec.log10().floor().toNumber()
     const engExp = Math.floor(exp / 3) * 3
     const mantissa = dec.div(Decimal.pow(10, engExp)).toNumber()
-    return `${mantissa.toFixed(precision)}e${engExp}`
+    return `${mantissa.toFixed(safePrecision)}e${engExp}`
   }
 
   // Logaritmik Notasyon (e12.345)
   if (notation === 'logarithm') {
     const logVal = dec.log10().toNumber()
-    return `e${logVal.toFixed(precision)}`
+    return `e${logVal.toFixed(safePrecision)}`
   }
 
   // Bilimsel Notasyon (Varsayılan: 1.23e45)
-  return formatScientific(dec, precision)
+  return formatScientific(dec, safePrecision)
 }
 
 export function formatNumber(value: DecimalSource, notation: NotationType = 'standard', precision = 2): string {
@@ -86,8 +92,8 @@ export function formatParts(value: DecimalSource, precision = 2, notation: Notat
     return { main: full, suffix: '', kind: 'plain' }
   }
   if (notation === 'logarithm') {
-    const m = /^(-?)e(\d+)(\.\d+)?$/.exec(full)
-    if (m) return { main: `${m[1]}e${m[2]}`, suffix: m[3] ?? '', kind: m[3] ? 'exponent' : 'plain' }
+    // e12.35 tek parçadır — ondalık kısmı ayrı sonek gibi bölme (eski regex
+    // "e12" + ".35" diye ayırıyordu). Tutarlılık için plain dön.
     return { main: full, suffix: '', kind: 'plain' }
   }
   // scientific + engineering: 1.23e45 (regex dışı her şey plain düşer)
@@ -97,6 +103,7 @@ export function formatParts(value: DecimalSource, precision = 2, notation: Notat
 }
 
 function formatScientific(dec: Decimal, precision = 2): string {
+  const safePrecision = clampPrecision(precision)
   // Tetrasyon veya çok büyük sayılar (layer >= 2)
   if (dec.layer >= 2) {
     return dec.toString()
@@ -104,7 +111,7 @@ function formatScientific(dec: Decimal, precision = 2): string {
 
   const exp = dec.log10().floor().toNumber()
   const mantissa = dec.div(Decimal.pow(10, exp)).toNumber()
-  return `${mantissa.toFixed(precision)}e${exp}`
+  return `${mantissa.toFixed(safePrecision)}e${exp}`
 }
 
 export function formatTime(seconds: number): string {
@@ -124,16 +131,17 @@ export function formatTime(seconds: number): string {
 export function getMassScaleBadge(value: DecimalSource): string {
   const dec = D(value)
   if (dec.isNan() || Number.isNaN(dec.mag)) return 'Bilinmeyen Ölçek'
-  if (dec.lt(1e-6)) return 'Moleküler Kırıntı'
-  if (dec.lt(1e0)) return 'Atomaltı Parçacık'
-  if (dec.lt(1e6)) return 'Fiziksel Madde'
-  if (dec.lt(1e12)) return 'Gökdelen Ölçeği'
-  if (dec.lt(1e18)) return 'Everest Dağı'
-  if (dec.lt(1e24)) return 'Ay & Okyanuslar'
-  if (dec.lt(1e30)) return 'Dünya Gezegeni'
-  if (dec.lt(1e36)) return 'Güneş Kütlesi'
-  if (dec.lt(1e48)) return 'Samanyolu Galaksisi'
-  if (dec.lt(1e56)) return 'Gözlemlenebilir Evren'
+  if (dec.lt(0)) return 'Bilinmeyen Ölçek'
+  if (dec.lt(D('1e-6'))) return 'Moleküler Kırıntı'
+  if (dec.lt(D('1e0'))) return 'Atomaltı Parçacık'
+  if (dec.lt(D('1e6'))) return 'Fiziksel Madde'
+  if (dec.lt(D('1e12'))) return 'Gökdelen Ölçeği'
+  if (dec.lt(D('1e18'))) return 'Everest Dağı'
+  if (dec.lt(D('1e24'))) return 'Ay & Okyanuslar'
+  if (dec.lt(D('1e30'))) return 'Dünya Gezegeni'
+  if (dec.lt(D('1e36'))) return 'Güneş Kütlesi'
+  if (dec.lt(D('1e48'))) return 'Samanyolu Galaksisi'
+  if (dec.lt(D('1e56'))) return 'Gözlemlenebilir Evren'
   return 'Kozmik Tekillik'
 }
 

@@ -28,7 +28,7 @@ import { useAuthStore } from '../stores/auth'
 import ConfirmModal from './ConfirmModal.vue'
 import confetti from 'canvas-confetti'
 
-const emit = defineEmits(['open-settings', 'open-auth'])
+const emit = defineEmits<{ (e: 'open-settings'): void; (e: 'open-auth'): void }>()
 
 const store = useGameStore()
 const authStore = useAuthStore()
@@ -79,10 +79,35 @@ const tickspeedCost = computed(() => format(store.tickspeedCost, 2, store.settin
 const tickspeedMultiplier = computed(() => format(store.tickspeedMultiplier, 2, store.settings.notation))
 const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
 
+// 20TPS yeniden render yükü: akış/fiyat metinleri ~4-5Hz anlık değerle beslenir.
+// Ham computed'lar mantıkta kalır; şablon throttled kopyayı okur.
+const displayDopamine = ref('')
+const displayPerSec = ref('')
+const displayClickPower = ref('')
+const displayTickCost = ref('')
+const displayTickMult = ref('')
+// SR özeti: ana sayaç sessizdir (aria-live off); bu gizli metin 5sn'de bir okunur.
+const srSummary = ref('')
+let throttledTextInterval: number | null = null
+let srSummaryInterval: number | null = null
+
+function refreshThrottledText() {
+  displayDopamine.value = formattedDopamine.value
+  displayPerSec.value = formattedPerSec.value
+  displayClickPower.value = formattedClickPower.value
+  displayTickCost.value = tickspeedCost.value
+  displayTickMult.value = tickspeedMultiplier.value
+}
+
+function refreshSrSummary() {
+  srSummary.value = `Yutulan Kütle ${displayDopamine.value}, saniyede ${displayPerSec.value}`
+}
+
 const decadeFlash = ref(false)
 let smoothRaf = 0
 let decadeTimer: number | null = null
 let lastDecade = 0
+let lastSmoothCheck = 0
 
 function currentDecade(): number {
   try {
@@ -245,8 +270,12 @@ function checkDecade() {
 
 function tickSmooth(frameT: number) {
   if (smoothRaf === 0) return
-  checkDecade()
-  updateTrend(frameT)
+  // Dekad kontrolü ~2Hz'ye kısıldı: her kare Decimal.log10() yok; trend örneklemeyle birleşik.
+  if (frameT - lastSmoothCheck >= 500) {
+    lastSmoothCheck = frameT
+    checkDecade()
+    updateTrend(frameT)
+  }
   smoothRaf = requestAnimationFrame(tickSmooth)
 }
 
@@ -555,6 +584,11 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('doomscroll:production-bump', onProductionBump as EventListener)
   lastDecade = currentDecade()
+  lastSmoothCheck = performance.now()
+  refreshThrottledText()
+  refreshSrSummary()
+  throttledTextInterval = window.setInterval(refreshThrottledText, 220)
+  srSummaryInterval = window.setInterval(refreshSrSummary, 5000)
   smoothRaf = requestAnimationFrame(tickSmooth)
   document.addEventListener('visibilitychange', handleCounterVisibility)
   visualizerInterval = window.setInterval(() => {
@@ -577,6 +611,14 @@ onUnmounted(() => {
   if (visualizerInterval !== null) {
     clearInterval(visualizerInterval)
     visualizerInterval = null
+  }
+  if (throttledTextInterval !== null) {
+    clearInterval(throttledTextInterval)
+    throttledTextInterval = null
+  }
+  if (srSummaryInterval !== null) {
+    clearInterval(srSummaryInterval)
+    srSummaryInterval = null
   }
   if (smoothRaf !== 0) {
     cancelAnimationFrame(smoothRaf)
@@ -637,6 +679,7 @@ onUnmounted(() => {
         <!-- Parça / Frekans İsmi -->
         <button
           @click="emit('open-settings')"
+          aria-label="Frekans ayarlarını aç"
           class="font-mono font-medium text-slate-300 hover:text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer truncate max-w-[110px] sm:max-w-[160px]"
           v-tip="`${currentTrackInfo.name} (${currentTrackInfo.subtitle}) — Frekans Ayarları`"
         >
@@ -649,6 +692,7 @@ onUnmounted(() => {
         <!-- Oynat / Duraklat -->
         <button
           @click="toggleMusic"
+          aria-label="Kuantum sinyalini başlat veya duraklat"
           class="hit-44 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           v-tip="store.settings.musicEnabled ? 'Sinyali Duraklat' : 'Sinyali Başlat'"
         >
@@ -658,6 +702,7 @@ onUnmounted(() => {
         <!-- Sonraki Frekans Kanalı -->
         <button
           @click="nextTrack"
+          aria-label="Sonraki kuantum kanalı"
           class="hit-44 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           v-tip="'Sonraki Kuantum Kanalı'"
         >
@@ -669,6 +714,7 @@ onUnmounted(() => {
       <div class="flex items-center gap-2">
         <button
           @click="emit('open-auth')"
+          aria-label="Bulut hesabını aç veya giriş yap"
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all text-xs cursor-pointer active:scale-95"
           :class="authStore.isAuthenticated ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20' : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-white'"
           v-tip="authStore.isAuthenticated ? `${authStore.userDisplayName} (Bulut Hesabı)` : 'Giriş Yap / Kaydol'"
@@ -711,10 +757,11 @@ onUnmounted(() => {
       </span>
 
       <!-- Sayıların zıplamaması ve taşmaması için tabular-nums; imza tipografi: Chakra Petch -->
+      <!-- SR notu: ana sayaç aria-live="off" (20TPS anonsu yok); 5sn'lik gizli özet okunur. -->
       <div
         ref="counterRef"
-        aria-live="polite"
-        :aria-label="`Yutulan Kütle: ${formattedDopamine}`"
+        aria-live="off"
+        :aria-label="`Yutulan Kütle: ${displayDopamine}`"
         class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tabular-nums tracking-tight my-0.5 select-all will-change-transform"
         :class="[
           flameOn
@@ -726,8 +773,9 @@ onUnmounted(() => {
           decadeFlash ? 'decade-flash' : ''
         ]"
       >
-        {{ formattedDopamine }}
+        {{ displayDopamine }}
       </div>
+      <span class="sr-only" aria-live="polite">{{ srSummary }}</span>
 
       <div class="text-xs font-mono text-purple-300/80 flex items-center gap-2 mt-1">
         <span
@@ -737,7 +785,7 @@ onUnmounted(() => {
             flameOn ? 'dps-burn' : 'text-purple-100'
           ]"
         >
-          <span>+{{ formattedPerSec }}/s</span>
+          <span>+{{ displayPerSec }}/s</span>
           <span
             v-if="mpsTrend === 1"
             class="dps-delta-up"
@@ -755,7 +803,7 @@ onUnmounted(() => {
         </span>
         <span
           v-if="store.formatUnlockBuffActive"
-          class="text-[10px] font-mono text-cyan-200 bg-cyan-500/15 px-1.5 py-0.2 rounded border border-cyan-400/30 tabular-nums shrink-0"
+          class="text-[10px] font-mono text-cyan-200 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-400/30 tabular-nums shrink-0"
           v-tip="'Yeni format keşfi: bu tier üretimine kısa süre ×1.25'"
         >
           📺 D{{ store.formatUnlockBuffTier }} · {{ store.formatUnlockBuffSecondsRemaining }}s
@@ -803,6 +851,7 @@ onUnmounted(() => {
       >
         <button
           @click="setStance('trend')"
+          aria-label="Kuantum odak duruşuna geç"
           class="btn-tactile hit-44 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
           :class="store.currentStance === 'trend'
             ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
@@ -816,6 +865,7 @@ onUnmounted(() => {
         <button
           @click="setStance('spam')"
           :disabled="!!stanceSpamLock"
+          aria-label="Obur çekim duruşuna geç"
           class="btn-tactile hit-44 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all whitespace-nowrap"
           :class="stanceSpamLock
             ? 'text-slate-600 border border-white/[0.03] bg-black/20 opacity-70 cursor-not-allowed'
@@ -832,6 +882,7 @@ onUnmounted(() => {
         <button
           @click="setStance('private_mode')"
           :disabled="!!stancePrivateLock"
+          aria-label="Vakum kalkanı duruşuna geç"
           class="btn-tactile hit-44 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-all whitespace-nowrap"
           :class="stancePrivateLock
             ? 'text-slate-600 border border-white/[0.03] bg-black/20 opacity-70 cursor-not-allowed'
@@ -872,18 +923,19 @@ onUnmounted(() => {
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
-          class="hidden md:flex btn-tactile btn-sheen h-11 px-3.5 sm:px-4.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-white border border-purple-400/50 text-xs font-bold font-mono items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[115px] sm:min-w-[140px]"
+          class="hidden md:flex btn-tactile btn-sheen h-11 px-3.5 sm:px-4 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-white border border-purple-400/50 text-xs font-bold font-mono items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[115px] sm:min-w-[140px]"
           :class="{ 'cta-beacon': showFirstSwipeHint }"
+          aria-label="Manuel kütle yut"
           v-tip="swipeTip"
         >
           <ArrowUp class="w-4 h-4 text-purple-300 shrink-0" />
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
               <span class="tracking-wide">YUT!</span>
-              <kbd class="hidden sm:inline-block px-1 py-0.2 rounded bg-black/50 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
+              <kbd class="hidden sm:inline-block px-1 py-0.5 rounded bg-black/50 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
             </div>
             <span class="text-[10px] text-purple-200/80 font-mono font-normal tabular-nums truncate max-w-[65px] sm:max-w-[90px]">
-              +{{ formattedClickPower }}
+              +{{ displayClickPower }}
             </span>
           </div>
         </button>
@@ -893,6 +945,7 @@ onUnmounted(() => {
           @click="buyTickspeed"
           v-hold="buyTickspeed"
           :disabled="!canAffordTickspeed"
+          aria-label="Çekim hızı yükselt"
           class="hidden md:flex btn-tactile h-11 px-2.5 sm:px-3 rounded-xl text-xs font-mono font-medium transition-all items-center gap-1.5 sm:gap-2 border shrink-0 min-w-[76px] sm:min-w-[92px]"
           :class="canAffordTickspeed
             ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 border-cyan-500/35 cursor-pointer affordance-pulse'
@@ -904,10 +957,10 @@ onUnmounted(() => {
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
               <span class="text-[10px] text-slate-400">Hz</span>
-              <span class="font-bold tabular-nums text-white text-xs">×{{ tickspeedMultiplier }}</span>
+              <span class="font-bold tabular-nums text-white text-xs">×{{ displayTickMult }}</span>
             </div>
             <span class="text-[10px] text-cyan-300/90 font-mono tabular-nums truncate max-w-[60px] sm:max-w-[80px]">
-              {{ tickspeedCost }}
+              {{ displayTickCost }}
             </span>
           </div>
         </button>
@@ -916,6 +969,7 @@ onUnmounted(() => {
         <button
           @click="maxAll"
           :disabled="!canAffordAny"
+          aria-label="Tüm yükseltmeleri al"
           class="hidden md:flex btn-tactile h-11 px-2.5 sm:px-3 rounded-xl font-bold text-xs tracking-wider items-center gap-1.5 sm:gap-2 transition-all border font-mono shrink-0 min-w-[65px] sm:min-w-[74px]"
           :class="canAffordAny
             ? 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/20 cursor-pointer'
@@ -934,6 +988,7 @@ onUnmounted(() => {
           v-if="inChallenge || singularityReady"
           @click="handleSingularity"
           :disabled="inChallenge && !singularityReady"
+          aria-label="Kozmik çöküşü başlat veya meydan okumayı tamamla"
           class="btn-tactile h-11 px-2.5 sm:px-3 rounded-xl border text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shrink-0 min-w-[70px] sm:min-w-[90px]"
           :class="inChallenge && !singularityReady
             ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed opacity-60'
@@ -983,6 +1038,7 @@ onUnmounted(() => {
       <span class="text-[11px] font-mono text-rose-300 font-bold tabular-nums shrink-0">%{{ challengeProgressPct }}</span>
       <button
         @click="requestChallengeExit"
+        aria-label="Meydan okumadan vazgeç"
         class="btn-tactile px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 cursor-pointer shrink-0"
         v-tip="'Meydan okumadan cezasız vazgeç (koşu sıfırlanır)'"
       >

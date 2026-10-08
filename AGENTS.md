@@ -69,16 +69,34 @@ Incremental/
     │   ├── math.ts            # break_eternity Decimal sarmalayıcısı ve sabitler
     │   ├── format.ts          # 4 farklı sayı notasyonu (Scientific, Standard, Eng, Log)
     │   ├── audio.ts           # Web Audio API osilatör synthesizer motoru
+    │   ├── music-engine.ts    # Prosedürel müzik motoru (Web Audio, harici ses dosyası yok)
+    │   ├── music/             # Müzik motoru alt modülleri
+    │   ├── auth/              # Firebase Auth yardımcıları
+    │   ├── tooltip.ts         # Tooltip konumlandırma yardımcıları
+    │   ├── cosmic-scale.ts    # Kozmik ölçek / katman eşikleri
+    │   ├── hold.ts            # Basılı tutma (press-and-hold) yardımcıları
+    │   ├── focus-trap.ts      # Modal odak tuzağı
+    │   ├── tilt.ts            # Kart eğilme (tilt) efekti
     │   ├── save.ts            # LZ-String sıkıştırma, LocalStorage ve Import/Export
+    │   ├── save-version.ts    # Kayıt sürümleme ve migrasyon
     │   └── game-loop.ts       # 20 TPS Accumulator pattern sabit adımlı döngü
+    ├── game/                  # Frameworksüz saf oyun verisi (Vitest kapsamı)
+    │   ├── unlocks.ts         # Kilitsiz içerik ve eşik mantığı
+    │   ├── pacing.ts          # Oyun temposu / denge eğrileri
+    │   ├── news.ts            # Haber bandı veritabanı ve easter egg'ler
+    │   ├── challenges.ts      # Meydan okuma tanımları
+    │   ├── achievements.ts    # Başarım tanımları
+    │   └── dimension_identity.ts # Boyut kimlikleri (D1-D8 ad/ölçek/lore)
     ├── stores/
     │   └── game.ts            # Merkezi Pinia veri deposu (State, Getters, Actions)
     ├── models/
     │   └── types.ts           # Tüm TypeScript tip ve arayüz tanımları
-    └── components/
+    └── components/            # ~29 Vue bileşeni (sekmeler, overlay'ler, modallar)
         ├── Header.vue         # Üst sayaç, Tickspeed, Max All ve hızlı butonlar
         ├── DimensionRow.vue   # Tekil boyut satırı, çarpan rozeti ve alım butonları
         ├── DimensionsTab.vue  # Boyutlar sekmesi, Shift/Boost ve Galaksi kartları
+        ├── CommentTicker.vue  # Haber bandı (src/game/news.ts tüketir)
+        ├── LabTab.vue / ColonyTab.vue / CrisisTab.vue # Faz 1+ oyun sekmeleri
         ├── StatsTab.vue       # Süre, tıklama, üretim istatistikleri
         └── SettingsModal.vue  # Notasyon, ses, save yönetimi ve Hard Reset
 ```

@@ -88,7 +88,9 @@ import {
 
 function parseSavedDecimal(value: string | number | undefined, fallback: Decimal): Decimal {
   const parsed = new Decimal(value ?? fallback.toString())
-  if (parsed.isNan() || !Number.isFinite(parsed.mag)) {
+  // mag filtresi: break_eternity'de mag log10-mertebedir; 1e9 üstü (≈10^1e9)
+  // meşru oyunda asla görülmez, bozuk/şişirilmiş kaydı fallback'e düşürür.
+  if (parsed.isNan() || !Number.isFinite(parsed.mag) || parsed.mag > 1e9) {
     return new Decimal(fallback.toString())
   }
   return parsed
@@ -100,7 +102,26 @@ function clampSavedNumber(value: unknown, fallback: number, min: number, max: nu
 }
 
 function isValidBuffType(value: unknown): value is BuffType {
-  return value === 'fyp' || value === 'heart_frenzy' || value === 'sponsor' || value === 'void' || value === 'espresso'
+  return value === 'fyp' || value === 'heart_frenzy' || value === 'sponsor' || value === 'void' || value === 'espresso' ||
+    value === 'planck_surge' || value === 'resonance_boost'
+}
+
+/**
+ * Özel ses URL'i allowlist: new URL ile parse edilebilmeli, protokol
+ * http:/https: olmalı (tercihen https) ve uzunluk 2048'i aşmamalı.
+ * Geçemezse boş string döner (müzik motoruna zararlı/uzun URL sızmaz).
+ */
+function sanitizeCustomAudioUrl(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (trimmed.length === 0 || trimmed.length > 2048) return ''
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+  } catch {
+    return ''
+  }
+  return trimmed
 }
 
 function isValidLabSeedType(value: unknown): value is LabSeedType {
@@ -1150,6 +1171,9 @@ let _achMultCache: { len: number; val: Decimal } | null = null
  */
 const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id))
 
+/** Kayıttan gelen unlockedFeatures id'lerini süzmek için özellik merdiveni beyaz listesi. */
+const FEATURE_IDS = new Set(FEATURE_UNLOCKS.map((f) => f.id))
+
 /** achievementMultiplier memo'sunu düşürür — kayıt yüklendiğinde çağrılmalı. */
 function resetAchievementCache(): void {
   _achMultCache = null
@@ -1325,13 +1349,16 @@ export const useGameStore = defineStore('game', {
     singularitySampleAcc: 0, // saniyelik örnekleme accumulator'ı
 
     // Kalıcı Uykusuzluk Dükkanı (SP Upgrades Seviyeleri)
+    // SINGULARITY_UPGRADES'teki 8 id ile birebir tutarlı olmalı (kayıt göçü + ağaç senkronu bu anahtarları okur)
     singularityUpgrades: {
       eye_drops: 0,
       muted_alerts: 0,
       fast_charger: 0,
       caffeine_drip: 0,
       neural_chip: 0,
-      guilt_immunity: 0
+      neural_nest: 0,
+      guilt_immunity: 0,
+      break_singularity: 0
     } as Record<string, number>,
 
     // Nöral Ağaç: kalıcı SP yetenek ağacı satın alımları (prestijde sıfırlanmaz; hariç seçimler sıfırlanır)
@@ -2206,7 +2233,10 @@ export const useGameStore = defineStore('game', {
       const bucket = Math.floor(dim.bought / 10)
       const infl = challengeCostInflationMult(state).toString()
       const eff = memoChallengeEffects(state.completedChallenges)
-      const cacheKey = bucket + '|' + infl + '|' + eff.dimCostMult
+      // dim_cost_x085 bayrağı anahtarın parçası: başarım kazanılınca indirimli
+      // maliyet bayat cache'ten dönmez (checkAchievements ayrıca cache'i düşürür).
+      const hasDimDiscount = hasAchievementReward(state.achievements, 'dim_cost_x085')
+      const cacheKey = bucket + '|' + infl + '|' + eff.dimCostMult + '|' + (hasDimDiscount ? 'D' : 'n')
       const cached = _dimCostCache.get(tier)
       if (cached && cached.key === cacheKey) return cached.val
       let cost = dimensionCostForBucket(tier, bucket, dim.baseCost, dim.costMult)
@@ -2214,7 +2244,7 @@ export const useGameStore = defineStore('game', {
       if (eff.dimCostMult !== 1) {
         cost = cost.times(eff.dimCostMult)
       }
-      if (hasAchievementReward(state.achievements, 'dim_cost_x085')) {
+      if (hasDimDiscount) {
         cost = cost.times(0.85)
       }
       _dimCostCache.set(tier, { key: cacheKey, val: cost })
@@ -2911,7 +2941,14 @@ export const useGameStore = defineStore('game', {
       return this.matterPerSecond
     },
 
-    /** Açık tier'lardan D1 CPS büyüme hızının üst sınırı (besleme ipucu). */
+    /**
+     * Ham zincir büyüme tahmini (UI besleme ipucu): açık tier'lardan D1'e akan
+     * ham zincir beslemesinin, tam üretim oranıyla ölçeklenmiş kaba üst sınırı.
+     * Bilinçli olarak HAMDIR — colony/nap/duruş/buff/lab/reaktör/challenge gibi
+     * global çarpanların tamamını tek tek uygulamaz; bunun yerine o anki
+     * matterPerSecond/d1.amount oranını ölçek olarak kullanır. Kesin üretim
+     * hesabı için değil, "hangi üst tier D1'i en hızlı büyütür" ipucu için okunur.
+     */
     matterPerSecondGrowth(state): Decimal {
       const d1 = state.dimensions[0]
       if (!d1 || d1.amount.lte(0) || this.matterPerSecond.lte(0)) return D_0
@@ -4607,6 +4644,9 @@ export const useGameStore = defineStore('game', {
       })
 
       if (newCount === 0) return
+      // Maliyet memo'su başarım bayrağını anahtarında taşır; yine de yeni
+      // başarım (öz. dim_cost_x085) sonrası cache'i düşürmek güvenli taraftır.
+      _dimCostCache.clear()
       // QoL: çevrimdışı simülasyonda ses/konfeti çalmaz (yükleme ekranında patlamasın)
       if (this.offlineSimActive) return
       if (completedRow) {
@@ -5165,32 +5205,44 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
       this.offlineAchTick = 0
 
       try {
-        // İlk 5 dakika: 0.1 sn hassasiyetli simülasyon (botlar, buff süreleri, lab doğru işler)
-        const detailedSeconds = Math.min(300, cappedSeconds)
+        // Kademeli kaba-adım merdiveni (senkron kalır; 24h cap korunur):
+        // ilk 60 sn 0.1 sn hassasiyet (botlar, buff süreleri, lab doğru işler),
+        // sonra 10 dk'ya kadar 1 sn, ~50 dk'ya kadar 10 sn, kalanı 300 sn kaba adım.
+        // 24 saatte toplam ≈600+600+300+275 ≈ 2k iterasyon (önceki 60 sn kaba
+        // adımla ≈8k idi; donma şikayeti bu merdivenle çözülür).
+        const detailedSeconds = Math.min(60, cappedSeconds)
         const steps = Math.floor(detailedSeconds / 0.1)
+        let iterations = steps
         for (let s = 0; s < steps; s++) {
           this.update(0.1)
         }
 
-        // Kalan süre: 1 sn adımları (1 saate kadar), sonrasında 10 sn (2 saate kadar), ardından 60 sn
+        // Kalan süre: 1 sn adımları (10 dk'ya kadar), sonrasında 10 sn (~50 dk'ya kadar), ardından 300 sn
         let remainingSeconds = cappedSeconds - detailedSeconds
-        const fineSteps = Math.min(remainingSeconds, 3600)
+        const fineSteps = Math.min(remainingSeconds, 600)
+        iterations += fineSteps
         for (let s = 0; s < fineSteps; s++) {
           this.update(1)
         }
         remainingSeconds -= fineSteps
-        const mediumBudget = Math.min(remainingSeconds, 3600)
+        const mediumBudget = Math.min(remainingSeconds, 3000)
         const mediumSteps = Math.floor(mediumBudget / 10)
+        iterations += mediumSteps
         for (let s = 0; s < mediumSteps; s++) {
           this.update(10)
         }
         remainingSeconds -= mediumSteps * 10
-        const coarseSteps = Math.floor(remainingSeconds / 60)
+        const coarseSteps = Math.floor(remainingSeconds / 300)
+        iterations += coarseSteps
         for (let s = 0; s < coarseSteps; s++) {
-          this.update(60)
+          this.update(300)
         }
-        const leftover = remainingSeconds - coarseSteps * 60
-        if (leftover > 0) this.update(leftover)
+        const leftover = remainingSeconds - coarseSteps * 300
+        if (leftover > 0) {
+          this.update(leftover)
+          iterations++
+        }
+        console.info(`[offline] ${cappedSeconds}sn simüle edildi (${iterations} iterasyon)`)
       } finally {
         this.offlineSimBoost = previousBoost
         this.offlineSimActive = false
@@ -5218,6 +5270,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
     // x1 modu: tek tıkla alabildiği kadar adet alır. Paket fiyatını karşılayabiliyorsa
     // 10'luk paketi paket fiyatına alır (aynı sonuç), karşılayamıyorsa kalan para ile
     // ad-adet devam eder. Maliyet geometrik büyüdüğü için tur sayısı küçük kalır.
+    // Guard tavanı: en fazla 1000 tur × tur başına ≤10 adet (≈10k birim). previewDimensionBuy
+    // ile aynı semantik (paket atlarken maliyet adımı değişir); önizlemenin guard'ı
+    // daha sıkıdır (300 tur) çünkü sadece fiyat toplar, state'e yazmaz.
     buyDimensionUnits(tier: number, playSound = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
       const dim = this.dimensions[tier - 1]
@@ -5321,8 +5376,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
     },
 
     setCustomAudioUrl(url: string): void {
-      this.settings.customAudioUrl = url
-      musicEngine.customUrl = url
+      const safe = sanitizeCustomAudioUrl(url)
+      this.settings.customAudioUrl = safe
+      musicEngine.customUrl = safe
       if (this.settings.musicTrack === 'custom') {
         musicEngine.setTrack('custom')
       }
@@ -5375,13 +5431,17 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
 
     // State Serialization (Kayıt)
     serialize(): SerializedPlayerState {
-      const serializedAutobuyers: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number }> = {}
+      const serializedAutobuyers: Record<string, { enabled: boolean; unlocked: boolean; mode?: AutobuyerMode; minGainSp?: number; customRule?: { maxGalaxies?: number } }> = {}
       Object.keys(this.autobuyers).forEach((k) => {
         serializedAutobuyers[k] = {
           enabled: this.autobuyers[k].enabled,
           unlocked: this.autobuyers[k].unlocked,
           mode: this.autobuyers[k].mode || 'single',
-          minGainSp: this.autobuyers[k].minGainSp
+          minGainSp: this.autobuyers[k].minGainSp,
+          // 0 = sınırsız tavan; tanımsızsa alan yazılmaz (eski kayıtlarla uyumlu)
+          ...(this.autobuyers[k].customRule
+            ? { customRule: { maxGalaxies: this.autobuyers[k].customRule?.maxGalaxies } }
+            : {})
         }
       })
 
@@ -5428,7 +5488,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           seedType: c.seedType,
           age: c.age,
           matureAge: c.matureAge,
-          maxAge: c.maxAge
+          // JSON Infinity'yi saklayamaz (null'a dönüşür); çürümesiz hücreyi null yaz,
+          // yüklemede null->Infinity olarak geri alınır.
+          maxAge: Number.isFinite(c.maxAge) ? c.maxAge : null
         })),
         labHype: this.labHype,
         labMode: this.labMode,
@@ -5443,6 +5505,12 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         activeChallenge: this.activeChallenge,
         completedChallenges: [...this.completedChallenges],
         challengeBestTimes: { ...this.challengeBestTimes },
+        // Aktif challenge koşu sayaçları (koşu-içi geçici durum; yüklemede clamp'lenir)
+        challengeElapsed: this.challengeElapsed,
+        challengeHaltUntil: this.challengeHaltUntil,
+        challengeCostInflation: this.challengeCostInflation,
+        challengeNotificationDoom: this.challengeNotificationDoom,
+        challengeDim1Growth: this.challengeDim1Growth.toString(),
         claimedBounties: [...(this.claimedBounties || [])],
         decadeSurgeMult: this.decadeSurgeMult,
         sacrificeCount: this.sacrificeCount,
@@ -5533,9 +5601,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
             }
           })
         }
-        this.tickspeedBought = data.tickspeedBought || 0
-        this.dimensionShifts = data.dimensionShifts || 0
-        this.galaxies = data.galaxies || 0
+        this.tickspeedBought = Math.floor(clampSavedNumber(data.tickspeedBought, 0, 0, 1e6))
+        this.dimensionShifts = Math.floor(clampSavedNumber(data.dimensionShifts, 0, 0, 1e6))
+        this.galaxies = Math.floor(clampSavedNumber(data.galaxies, 0, 0, 1e6))
 
         this.dimensionCapFloor = BASE_UNLOCKED_DIMENSIONS
         this.formatDiscoverSeenCap = BASE_UNLOCKED_DIMENSIONS
@@ -5584,7 +5652,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         }
 
         if (typeof data.singularities === 'number') {
-          this.singularities = Math.floor(data.singularities)
+          this.singularities = Math.floor(clampSavedNumber(data.singularities, 0, 0, 1e6))
         }
         if (typeof data.nightWatchUnlocked === 'boolean') {
           this.nightWatchUnlocked = data.nightWatchUnlocked
@@ -5605,6 +5673,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
             .filter((b) => isValidBuffType(b.type) && b.type !== 'void' && b.type !== 'sponsor')
             .map((b) => {
               const remaining = clampSavedNumber(b.remaining, 0, 0, 86400)
+              // Süre/çarpan karşılıkları runtime ile birebir: fyp 60sn×7,
+              // espresso 30sn×3, planck_surge 20sn×4, resonance_boost 30sn×5,
+              // heart_frenzy 15sn×300.
               return {
                 id: `buff-${b.type}-${Date.now()}`,
                 type: b.type,
@@ -5612,10 +5683,14 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
                   ? '🔥 Gece 3 Çılgınlığı (7× Dopamin)'
                   : b.type === 'espresso'
                     ? '☕ Çift Espresso (3× Frekans)'
-                    : '👆 Başparmak Histerisi (300× Kaydır)',
-                duration: b.type === 'fyp' ? 60 : b.type === 'espresso' ? 30 : 15,
+                    : b.type === 'planck_surge'
+                      ? '💥 Planck Patlaması (4× Hz, 10× Yutma)'
+                      : b.type === 'resonance_boost'
+                        ? '🌌 Boyut Sıkışması (5× Boyutlar)'
+                        : '👆 Başparmak Histerisi (300× Kaydır)',
+                duration: b.type === 'fyp' ? 60 : b.type === 'espresso' ? 30 : b.type === 'planck_surge' ? 20 : b.type === 'resonance_boost' ? 30 : 15,
                 remaining,
-                multiplier: b.type === 'fyp' ? 7 : b.type === 'espresso' ? 3 : 300
+                multiplier: b.type === 'fyp' ? 7 : b.type === 'espresso' ? 3 : b.type === 'planck_surge' ? 4 : b.type === 'resonance_boost' ? 5 : 300
               }
             })
             .filter((b) => b.remaining > 0)
@@ -5665,7 +5740,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
                 : 0
               const savedMatureAge = clampSavedNumber(savedCell.matureAge, 0, 0, 31536000)
               const matureAge = seedType && savedMatureAge > 0 ? savedMatureAge : seedGrowth
-              const maxAge = clampSavedNumber(savedCell.maxAge, 0, 0, 31536000)
+              // JSON Infinity'yi taşıyamaz: plantSeed/update Infinity yazar ama
+              // kayda null düşer. null->Infinity (çürümesiz hücre), sayıysa clamp'le.
+              const maxAge = savedCell.maxAge == null ? Infinity : clampSavedNumber(savedCell.maxAge, 0, 0, 31536000)
               this.labCells[i].seedType = seedType
               this.labCells[i].age = age
               this.labCells[i].matureAge = matureAge
@@ -5697,14 +5774,25 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         if (data.autobuyers) {
           Object.keys(data.autobuyers).forEach((k) => {
             if (this.autobuyers[k]) {
-              this.autobuyers[k].enabled = data.autobuyers![k].enabled
-              this.autobuyers[k].unlocked = data.autobuyers![k].unlocked
+              this.autobuyers[k].enabled = data.autobuyers![k].enabled === true
+              this.autobuyers[k].unlocked = data.autobuyers![k].unlocked === true
               const savedMode = data.autobuyers![k].mode
               this.autobuyers[k].mode = savedMode === 'bulk' || savedMode === 'max' ? savedMode : 'single'
               this.autobuyers[k].interval = getAutobuyerInterval(k, this.autobuyers[k].mode || 'single')
               this.autobuyers[k].timer = 0
-              if (typeof data.autobuyers![k].minGainSp === 'number' && data.autobuyers![k].minGainSp! > 0) {
-                this.autobuyers[k].minGainSp = data.autobuyers![k].minGainSp
+              const savedMinGain = data.autobuyers![k].minGainSp
+              if (typeof savedMinGain === 'number') {
+                this.autobuyers[k].minGainSp = clampSavedNumber(savedMinGain, 1, 1, 1e6)
+              }
+              // Kokpit kuralı: Küme botu tavanı (0 = sınırsız korunur)
+              const savedRule = data.autobuyers![k].customRule
+              if (savedRule && typeof savedRule === 'object') {
+                const savedMaxGalaxies = (savedRule as { maxGalaxies?: unknown }).maxGalaxies
+                if (typeof savedMaxGalaxies === 'number') {
+                  this.autobuyers[k].customRule = {
+                    maxGalaxies: clampSavedNumber(savedMaxGalaxies, 0, 0, 1e6)
+                  }
+                }
               }
             }
           })
@@ -5749,9 +5837,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         const loadedNeuralNodes: Record<string, number> = {}
         if (data.neuralNodesBought && typeof data.neuralNodesBought === 'object') {
           Object.entries(data.neuralNodesBought).forEach(([nodeId, lvl]) => {
-            if (typeof lvl === 'number' && lvl > 0 && NEURAL_TREE.some((n) => n.id === nodeId)) {
-              loadedNeuralNodes[nodeId] = Math.floor(lvl)
-            }
+            const def = NEURAL_TREE.find((n) => n.id === nodeId)
+            if (!def || typeof lvl !== 'number' || !Number.isFinite(lvl) || lvl <= 0) return
+            loadedNeuralNodes[nodeId] = Math.min(Math.floor(lvl), def.maxLevel ?? 1)
           })
         }
         // Eski kayıt göçü: düz dükkân seviyeleri ağaçtaki karşılık düğümlere yansıtılır
@@ -5761,13 +5849,33 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
             loadedNeuralNodes[legacyId] = shopLvl
           }
         })
+        // Kayıt şişmesine karşı toplam düğüm sayısını caple (ağaç ~25 düğüm; 40 güvenli tavan)
+        for (const key of Object.keys(loadedNeuralNodes).slice(40)) {
+          delete loadedNeuralNodes[key]
+        }
         this.neuralNodesBought = loadedNeuralNodes
 
         // Gece Krizi (v10): whitelist doğrulaması — kayıtlı id registry'de yoksa geçersiz sayılır
         if (typeof data.activeChallenge === 'string' && getChallengeById(data.activeChallenge)) {
           this.activeChallenge = data.activeChallenge
+          // Koşu-içi sayaçlar kayıttan yüklenir (yoksa koşu başı varsayılanı)
+          this.challengeElapsed = clampSavedNumber(data.challengeElapsed, 0, 0, 1e9)
+          this.challengeHaltUntil = clampSavedNumber(data.challengeHaltUntil, 0, 0, 3600)
+          this.challengeSinceBuy = 9999
+          this.challengeCostInflation = clampSavedNumber(data.challengeCostInflation, 0, 0, 1e9)
+          this.challengeNotificationDoom = clampSavedNumber(data.challengeNotificationDoom, 0, 0, 1e9)
+          this.challengeDim1Growth = parseSavedDecimal(data.challengeDim1Growth, new Decimal(1))
         } else {
+          // Güvenli bitir (exitChallenge eşdeğeri): deserialize ortasında gerçek
+          // exitChallenge() çağrılmaz çünkü resetRunState() az önce yüklenen
+          // koşu durumunu (matter/boyutlar) sıfırlardı. Sayaçlar temizlenir, koşu düşer.
           this.activeChallenge = null
+          this.challengeElapsed = 0
+          this.challengeHaltUntil = 0
+          this.challengeSinceBuy = 9999
+          this.challengeCostInflation = 0
+          this.challengeNotificationDoom = 0
+          this.challengeDim1Growth = new Decimal(1)
         }
         if (Array.isArray(data.completedChallenges)) {
           this.completedChallenges = data.completedChallenges.filter(
@@ -5785,12 +5893,8 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           })
         }
         this.challengeBestTimes = loadedBestTimes
-        this.challengeElapsed = 0
-        this.challengeHaltUntil = 0
-        this.challengeSinceBuy = 9999
-        this.challengeCostInflation = 0
-        this.challengeNotificationDoom = 0
-        this.challengeDim1Growth = new Decimal(1)
+        // Not: challenge koşu sayaçları yukarıdaki activeChallenge bloğunda
+        // kayıttan yüklenir (veya güvenli bitirişle sıfırlanır); burada ezilmez.
 
         // Combo serisi geçicidir: kayıttan yüklense bile bayat lastClickAt decay ile sıfırlanır
         if (
@@ -5808,9 +5912,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         }
 
         if (Array.isArray(data.claimedBounties)) {
-          this.claimedBounties = data.claimedBounties.filter(
-            (e): e is number => typeof e === 'number' && Number.isFinite(e)
-          )
+          this.claimedBounties = data.claimedBounties
+            .filter((e): e is number => typeof e === 'number' && Number.isFinite(e))
+            .slice(0, 200)
         } else {
           this.claimedBounties = []
         }
@@ -5820,9 +5924,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           typeof data.decadeSurgeMult === 'number' && Number.isFinite(data.decadeSurgeMult)
             ? clampSavedNumber(data.decadeSurgeMult, 1, 1, 1000)
             : 1
-        if (typeof data.sacrificeCount === 'number') {
-          this.sacrificeCount = data.sacrificeCount
-        }
+        this.sacrificeCount = Math.floor(clampSavedNumber(data.sacrificeCount, 0, 0, 1e6))
         if (data.sacrificeMultiplier) {
           this.sacrificeMultiplier = parseSavedDecimal(data.sacrificeMultiplier, D_1)
         }
@@ -5845,11 +5947,13 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         resetAchievementCache()
         }
         if (typeof data.achievementsSeenCount === 'number') {
-          this.achievementsSeenCount = data.achievementsSeenCount
+          this.achievementsSeenCount = Math.floor(clampSavedNumber(data.achievementsSeenCount, 0, 0, 1e6))
         }
 
         if (Array.isArray(data.seenNewsIds)) {
-          this.seenNewsIds = data.seenNewsIds.filter((id) => typeof id === 'string')
+          this.seenNewsIds = data.seenNewsIds
+            .filter((id) => typeof id === 'string')
+            .slice(0, 500)
         }
         if (typeof data.uselessNewsClicks === 'number') {
           this.uselessNewsClicks = clampSavedNumber(data.uselessNewsClicks, 0, 0, 1000000)
@@ -5860,6 +5964,21 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
 
         if (data.settings) {
           this.settings = { ...this.settings, ...data.settings }
+          // Kayıttan gelen enum ayarlar beyaz listeden geçer (bozuk/gelecek
+          // sürüm değeri UI'yı kırmasın); sayısal olan clamp'lenir.
+          if (!['standard', 'scientific', 'engineering', 'logarithm'].includes(this.settings.notation)) {
+            this.settings.notation = 'standard'
+          }
+          if (this.settings.decimalPlaces !== 2 && this.settings.decimalPlaces !== 3) {
+            this.settings.decimalPlaces = 2
+          }
+          if (!['cyberpunk', 'dark'].includes(this.settings.theme)) {
+            this.settings.theme = 'cyberpunk'
+          }
+          if (!['calm', 'balanced', 'tilt'].includes(this.settings.juiceMode)) {
+            this.settings.juiceMode = 'balanced'
+          }
+          this.settings.customAudioUrl = sanitizeCustomAudioUrl(this.settings.customAudioUrl)
           sounds.enabled = this.settings.soundEnabled
           sounds.volume = this.settings.soundVolume
           musicEngine.enabled = this.settings.musicEnabled ?? true
@@ -5889,38 +6008,43 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         }
 
         if (Array.isArray(data.pastSingularities)) {
-          this.pastSingularities = data.pastSingularities.map((p) => ({
-            id: p.id,
-            duration: p.duration,
-            spGained: parseSavedDecimal(p.spGained, D_0),
-            spPerMinute: parseSavedDecimal(p.spPerMinute, D_0),
-            peakMatter: parseSavedDecimal(p.peakMatter, D_0),
-            timestamp: p.timestamp || Date.now(),
-            challengeId: p.challengeId || null
-          }))
+          this.pastSingularities = data.pastSingularities
+            .map((p) => ({
+              id: p.id,
+              duration: p.duration,
+              spGained: parseSavedDecimal(p.spGained, D_0),
+              spPerMinute: parseSavedDecimal(p.spPerMinute, D_0),
+              peakMatter: parseSavedDecimal(p.peakMatter, D_0),
+              timestamp: p.timestamp || Date.now(),
+              challengeId: p.challengeId || null
+            }))
+            .slice(0, 50)
         } else {
           this.pastSingularities = []
         }
 
         if (data.stats) {
           this.stats = {
-            manualClicks: data.stats.manualClicks || 0,
+            manualClicks: Math.floor(clampSavedNumber(data.stats.manualClicks, 0, 0, 1e12)),
             totalMatterProduced: parseSavedDecimal(data.stats.totalMatterProduced, new Decimal(10)),
             highestMatter: parseSavedDecimal(data.stats.highestMatter, new Decimal(10)),
-            totalPlaytime: data.stats.totalPlaytime || 0,
-            singularityCount: data.stats.singularityCount || 0,
-            fastestSingularity: data.stats.fastestSingularity || Infinity,
+            totalPlaytime: clampSavedNumber(data.stats.totalPlaytime, 0, 0, 1e10),
+            singularityCount: Math.floor(clampSavedNumber(data.stats.singularityCount, 0, 0, 1e6)),
+            fastestSingularity:
+              typeof data.stats.fastestSingularity === 'number' && Number.isFinite(data.stats.fastestSingularity)
+                ? clampSavedNumber(data.stats.fastestSingularity, Infinity, 0, 1e10)
+                : Infinity,
             highestDps: parseSavedDecimal(data.stats.highestDps, D_0),
             totalManualDopamine: parseSavedDecimal(data.stats.totalManualDopamine, D_0),
-            anomaliesClicked: data.stats.anomaliesClicked || 0,
-            mythicsClicked: data.stats.mythicsClicked || 0,
-            combosTriggered: data.stats.combosTriggered || 0,
-            slackersFired: data.stats.slackersFired || 0,
-            labHarvests: data.stats.labHarvests || 0,
-            spellsCast: data.stats.spellsCast || 0,
-            seedsPlanted: data.stats.seedsPlanted || 0,
-            challengesCompleted: data.stats.challengesCompleted || 0,
-            reactorCollapses: data.stats.reactorCollapses || 0
+            anomaliesClicked: Math.floor(clampSavedNumber(data.stats.anomaliesClicked, 0, 0, 1e12)),
+            mythicsClicked: Math.floor(clampSavedNumber(data.stats.mythicsClicked, 0, 0, 1e12)),
+            combosTriggered: Math.floor(clampSavedNumber(data.stats.combosTriggered, 0, 0, 1e12)),
+            slackersFired: Math.floor(clampSavedNumber(data.stats.slackersFired, 0, 0, 1e12)),
+            labHarvests: Math.floor(clampSavedNumber(data.stats.labHarvests, 0, 0, 1e12)),
+            spellsCast: Math.floor(clampSavedNumber(data.stats.spellsCast, 0, 0, 1e12)),
+            seedsPlanted: Math.floor(clampSavedNumber(data.stats.seedsPlanted, 0, 0, 1e12)),
+            challengesCompleted: Math.floor(clampSavedNumber(data.stats.challengesCompleted, 0, 0, 1e6)),
+            reactorCollapses: Math.floor(clampSavedNumber(data.stats.reactorCollapses, 0, 0, 1e6))
           }
           // Eski kayıt göçü (v9-): yukarıdaki version kancası atlandıysa (bozuk versiyon alanı) yine de güvence altına al
           if (typeof this.singularities !== 'number' || Number.isNaN(this.singularities)) {
@@ -5929,8 +6053,11 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         }
 
         // Özellik Merdiveni (v0.11.0): yapışkan kilitlemeleri yükle, eksikleri hesapla
+        // Kayıt beyaz listeden geçer: FEATURE_UNLOCKS'ta olmayan id düşer, liste merdiven boyuyla cap'lenir.
         if (Array.isArray(data.unlockedFeatures)) {
-          this.unlockedFeatures = data.unlockedFeatures.filter((id) => typeof id === 'string')
+          this.unlockedFeatures = data.unlockedFeatures
+            .filter((id): id is string => typeof id === 'string' && FEATURE_IDS.has(id))
+            .slice(0, FEATURE_UNLOCKS.length)
         }
 
         // ADR-0035 (v15) — geriye dönük uyumlu yükleme, veri KAYBI YOK.
