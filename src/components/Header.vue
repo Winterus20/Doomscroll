@@ -79,8 +79,9 @@ const tickspeedCost = computed(() => format(store.tickspeedCost, 2, store.settin
 const tickspeedMultiplier = computed(() => format(store.tickspeedMultiplier, 2, store.settings.notation))
 const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
 
-// 20TPS yeniden render yükü: akış/fiyat metinleri ~4-5Hz anlık değerle beslenir.
-// Ham computed'lar mantıkta kalır; şablon throttled kopyayı okur.
+// Sayaç akışı: ana kütle sayacı rAF ile ~12Hz tazelenir (göz akıcı görür),
+// fiyat/hız gibi yavaş değişen yan metinler ~2Hz'de kalır (render yükü düşük).
+// Ham computed'lar mantıkta kalır; şablon bu kopyaları okur.
 const displayDopamine = ref('')
 const displayPerSec = ref('')
 const displayClickPower = ref('')
@@ -88,15 +89,24 @@ const displayTickCost = ref('')
 const displayTickMult = ref('')
 // SR özeti: ana sayaç sessizdir (aria-live off); bu gizli metin 5sn'de bir okunur.
 const srSummary = ref('')
-let throttledTextInterval: number | null = null
 let srSummaryInterval: number | null = null
+let lastCounterRefresh = 0
+let lastSecondaryRefresh = 0
 
-function refreshThrottledText() {
+function refreshCounterText() {
   displayDopamine.value = formattedDopamine.value
+}
+
+function refreshSecondaryText() {
   displayPerSec.value = formattedPerSec.value
   displayClickPower.value = formattedClickPower.value
   displayTickCost.value = tickspeedCost.value
   displayTickMult.value = tickspeedMultiplier.value
+}
+
+function refreshThrottledText() {
+  refreshCounterText()
+  refreshSecondaryText()
 }
 
 function refreshSrSummary() {
@@ -270,6 +280,18 @@ function checkDecade() {
 
 function tickSmooth(frameT: number) {
   if (smoothRaf === 0) return
+  // Ana sayaç ~12Hz (80ms): 20TPS tick'lerin tamamına yakını ekrana yansır, akıcı görünür.
+  // Hareket kapalı/pil tasarrufunda 500ms'ye düşer (pil dostu).
+  const counterEvery = motionOff.value ? 500 : 80
+  if (frameT - lastCounterRefresh >= counterEvery) {
+    lastCounterRefresh = frameT
+    refreshCounterText()
+  }
+  // Yan metinler ~2Hz: fiyat/hız nadiren değişir, her kare format maliyeti yok.
+  if (frameT - lastSecondaryRefresh >= 500) {
+    lastSecondaryRefresh = frameT
+    refreshSecondaryText()
+  }
   // Dekad kontrolü ~2Hz'ye kısıldı: her kare Decimal.log10() yok; trend örneklemeyle birleşik.
   if (frameT - lastSmoothCheck >= 500) {
     lastSmoothCheck = frameT
@@ -584,10 +606,12 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('doomscroll:production-bump', onProductionBump as EventListener)
   lastDecade = currentDecade()
-  lastSmoothCheck = performance.now()
+  const now = performance.now()
+  lastSmoothCheck = now
+  lastCounterRefresh = now
+  lastSecondaryRefresh = now
   refreshThrottledText()
   refreshSrSummary()
-  throttledTextInterval = window.setInterval(refreshThrottledText, 220)
   srSummaryInterval = window.setInterval(refreshSrSummary, 5000)
   smoothRaf = requestAnimationFrame(tickSmooth)
   document.addEventListener('visibilitychange', handleCounterVisibility)
@@ -611,10 +635,6 @@ onUnmounted(() => {
   if (visualizerInterval !== null) {
     clearInterval(visualizerInterval)
     visualizerInterval = null
-  }
-  if (throttledTextInterval !== null) {
-    clearInterval(throttledTextInterval)
-    throttledTextInterval = null
   }
   if (srSummaryInterval !== null) {
     clearInterval(srSummaryInterval)

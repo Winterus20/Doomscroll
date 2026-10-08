@@ -1,5 +1,16 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Yutulan Kütle sayacı smooth akış düzeltmesi
+
+### Kapsam:
+- `src/components/Header.vue`: 220ms `setInterval` (~4.5Hz) kaldırıldı; metin tazeleme mevcut `tickSmooth` rAF döngüsüne taşındı.
+- Ana sayaç ~12Hz (80ms), yan metinler (hız/fiyat) ~2Hz (500ms); pil tasarrufu / hareket kapalı modda sayaç 500ms'ye düşer.
+- Ayrı timer kalktı, tek rAF döngüsü kaldı (timer sızıntısı yok, `onUnmounted` temizliği güncellendi).
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+- `throttledTextInterval` referansı kalmadı (grep temiz).
+
 ## [2026-10-08] — GPL-3.0-or-later lisanslaması
 
 ### Kapsam:
