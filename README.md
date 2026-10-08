@@ -8,6 +8,7 @@
 [![typescript](https://img.shields.io/badge/TypeScript-5.7_strict-3178c6?style=flat-square)](https://www.typescriptlang.org/)
 [![vite](https://img.shields.io/badge/Vite-6-646cff?style=flat-square)](https://vitejs.dev/)
 [![tests](https://img.shields.io/badge/tests-199_yeşil-22c55e?style=flat-square)](#testler)
+[![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue?style=flat-square)](LICENSE)
 [![save](https://img.shields.io/badge/kayıt-LZ--String_+_3_slot-0ea5e9?style=flat-square)](#kayıt-sistemi)
 
 **Tür:** Hibrit çok katmanlı Incremental / Idle
@@ -303,5 +304,14 @@ cerrahi düzenleme, Windows'ta çift tırnaklı komutlar, `any` yasak.
 
 ## Lisans
 
-Bu repoda henüz ayrı bir `LICENSE` dosyası yok. Lisanslanana kadar kodu
-kopyalama veya yeniden dağıtma; katkı yapmadan önce repo sahibiyle netleştir.
+Copyright (C) 2026 Yigit Emre Gulen
+
+Bu program özgür yazılımdır: Free Software Foundation tarafından yayımlanan
+**GNU General Public License** sürüm 3 (veya isteğe bağlı olarak daha sonraki
+sürümler) koşulları altında yeniden dağıtabilir ve değiştirebilirsin.
+
+Bu program faydalı olması umuduyla dağıtılır, ancak **HİÇBİR GARANTİ** vermez.
+Ayrıntılar için [`LICENSE`](LICENSE) dosyasına bak.
+
+Pratik sonucu: bu oyunu çatallayıp değiştiren herkes, türev çalışmayı da
+aynı lisansla ve kaynak koduyla birlikte paylaşmak zorundadır (copyleft).

@@ -1,5 +1,13 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — GPL-3.0-or-later lisanslaması
+
+### Kapsam:
+- Resmi GPL-3.0 metni gnu.org adresinden alınıp verbatim `LICENSE` dosyası olarak eklendi.
+- `package.json` içine `"license": "GPL-3.0-or-later"` alanı eklendi.
+- README Lisans bölümü güncellendi (telif + copyleft sonucu) ve rozet eklendi.
+- Doğrulama: `npm run build` temiz (1705 modül, 0 hata).
+
 ## [2026-10-08] — README sıfırdan yazımı (v0.38.0)
 
 ### Kapsam:
