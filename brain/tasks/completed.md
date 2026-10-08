@@ -1,5 +1,65 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Plaket UI/UX revizyonu (filtre + arama + sıradaki hedef + toast aksiyonu)
+
+### Kapsam:
+- `AchievementsTab.vue`: yapışkan araç çubuğu (arama + Tümü/Ödüllü/Açılan/Kilitli + Daralt/Aç + genel ilerleme), alt başlık sadeleşti (formül details içine), kategori başlığı daraltılabilir buton + tam satır rozeti, ödüllü kartta yeşil sol şerit + hediye rozeti, kilitli kart opaklığı 45->60 + sıradaki hedefe amber halka, boş filtre durumu eklendi, şablon içi filter() O(n²) yerine grup haritası.
+- `AchievementToast.vue`: "İncele" butonu (plaket sekmesine götürür), 4sn ilerleme çizgisi, kapatma ipucu, z-50.
+- `App.vue`: `uroboros:goto-achievements` dinleyicisi + `handleGotoAchievements` (toast -> sekme geçişi), cleanup eklendi.
+
+### Doğrulama:
+- `npm run build` temiz (1706 modül, 0 hata).
+- `balance.test.ts` 14/14 geçti.
+
+## [2026-10-08] — Satır cila (alt yazı + rozet hiyerarşisi + Çöküş teaser + ticker guard)
+
+### Kapsam:
+- `DimensionRow.vue`: satır altı açıklama kaldırıldı (bilgi isim tooltip'ine taşındı); çarpan rozeti ikincil dile çekildi (nötr silik), milestone rozeti öne çıktı.
+- `DimensionsTab.vue`: hedef boyut kilitliyken Çöküş kartında ölü ilerleme yerine teaser (`D8 açılınca aktifleşir`).
+- `CommentTicker.vue`: boş metinli haber seçilirse dolu bulunana kadar yeniden seçim (bant boş kalmaz).
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+
+## [2026-10-08] — Alt kısım cila (SI rozet + yüzde etiketi + satır vurgusu)
+
+### Kapsam:
+- `DimensionRow.vue`: rozette taşan üs yazısı yerine SI sembolü (nm/pm/fm/am/m/Mm/Gm/kpc); tam ölçek tooltip'te duruyor. Sol vurgu çizgisi duruma bağlandı (alınabilir mor, diğerleri sönük).
+- `App.vue`: arc bar yüzdelerine etiket eklendi (`ufuk %3,1` / `kilit %67`).
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+
+## [2026-10-08] — Header kayma düzeltmesi (stance latch + sabit aksiyon sırası)
+
+### Kapsam:
+- `Header.vue`: stance görünürlüğü `localStorage` mührüyle yapışkan yapıldı (`uroboros-stance-seen`); D1×25 önizlemesi sıçramada sıfırlanıp barı kapatmıyor.
+- Kontrol çubuğu yan-yana düzenden alt-alta iki sıraya çevrildi (üstte duruş, altta aksiyon); YUT grubu hep sağda sabit, duruş açılması yatayda itme yapmıyor.
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+
+## [2026-10-08] — ADR-0049 P1 en-iyi-hâl
+
+### Kapsam:
+- `AnomalyOverlay.vue`: edition sıradan anomalilerden kaldırıldı (yalnızca void/heart_frenzy poly); beam ve shimmer yalnızca void kapsülünde; kategori rozeti 9px mono→10px sans.
+- `Header.vue`: YUT butonundan sürekli `btn-sheen` söküldü + mono→sans; Space rozeti 10px.
+- `DimensionRow.vue`: açıklama satırı mobilde gizlendi (sm+ görünür, 11px silik); satır taranır kaldı.
+- `LabTab.vue`: birincil buton dili sakinleştirildi (emoji+caps gitti, Inter ton); viral başlık sakin dile çekildi.
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+
+## [2026-10-08] — ADR-0049 Okunaklı Balatro P0
+
+### Kapsam:
+- `brain/decisions/0049-legible-balatro-design-language.md` açıldı (zemin sakin + kart karakterli, semantik 5 renk, dozunda efekt, çift ton dil).
+- `src/components/DimensionRow.vue`: TIER_ACCENT_COLORS nötrlendi (D1-D7 slate, D8 amber-beyaz özel); ölçek rozeti 9px→10px; sinerji rozeti ve paket satırı mono→sans + 10px; satın alma butonu mono→sans.
+- `src/components/Header.vue`: sayaç sürekli nabzı kapatıldı (`counterHeatClass` boş döner, `rateTier` kaldırıldı); alev histerezisi devre dışı (`flameOn` hep false); olay anı efektleri (`count-pop`, `decade-flash`) korundu; `AlgorithmicSwirl` arka planına dokunulmadı.
+
+### Doğrulama:
+- `npm run build` temiz (1705 modül, 0 hata).
+
 ## [2026-10-08] — Yutulan Kütle sayacı smooth akış düzeltmesi
 
 ### Kapsam:

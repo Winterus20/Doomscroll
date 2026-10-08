@@ -180,6 +180,11 @@ function switchTabByOffset(direction: 1 | -1) {
   }
 }
 
+// Plaket toast'undaki "İncele" butonu buraya düşer
+function handleGotoAchievements(): void {
+  switchTab('achievements')
+}
+
 // Mobil Yatay Fiske (Swipe Left / Right) ile Sekme Değiştirme Jestleri
 let swipeStartX = 0
 let swipeStartY = 0
@@ -456,6 +461,9 @@ onMounted(() => {
 
   // Gizli Admin Paneli: klavyede GODMODE yazınca aç/kapat
   window.addEventListener('keydown', handleGodmode)
+
+  // Plaket toast'undaki "İncele" butonu bu olayı gönderir
+  window.addEventListener('uroboros:goto-achievements', handleGotoAchievements)
 })
 
 onUnmounted(() => {
@@ -476,6 +484,7 @@ onUnmounted(() => {
   window.removeEventListener('pagehide', persistLocalSave)
   window.removeEventListener('beforeunload', persistLocalSave)
   window.removeEventListener('keydown', handleGodmode)
+  window.removeEventListener('uroboros:goto-achievements', handleGotoAchievements)
 })
 </script>
 
@@ -525,7 +534,7 @@ onUnmounted(() => {
           <span class="text-slate-600">·</span>
           <span class="text-slate-400">Tekillik Ufku</span>
           <span class="ml-auto tabular-nums font-bold" :class="arcPercent >= 100 ? 'text-amber-300' : 'text-slate-300'">
-            {{ arcPercent >= 100 ? 'TEKİLLİK HAZIR' : arcPercent.toFixed(1) + '%' }}
+            <span class="text-slate-600 font-normal mr-1">ufuk</span>{{ arcPercent >= 100 ? 'TEKİLLİK HAZIR' : arcPercent.toFixed(1) + '%' }}
           </span>
         </div>
         <div class="progress-track progress-track-sm progress-track-bordered w-full mb-2">
@@ -542,7 +551,7 @@ onUnmounted(() => {
           <span class="text-slate-500 shrink-0">Sıradaki kilit:</span>
           <span class="text-slate-200 truncate min-w-0 font-medium">{{ nextUnlockLabel }}</span>
           <span class="ml-auto shrink-0 tabular-nums font-mono text-cyan-400 font-semibold">
-            {{ nextUnlockPercent.toFixed(0) }}%
+            <span class="text-slate-600 font-normal mr-1">kilit</span>{{ nextUnlockPercent.toFixed(0) }}%
           </span>
         </div>
       </div>
