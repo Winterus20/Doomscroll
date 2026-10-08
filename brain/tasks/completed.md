@@ -1,5 +1,12 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — README sıfırdan yazımı (v0.38.0)
+
+### Kapsam:
+- İnternetten README en iyi pratikleri araştırıldı (Best-README-Template, readme-best-practices, freeCodeCamp yapısı).
+- README.md sıfırdan yazıldı: rozetler, içindekiler, lore, D1-D8 tablosu, nasıl oynanır, hızlı başlangıç, teknoloji yığını, repo yapısı, mimari notlar, kayıt, Firebase, testler, yol haritası, katkı düzeni, teşekkür, lisans notu.
+- Doğrulama: dosya okundu, Faz durumu todo.md ile tutarlı (Faz 0/1 ✅, Faz 2/3 ❌).
+
 ## [2026-10-08] — Full Codebase Review Fix Pass (v0.38.1-dev)
 
 ### Kapsam:
