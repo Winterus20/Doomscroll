@@ -149,6 +149,7 @@ function switchTab(tab: TabId) {
 
   sounds.playHapticTap()
   activeTab.value = tab
+  store.setActiveGameTab(tab)
   // ADR-0029: aktif sekmeyi görünür alana getir. Sekme dock'u yatay
   // kaydırılabilir olduğu için (9 sekme 360 px'e sığmıyor), 8. sekmeye tıklayıp
   // onu görünmeyen bir konuma gönderiyordu. Klavye ile de gezilebildiği için
@@ -269,8 +270,17 @@ watch(
   () => {
     if (tabLocked.value[activeTab.value]) {
       activeTab.value = 'dimensions'
+      store.setActiveGameTab('dimensions')
     }
   }
+)
+
+// Kutlama kapısı senkronu: aktif oyun sekmesi store'da tutulur,
+// otomatik olaylar ilgili sekmede değilken sessiz geçer.
+watch(
+  activeTab,
+  (tab) => store.setActiveGameTab(tab),
+  { immediate: true }
 )
 
 // QoL: animasyon azaltma ayarı — kök elemana sınıf bağlar (style.css: .reduce-anim)

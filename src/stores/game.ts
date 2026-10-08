@@ -80,6 +80,15 @@ import {
   calculateWritingParadox
 } from '../core/cosmic-scale'
 
+// P1 Lab denge: Boşalım bekleme damgası kayıt alanı. types.ts'e dokunmadan
+// (bu dosya-only kısıtı) arayüz birleştirmeyle eklenir; eski kayıtlarda
+// tanımsız gelir ve yükleme hazır (beklemesiz) varsayar.
+declare module '../models/types' {
+  interface SerializedPlayerState {
+    lastViralAt?: number
+  }
+}
+
 function parseSavedDecimal(value: string | number | undefined, fallback: Decimal): Decimal {
   const parsed = new Decimal(value ?? fallback.toString())
   // mag filtresi: break_eternity'de mag log10-mertebedir; 1e9 üstü (≈10^1e9)
@@ -409,6 +418,65 @@ export const LAB_RECIPES: LabRecipe[] = [
     desc: 'Kozmik tekillik çekirdeği: Tüm küresel kütle üretimini kalıcı olarak üçe katlar!'
   }
 ]
+
+// ---- P1 Lab denge sabitleri (magic number dağıtmamak için tek blok) ----
+// Tohum maliyeti yumuşak ölçekleme: lifetimePeakMatter log10'u bu eşiği
+// aşınca her basamak aralığında maliyet katlanır, tavanla sınırlıdır.
+const LAB_SEED_COST_SOFT_START_LOG = 65
+const LAB_SEED_COST_DECADES_PER_STEP = 25
+const LAB_SEED_COST_STEP_MULT = 2
+const LAB_SEED_COST_MAX_MULT = 64
+// Süperkritik Boşalım bekleme süresi (sn, totalPlaytime damgasıyla ölçülür).
+const VIRAL_DROP_COOLDOWN_SECONDS = 120
+// Egzotik tek-meta kırma: ebeveyn desteksiz egzotik hücrenin bonusu
+// 1.0'a doğru bu bölenle yarıya indirilir.
+const EXOTIC_LONE_PENALTY_DIVISOR = 2
+const EXOTIC_LONE_PENALTY_SEEDS: readonly LabSeedType[] = ['higgs_boson', 'dark_matter_core', 'tachyon_flux', 'magnetic_shield']
+// Dalgalanma Rejimi hasat ikilemesi: şans ve çarpan.
+const FLUCTUATION_HARVEST_DOUBLE_CHANCE = 0.2
+const FLUCTUATION_HARVEST_DOUBLE_MULT = 2
+// Merkez hücre (id 4) manuel yutma bonusu.
+const LAB_CENTER_CLICK_BONUS = 1.3
+
+/** Efektif tohum maliyeti çarpanı (1 = taban maliyet). Bozuk tepeye karşı güvenli. */
+function labSeedCostMultiplier(peak: Decimal): number {
+  if (peak.isNan() || Number.isNaN(peak.mag)) return 1
+  const peakLog = peak.log10().toNumber()
+  if (!Number.isFinite(peakLog) || peakLog <= LAB_SEED_COST_SOFT_START_LOG) return 1
+  const steps = Math.floor((peakLog - LAB_SEED_COST_SOFT_START_LOG) / LAB_SEED_COST_DECADES_PER_STEP)
+  if (!Number.isFinite(steps) || steps <= 0) return 1
+  return Math.min(LAB_SEED_COST_MAX_MULT, Math.pow(LAB_SEED_COST_STEP_MULT, steps))
+}
+
+/** Taban maliyeti tepe-noktaya göre ölçekler; LAB_SEEDS.cost sabitini değiştirmez. */
+function labEffectiveSeedCost(baseCost: Decimal, peak: Decimal): Decimal {
+  const mult = labSeedCostMultiplier(peak)
+  return mult === 1 ? baseCost : baseCost.times(mult)
+}
+
+/** Egzotik hücrenin tarif ebeveynleri (tarifesizse boş dizi). */
+function labExoticParents(seed: LabSeedType): LabSeedType[] {
+  const recipe = LAB_RECIPES.find((r) => r.result === seed)
+  return recipe ? [recipe.parent1, recipe.parent2] : []
+}
+
+/** 3x3 matriste ortogonal (paylaşılan kenar) komşular. */
+function labNeighborCells(cells: LabCell[], idx: number): LabCell[] {
+  const row = Math.floor(idx / 3)
+  const col = idx % 3
+  const out: LabCell[] = []
+  if (row > 0) out.push(cells[idx - 3])
+  if (row < 2) out.push(cells[idx + 3])
+  if (col > 0) out.push(cells[idx - 1])
+  if (col < 2) out.push(cells[idx + 1])
+  return out
+}
+
+/** Komşular arasında en az 1 olgun tarif-ebeveyni var mı? (tarifesiz hücre destekli sayılır) */
+function hasMatureParentSupport(neighbors: LabCell[], parents: readonly LabSeedType[]): boolean {
+  if (parents.length === 0) return true
+  return neighbors.some((n) => n.isMature && n.seedType !== null && parents.includes(n.seedType))
+}
 
 export const CRISIS_INTERVENTIONS = [
   {
@@ -1350,6 +1418,9 @@ export const useGameStore = defineStore('game', {
     isViralActive: false,
     viralTimeRemaining: 0,
     viralViews: 0,
+    // P1: son Süperkritik Boşalım damgası (totalPlaytime sn). Negatif başlangıç
+    // ilk tetiklemeyi beklemesiz yapar; eski kayıtlarda da aynı varsayılır.
+    lastViralAt: -VIRAL_DROP_COOLDOWN_SECONDS,
 
     // Mini-Oyun 2: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi (Crisis 2.0)
     reactorHeat: 0,
@@ -2642,6 +2713,14 @@ export const useGameStore = defineStore('game', {
           cellBoost *= 1.20
         }
 
+        // 5. Egzotik tek-meta kırma: ebeveyn desteksiz egzotik yarı bonus
+        if (EXOTIC_LONE_PENALTY_SEEDS.includes(c.seedType)) {
+          const parents = labExoticParents(c.seedType)
+          if (!hasMatureParentSupport(matureNeighbors, parents)) {
+            cellBoost = 1 + (cellBoost - 1) / EXOTIC_LONE_PENALTY_DIVISOR
+          }
+        }
+
         mult = mult.times(cellBoost)
       })
 
@@ -2691,14 +2770,26 @@ export const useGameStore = defineStore('game', {
       state.labCells.forEach((c, idx) => {
         if (!c.isMature || !c.seedType) return
 
-        if (c.seedType === 'gluon_binder') mult = mult.times(2.0)
-        else if (c.seedType === 'dark_matter_core') mult = mult.times(1.5)
-        else if (c.seedType === 'tachyon_flux') mult = mult.times(2.0)
+        let cellFactor = 1
+        if (c.seedType === 'gluon_binder') cellFactor = 2.0
+        else if (c.seedType === 'dark_matter_core') cellFactor = 1.5
+        else if (c.seedType === 'tachyon_flux') cellFactor = 2.0
+        else return
 
         // Merkez hücre bonusu
-        if (idx === 4 && (c.seedType === 'gluon_binder' || c.seedType === 'tachyon_flux' || c.seedType === 'dark_matter_core')) {
-          mult = mult.times(1.3)
+        if (idx === 4) {
+          cellFactor *= LAB_CENTER_CLICK_BONUS
         }
+
+        // Egzotik tek-meta kırma: ebeveyn desteksiz egzotik yarı bonus
+        if (EXOTIC_LONE_PENALTY_SEEDS.includes(c.seedType)) {
+          const parents = labExoticParents(c.seedType)
+          if (!hasMatureParentSupport(labNeighborCells(state.labCells, idx), parents)) {
+            cellFactor = 1 + (cellFactor - 1) / EXOTIC_LONE_PENALTY_DIVISOR
+          }
+        }
+
+        mult = mult.times(cellFactor)
       })
 
       if (state.isViralActive) {
@@ -2730,6 +2821,30 @@ export const useGameStore = defineStore('game', {
     labViralMultiplier(state): number {
       const matureCount = state.labCells.filter((c) => c.isMature && !!c.seedType).length
       return (5.0 + matureCount * 1.0) * (state.labMode === 'overdrive' ? 2.0 : 1.0)
+    },
+
+    // P1: Boşalım bekleme sayacı (sn). Kurcalanmış gelecek damgaya karşı tavanlıdır.
+    viralCooldownRemaining(state): number {
+      const last = typeof state.lastViralAt === 'number' && Number.isFinite(state.lastViralAt)
+        ? state.lastViralAt
+        : -VIRAL_DROP_COOLDOWN_SECONDS
+      const played = state.stats.totalPlaytime || 0
+      const remaining = VIRAL_DROP_COOLDOWN_SECONDS - (played - last)
+      return Math.max(0, Math.min(VIRAL_DROP_COOLDOWN_SECONDS, remaining))
+    },
+
+    // P1: Boşalım butonu etkinliği — LabTab bu getter'a bağlanır.
+    canTriggerViralDrop(): boolean {
+      return this.labHype >= 100 && !this.isViralActive && this.viralCooldownRemaining <= 0
+    },
+
+    // P1: Tohumun tepe-noktaya göre efektif maliyeti (LabTab fiyat gösterimi için).
+    labSeedEffectiveCost(state) {
+      return (seedType: LabSeedType): Decimal => {
+        const seedDef = LAB_SEEDS.find((s) => s.type === seedType)
+        if (!seedDef) return D_0
+        return labEffectiveSeedCost(seedDef.cost, state.lifetimePeakMatter)
+      }
     },
 
     // Parçacık Atlası Keşif Yüzdesi / Global Çarpanı
@@ -3825,9 +3940,11 @@ export const useGameStore = defineStore('game', {
 
       const seedDef = LAB_SEEDS.find((s) => s.type === seedType)
       if (!seedDef) return false
-      if (this.matter.lt(seedDef.cost)) return false
+      // P1: taban maliyet sabittir; efektif maliyet tepe-noktayla yumuşak artar.
+      const effectiveCost = labEffectiveSeedCost(seedDef.cost, this.lifetimePeakMatter)
+      if (this.matter.lt(effectiveCost)) return false
 
-      this.matter = this.matter.minus(seedDef.cost)
+      this.matter = this.matter.minus(effectiveCost)
       cell.seedType = seedType
       cell.age = 0
       cell.matureAge = seedDef.growthSeconds
@@ -3867,6 +3984,11 @@ export const useGameStore = defineStore('game', {
       }
 
       reward = reward.times(this.achievementLabYield)
+
+      // P1: Dalgalanma Rejimi hasat ikilemesi (%15 şansla ×2, sessiz)
+      if (this.labMode === 'fluctuation' && Math.random() < FLUCTUATION_HARVEST_DOUBLE_CHANCE) {
+        reward = reward.times(FLUCTUATION_HARVEST_DOUBLE_MULT)
+      }
 
       this.matter = this.matter.plus(reward)
       this.stats.totalMatterProduced = this.stats.totalMatterProduced.plus(reward)
@@ -3914,7 +4036,7 @@ export const useGameStore = defineStore('game', {
 
     // Kuantum Reaktörü: Süperkritik Boşalım! (Supercritical Venting)
     triggerViralDrop(): boolean {
-      if (this.labHype < 100 || this.isViralActive) return false
+      if (!this.canTriggerViralDrop) return false
 
       let reward = this.matterPerSecond.gt(0)
         ? this.matterPerSecond.times(60)
@@ -3933,6 +4055,8 @@ export const useGameStore = defineStore('game', {
       this.viralTimeRemaining = 25
       this.viralViews = 65000
       this.labHype = 0
+      // P1: bekleme damgası kurulur (totalPlaytime tabanlı, kalıcı sayaç).
+      this.lastViralAt = this.stats.totalPlaytime || 0
 
       sounds.playViralDrop()
       safeConfetti({
@@ -5600,6 +5724,8 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         isViralActive: this.isViralActive,
         viralTimeRemaining: this.viralTimeRemaining,
         viralViews: this.viralViews,
+        // P1: boşalım bekleme damgası (yoksa eski kayıt varsayımıyla hazır başlar)
+        lastViralAt: this.lastViralAt,
         labCells: this.labCells.map((c) => ({
           id: c.id,
           seedType: c.seedType,
@@ -5846,6 +5972,8 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         this.isViralActive = data.isViralActive === true
         this.viralTimeRemaining = clampSavedNumber(data.viralTimeRemaining, 0, 0, 3600)
         this.viralViews = clampSavedNumber(data.viralViews, 0, 0, 1e15)
+        // P1: eksikse hazır başlar (negatif başlangıç = bekleme yok)
+        this.lastViralAt = clampSavedNumber(data.lastViralAt, -VIRAL_DROP_COOLDOWN_SECONDS, -1e12, 1e15)
 
         if (Array.isArray(data.labCells)) {
           data.labCells.forEach((savedCell, i) => {

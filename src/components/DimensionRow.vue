@@ -31,6 +31,7 @@ interface FormatMeta {
   subtitle: string
   scale: string
   metric: string
+  symbol: string
 }
 
 const formatConfigs: Record<number, FormatMeta> = {
@@ -39,56 +40,64 @@ const formatConfigs: Record<number, FormatMeta> = {
     shortName: 'Moleküler Bağlar',
     subtitle: 'Su damlasındaki kovalent bağları ayrıştırma',
     scale: '10⁻⁹ m',
-    metric: 'Nanometre'
+    metric: 'Nanometre',
+    symbol: 'nm'
   },
   2: {
     tier: 2,
     shortName: 'Elektron Orbitalleri',
     subtitle: 'Elektron bulutlarını ve spinleri vakumlama',
     scale: '10⁻¹² m',
-    metric: 'Pikometre'
+    metric: 'Pikometre',
+    symbol: 'pm'
   },
   3: {
     tier: 3,
     shortName: 'Nükleer Çekirdek',
     subtitle: 'Proton ve nötronları birbirine bağlayan güçlü nükleer kuvvet',
     scale: '10⁻¹⁵ m',
-    metric: 'Femtometre'
+    metric: 'Femtometre',
+    symbol: 'fm'
   },
   4: {
     tier: 4,
     shortName: 'Kuark Çorbası',
     subtitle: 'Renk yükleri, gluonlar ve kuantum dalgalanması',
     scale: '10⁻¹⁸ m',
-    metric: 'Attometre'
+    metric: 'Attometre',
+    symbol: 'am'
   },
   5: {
     tier: 5,
     shortName: 'Laboratuvar & Şehir',
     subtitle: 'Planck Yırtılması: Binalar ve nesneler olay ufkuna çekiliyor',
     scale: '10⁰ m',
-    metric: 'Metre'
+    metric: 'Metre',
+    symbol: 'm'
   },
   6: {
     tier: 6,
     shortName: 'Gezegenler & Dünya',
     subtitle: 'Ay ve Dünya\'nın kütleçekimsel olay ufkuna kapılışı',
     scale: '10⁷ m',
-    metric: 'Megametre'
+    metric: 'Megametre',
+    symbol: 'Mm'
   },
   7: {
     tier: 7,
     shortName: 'Yıldızlar & Güneş',
     subtitle: 'Güneş sistemleri ve plazma kürelerinin yutuluşu',
     scale: '10⁹ m',
-    metric: 'Gigametre'
+    metric: 'Gigametre',
+    symbol: 'Gm'
   },
   8: {
     tier: 8,
     shortName: 'Samanyolu & Karadelik',
     subtitle: 'Süper kütleli galaktik merkez tekillik tabağında',
     scale: '10²¹ m',
-    metric: 'Kiloparsek'
+    metric: 'Kiloparsek',
+    symbol: 'kpc'
   }
 }
 
@@ -99,7 +108,8 @@ const tierConfig = computed<FormatMeta>(() => {
       shortName: `D${props.dimension.tier} Boyutu`,
       subtitle: 'Kozmik Katman',
       scale: '10ⁿ m',
-      metric: 'Bilinmeyen'
+      metric: 'Bilinmeyen',
+      symbol: '?'
     }
   )
 })
@@ -174,16 +184,17 @@ onUnmounted(() => {
   }
 })
 
-// Tier renk ve stil temaları (Hard Sci-Fi HUD)
+// Tier renk ve stil temaları — ADR-0049 Okunaklı Balatro: D1-D7 nötr,
+// yalnızca D8 (tekillik) özel muamele görür. Vurgu tek renkte (mor) toplanır.
 const TIER_ACCENT_COLORS: Record<number, { bar: string; badge: string; text: string }> = {
-  1: { bar: 'bg-purple-500', badge: 'bg-purple-500/10 text-purple-300 border-purple-500/25', text: 'text-purple-400' },
-  2: { bar: 'bg-cyan-400', badge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25', text: 'text-cyan-400' },
-  3: { bar: 'bg-blue-400', badge: 'bg-blue-500/10 text-blue-300 border-blue-500/25', text: 'text-blue-400' },
-  4: { bar: 'bg-pink-400', badge: 'bg-pink-500/10 text-pink-300 border-pink-500/25', text: 'text-pink-400' },
-  5: { bar: 'bg-emerald-400', badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25', text: 'text-emerald-400' },
-  6: { bar: 'bg-amber-400', badge: 'bg-amber-500/10 text-amber-300 border-amber-500/25', text: 'text-amber-400' },
-  7: { bar: 'bg-rose-500', badge: 'bg-rose-500/10 text-rose-300 border-rose-500/25', text: 'text-rose-400' },
-  8: { bar: 'bg-white', badge: 'bg-white/10 text-slate-100 border-white/30', text: 'text-white' }
+  1: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  2: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  3: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  4: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  5: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  6: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  7: { bar: 'bg-slate-600/60', badge: 'bg-white/[0.04] text-slate-300 border-white/10', text: 'text-slate-400' },
+  8: { bar: 'bg-amber-400', badge: 'bg-white/10 text-slate-100 border-white/30', text: 'text-white' }
 }
 
 const tierStyle = computed(() => TIER_ACCENT_COLORS[props.dimension.tier] || TIER_ACCENT_COLORS[1])
@@ -254,8 +265,8 @@ function buy(e?: MouseEvent) {
       comboRowGlow ? 'ring-1 ring-amber-400/30' : ''
     ]"
   >
-    <!-- Sol Tier Vurgu Çizgisi -->
-    <span class="absolute left-0 top-0 bottom-0 w-1 shrink-0" :class="tierStyle.bar"></span>
+    <!-- Sol Tier Vurgu Çizgisi — alınabilir satır mor yanar, diğerleri sönük -->
+    <span class="absolute left-0 top-0 bottom-0 w-1 shrink-0" :class="canAfford ? 'bg-purple-500/80' : 'bg-white/[0.06]'"></span>
 
     <!-- Sol: Tier Ölçek Rozeti + Başlık + Bilgi -->
     <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -266,13 +277,16 @@ function buy(e?: MouseEvent) {
         v-tip="`${tierConfig.metric} ölçeği: ${tierConfig.scale}`"
       >
         <span class="text-xs font-black tracking-tight leading-none">D{{ props.dimension.tier }}</span>
-        <span class="text-[9px] font-medium opacity-85 leading-tight mt-0.5">{{ tierConfig.scale }}</span>
+        <span class="text-[10px] font-bold opacity-90 leading-tight mt-0.5 whitespace-nowrap">{{ tierConfig.symbol }}</span>
       </div>
 
-      <!-- Başlık ve Meta Bilgileri -->
+      <!-- Başlık ve Meta Bilgileri (alt yazı kaldırıldı — açıklama ismin tooltip'inde) -->
       <div class="flex flex-col min-w-0 flex-1">
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-xs font-bold text-slate-100 truncate max-w-[130px] sm:max-w-[200px] md:max-w-none">
+          <span
+            class="text-xs font-bold text-slate-100 truncate max-w-[130px] sm:max-w-[200px] md:max-w-none cursor-help"
+            v-tip="tierConfig.subtitle"
+          >
             {{ tierConfig.shortName }}
           </span>
 
@@ -291,9 +305,9 @@ function buy(e?: MouseEvent) {
             {{ milestoneInfo.current.shortName }}
           </span>
 
-          <!-- Toplam Çarpan -->
+          <!-- Toplam Çarpan (ikincil bilgi — rozet hiyerarşisinde silik) -->
           <span
-            class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 tabular-nums shrink-0 cursor-help select-none"
+            class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.03] text-slate-500 border border-white/[0.06] tabular-nums shrink-0 cursor-help select-none"
             v-tip="`D${props.dimension.tier} Çarpanı: Toplam ×${displayMultText} kat çekim gücü`"
           >
             ×{{ displayMultText }}
@@ -302,7 +316,7 @@ function buy(e?: MouseEvent) {
           <!-- Sinerji Bağlantısı -->
           <span
             v-if="partnerInfo.partnerBought > 0 && partnerInfo.mult > 1"
-            class="hidden lg:inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tabular-nums shrink-0 cursor-help select-none"
+            class="hidden lg:inline-flex items-center gap-1 text-[10px] font-sans px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tabular-nums shrink-0 cursor-help select-none"
             v-tip="`Kuantum Rezonans Bağı: ${partnerInfo.label} (${partnerInfo.partnerBought} adet) bu boyuta ×${partnerInfo.mult.toFixed(2)} çarpan sağlıyor`"
           >
             <Link class="w-2.5 h-2.5 text-cyan-400" />
@@ -310,10 +324,6 @@ function buy(e?: MouseEvent) {
           </span>
         </div>
 
-        <!-- Açıklama / Alt Metin -->
-        <span class="text-[10px] text-slate-400 truncate max-w-[160px] sm:max-w-[280px] md:max-w-[400px] leading-tight select-none mt-0.5">
-          {{ tierConfig.subtitle }}
-        </span>
       </div>
     </div>
 
@@ -339,7 +349,7 @@ function buy(e?: MouseEvent) {
         v-hold="buy"
         :disabled="!canAfford"
         :aria-label="`D${props.dimension.tier} boyutu satın al`"
-        class="btn-tactile hit-44 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex flex-col items-end justify-center border shrink-0 relative overflow-hidden min-w-[88px] sm:min-w-[104px]"
+        class="btn-tactile hit-44 px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all flex flex-col items-end justify-center border shrink-0 relative overflow-hidden min-w-[88px] sm:min-w-[104px]"
         :class="[
           canAfford
             ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-100 border-purple-500/40 cursor-pointer shadow-xs affordance-pulse'
@@ -352,7 +362,7 @@ function buy(e?: MouseEvent) {
           <span class="tabular-nums font-bold text-xs">{{ displayCostText }}</span>
         </div>
 
-        <div class="flex items-center gap-1 text-[9px] font-mono leading-none mt-1 z-10 tabular-nums">
+        <div class="flex items-center gap-1 text-[10px] font-sans leading-none mt-1 z-10 tabular-nums">
           <span :class="canAfford ? 'text-purple-300/80' : 'text-slate-500'">{{ packProgress }}/10</span>
           <span v-if="canAfford && affordableUnits > 0" class="text-emerald-400 font-bold">
             (+{{ affordableUnits }})

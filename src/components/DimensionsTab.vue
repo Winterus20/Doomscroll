@@ -71,6 +71,8 @@ const shiftProgressPercent = computed(() => {
 
 const galaxyReq = computed(() => store.galaxyRequirement)
 const galaxyTier = computed(() => store.galaxyRequirementTier)
+// Hedef boyut henüz kilitliyse ölü ilerleme (0/40 D8) yerine teaser gösterilir
+const isGalaxyTierLocked = computed(() => galaxyTier.value > store.unlockedDimensionsCount)
 const currentGalaxyDimAmount = computed(() => {
   const dim = store.dimensions[galaxyTier.value - 1]
   return dim ? dim.amount : D_0
@@ -431,12 +433,17 @@ function handleTouchEnd(e: TouchEvent) {
               <span class="font-semibold text-xs text-slate-200">Kozmik Çöküş</span>
               <span class="text-[10px] font-mono text-amber-400">Adet: {{ store.galaxies }}</span>
             </div>
-            <div class="text-[11px] font-mono text-slate-400 tabular-nums">
-              {{ format(currentGalaxyDimAmount, 0, store.settings.notation) }} / {{ galaxyReq }} D{{ galaxyTier }}
+            <div v-if="isGalaxyTierLocked" class="text-[11px] font-sans text-slate-500 leading-tight">
+              D{{ galaxyTier }} açılınca aktifleşir
             </div>
-            <div class="progress-track progress-track-mini w-20 sm:w-24 mt-1">
-              <div class="progress-fill progress-fill-amber" :style="{ width: `${galaxyProgressPercent}%` }"></div>
-            </div>
+            <template v-else>
+              <div class="text-[11px] font-mono text-slate-400 tabular-nums">
+                {{ format(currentGalaxyDimAmount, 0, store.settings.notation) }} / {{ galaxyReq }} D{{ galaxyTier }}
+              </div>
+              <div class="progress-track progress-track-mini w-20 sm:w-24 mt-1">
+                <div class="progress-fill progress-fill-amber" :style="{ width: `${galaxyProgressPercent}%` }"></div>
+              </div>
+            </template>
           </div>
         </div>
 

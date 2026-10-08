@@ -1,5 +1,25 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Lab P0+P1 rebalance (QoL + denge + reviewer düzeltmeleri)
+
+### Kapsam:
+- `src/components/LabTab.vue`: toplu hasat/ek, hype `+%X/sn` hızı, rezonans önizleme (foton/graviton/merkez+ağır), cooldown butonu (`canTriggerViralDrop` + geri sayım), efektif maliyet gösterimi.
+- `src/stores/game.ts`: tohum maliyet ölçekleme (log10>65 her 25 dekad ×2, tavan ×64), vent cooldown 120sn (`lastViralAt` + save/load uyumu), egzotik lone-penalty 4'lü (`1+(b-1)/2`, magnetic dahil), fluctuation hasat ×2 %20.
+- `tests/lab-rebalance.spec.ts` + `src/game/lab-rebalance.test.ts`: 21 test, gerçek tip birliği (`balanced` kaldırıldı), egzotik formül oyunla eşitlendi.
+- `brain/decisions/0050-lab-rebalance.md`: ADR.
+
+### Doğrulama:
+- `npm run build` temiz (1707 modül, 0 hata).
+- `npx vitest run` 220/220 geçti.
+
+## [2026-10-08] — Emin misin kutuları sarsıntıda kaymıyor (Teleport fix)
+
+### Kapsam:
+- `src/components/ConfirmModal.vue`: kök overlay `Teleport to="body"` içine alındı — `#game-main-content` shake transform'u artık fixed kutuyu hapsetmiyor, kutu viewport ortasında sabit kalıyor.
+
+### Doğrulama:
+- `npm run build` temiz (1707 modül, 0 hata).
+
 ## [2026-10-08] — Bot kilidi açılınca açık botlar otomatik vites yükseltir
 
 ### Kapsam:

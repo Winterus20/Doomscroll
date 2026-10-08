@@ -29,11 +29,15 @@ const { dialogRef } = useFocusTrap(true, {
 </script>
 
 <template>
-  <!-- QoL: tüm prestij/sıfırlama aksiyonları için tek onay diyaloğu (settings.confirmDialogs'a bağlı) -->
-  <div
-    class="layer-modal fixed inset-0 flex items-center justify-center p-4 bg-black/70"
-    @click.self="emit('cancel')"
-  >
+  <!-- QoL: tüm prestij/sıfırlama aksiyonları için tek onay diyaloğu (settings.confirmDialogs'a bağlı)
+    Teleport: #game-main-content screen-shake transform'u aldığında fixed çocuklar
+    containing block'e hapsolup kutuyla birlikte kayıyordu. body'ye ışınlanınca
+    kutu viewport'ta sabit kalır, arka plan sallanmaya devam eder. -->
+  <Teleport to="body">
+    <div
+      class="layer-modal fixed inset-0 flex items-center justify-center p-4 bg-black/70"
+      @click.self="emit('cancel')"
+    >
     <div
       ref="dialogRef"
       role="dialog"
@@ -71,5 +75,6 @@ const { dialogRef } = useFocusTrap(true, {
         </button>
       </div>
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>

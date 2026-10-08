@@ -22,11 +22,11 @@ import {
 } from 'lucide-vue-next'
 import { musicEngine, MUSIC_TRACKS } from '../core/music-engine'
 import { sounds } from '../core/audio'
+import { safeConfetti, isPageVisible } from '../core/celebrate'
 import { getFeatureById, unlockProgress } from '../game/unlocks'
 import { Decimal, D_1 } from '../core/math'
 import { useAuthStore } from '../stores/auth'
 import ConfirmModal from './ConfirmModal.vue'
-import confetti from 'canvas-confetti'
 
 const emit = defineEmits<{ (e: 'open-settings'): void; (e: 'open-auth'): void }>()
 
@@ -162,15 +162,7 @@ const heatScore = computed(() => {
 
 const motionOff = computed(() => store.settings.reduceAnimations || store.settings.batterySaver)
 
-// Logaritmik hız kademesi: skor <0.25 sakin, <0.5 ılık, <0.75 sıcak, üstü süpernova.
-type RateTier = 'calm' | 'warm' | 'hot' | 'supernova'
-const rateTier = computed<RateTier>(() => {
-  const s = heatScore.value
-  if (s >= 0.75) return 'supernova'
-  if (s >= 0.5) return 'hot'
-  if (s >= 0.25) return 'warm'
-  return 'calm'
-})
+// ADR-0049: logaritmik hız kademesi (rateTier) kaldırıldı — sayaç nabzı kapalı.
 
 
 // /s delta oku: ~1.5 sn arayla mps örneği, %5 bandı üstü ▲/▼.
@@ -194,41 +186,19 @@ function updateTrend(now: number) {
   } catch { /* yoksay */ }
 }
 
-// Alev histerezisi: 0.75'te tutuşur, 0.6'nın altına inmeden sönmez
-// (eşikte titreyip açılıp kapanmaz). Hareket kapalıyken alev yok.
+// ADR-0049: alev histerezisi kapalı — sayaç sakin kalır, okunaklık öncelikli.
+// flameOn her zaman false tutulur; şablon dalı korunur ama tetiklenmez.
 const flameOn = ref(false)
 watch(heatScore, (s) => {
-  if (!flameOn.value && s >= 0.75 && !motionOff.value) {
-    flameOn.value = true
-    // Tutuşma anı: tek seferlik kor patlaması (spam yok — geçişte bir kez)
-    try {
-      const r = counterRef.value?.getBoundingClientRect()
-      if (r) {
-        window.dispatchEvent(
-          new CustomEvent('doomscroll:shockwave', {
-            detail: { x: r.left + r.width / 2, y: r.top + r.height / 2, color: '#ff7b00', maxRadius: 150 }
-          })
-        )
-      }
-    } catch { /* yoksay */ }
-    sounds.playTallyTick(1)
-  } else if (flameOn.value && (s < 0.6 || motionOff.value)) {
+  if (flameOn.value && (s < 0.6 || motionOff.value)) {
     flameOn.value = false
   }
 })
 
 const counterHeatClass = computed(() => {
-  if (motionOff.value) return ''
-  switch (rateTier.value) {
-    case 'supernova':
-      return 'rate-supernova'
-    case 'hot':
-      return 'rate-hot'
-    case 'warm':
-      return 'rate-warm'
-    default:
-      return ''
-  }
+  // ADR-0049 Okunaklı Balatro: sayaçta sürekli nabız kapalı.
+  // Olay anı efektleri (count-pop, decade-flash) korunur.
+  return ''
 })
 
 
@@ -246,10 +216,11 @@ function checkDecade() {
         decadeTimer = null
       }, 900)
       // Büyük dekadlar (10'arlı): konfeti + orta sarsıntı + şok dalgası + payoff.
+      // Gizli sekmede kutlama yok (rAF durur + dönüşte lastDecade senkronlanır).
       if (dec % 10 === 0 && dec > 0) {
-        try {
-          confetti({ particleCount: 40, spread: 70, ticks: 120, disableForReducedMotion: true })
-        } catch { /* yoksay */ }
+        if (isPageVisible()) {
+          safeConfetti({ particleCount: 40, spread: 70, ticks: 120, disableForReducedMotion: true })
+        }
         try {
           sounds.playPayoff()
           window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'medium' } }))
@@ -409,7 +380,9 @@ const showFirstSwipeHint = computed(() => store.dimensions[0]?.bought === 0)
 const canAffordAny = computed(() => {
   if (canAffordTickspeed.value) return true
   for (let i = 1; i <= store.unlockedDimensionsCount; i++) {
-    if (store.matter.gte(store.getDimensionCost(i))) return true
+    const pack = store.getDimensionCost(i)
+    if (store.matter.gte(pack)) return true
+    if (store.matter.gte(pack.div(10))) return true
   }
   return false
 })
@@ -463,7 +436,22 @@ function stanceLockHint(featureId: string): { hint: string; progress: string } |
 }
 const stanceSpamLock = computed(() => stanceLockHint('stance_spam'))
 const stancePrivateLock = computed(() => stanceLockHint('stance_private'))
-const isStanceUnlocked = computed(() => (store.dimensions[0]?.bought ?? 0) >= 25 || store.isFeatureUnlocked('stance_spam'))
+// Bir kez açılan kapanmaz: D1×25 erken önizlemesi sıçramada sıfırlanıyordu
+// (bought koşu-içidir). İlk açılış localStorage'a mühürlenir, bir daha kapanmaz.
+const STANCE_SEEN_KEY = 'uroboros-stance-seen'
+const stanceSeen = ref(false)
+try {
+  stanceSeen.value = localStorage.getItem(STANCE_SEEN_KEY) === '1'
+} catch { /* yoksay */ }
+const isStanceUnlocked = computed(() => stanceSeen.value || (store.dimensions[0]?.bought ?? 0) >= 25 || store.isFeatureUnlocked('stance_spam'))
+watch(isStanceUnlocked, (v) => {
+  if (v && !stanceSeen.value) {
+    stanceSeen.value = true
+    try {
+      localStorage.setItem(STANCE_SEEN_KEY, '1')
+    } catch { /* yoksay */ }
+  }
+}, { immediate: true })
 const hasMobileControls = computed(() => isStanceUnlocked.value || inChallenge.value || singularityReady.value)
 
 function buyTickspeed() {
@@ -857,14 +845,16 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 3. DENETİM VE AKSİYON BUTONLARI ÇUBUĞU -->
+    <!-- 3. DENETİM VE AKSİYON BUTONLARI — tek sıra: duruş solda, aksiyon
+      hep sağda. Aksiyon grubundaki ml-auto, duruş kapalıyken bile grubu
+      sağda tutar; açılışta yatay kayma olmaz. -->
     <div
       :class="[
         hasMobileControls ? 'flex' : 'hidden md:flex',
         'flex-col md:flex-row items-center justify-between gap-3 pt-3 border-t border-white/[0.05]'
       ]"
     >
-      <!-- Sol: Stance Modları (Denetim Merkezi - İlk 25 alımdan sonra veya duruş açılınca görünür) -->
+      <!-- Sol: Stance Modları (bir kez açılır, bir daha kapanmaz) -->
       <div
         v-if="isStanceUnlocked"
         class="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.06] shrink-0 justify-center md:justify-start w-fit mx-auto md:mx-0 max-w-full overflow-x-auto no-scrollbar"
@@ -917,11 +907,11 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Sağ: TAKTİL BUTONLAR (Masaüstü eylem butonları + ortak Tekillik butonu) -->
+      <!-- Sağ: TAKTİL BUTONLAR (md:ml-auto ile duruş kapalıyken de sağda sabit) -->
       <div
         :class="[
           inChallenge || singularityReady ? 'flex' : 'hidden md:flex',
-          'items-center justify-center md:justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full'
+          'items-center justify-end gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto py-0.5 max-w-full md:ml-auto'
         ]"
       >
         <!-- Hipnotik Seri rozeti: masaüstünde YUT butonunun solunda belirir (mobilde FloatingThumbBar'da gösterilir) -->
@@ -943,7 +933,7 @@ onUnmounted(() => {
         <button
           ref="swipeBtnRef"
           @click="handleManualClick($event)"
-          class="hidden md:flex btn-tactile btn-sheen h-11 px-3.5 sm:px-4 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-white border border-purple-400/50 text-xs font-bold font-mono items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[115px] sm:min-w-[140px]"
+          class="hidden md:flex btn-tactile h-11 px-3.5 sm:px-4 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-white border border-purple-400/50 text-xs font-bold font-sans items-center gap-2 cursor-pointer shadow-md active:scale-95 shrink-0 min-w-[115px] sm:min-w-[140px]"
           :class="{ 'cta-beacon': showFirstSwipeHint }"
           aria-label="Manuel kütle yut"
           v-tip="swipeTip"
@@ -952,7 +942,7 @@ onUnmounted(() => {
           <div class="flex flex-col items-start text-left leading-tight">
             <div class="flex items-center gap-1">
               <span class="tracking-wide">YUT!</span>
-              <kbd class="hidden sm:inline-block px-1 py-0.5 rounded bg-black/50 border border-white/10 text-[9px] text-slate-400 font-mono font-normal">Space</kbd>
+              <kbd class="hidden sm:inline-block px-1 py-0.5 rounded bg-black/50 border border-white/10 text-[10px] text-slate-400 font-sans font-normal">Space</kbd>
             </div>
             <span class="text-[10px] text-purple-200/80 font-mono font-normal tabular-nums truncate max-w-[65px] sm:max-w-[90px]">
               +{{ displayClickPower }}

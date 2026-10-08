@@ -27,6 +27,64 @@ import LockedFeature from './LockedFeature.vue'
 const store = useGameStore()
 const selectedSeedType = ref<LabSeedType>('photon_resonator')
 const showCodexModal = ref(false)
+const bulkHarvestInfo = ref<string>('')
+
+const matureCellCount = computed(() => store.labCells.filter((c) => c.isMature && c.seedType !== null).length)
+
+const emptyCellCount = computed(() => store.labCells.filter((c) => c.seedType === null).length)
+
+const hypeRatePerSec = computed(() => {
+  if (store.labMode === 'superconductor') return 0
+  const modeMult = store.labMode === 'overdrive' ? 1.8 : 1.0
+  return (0.35 + matureCellCount.value * 0.3) * modeMult
+})
+
+function handleBulkHarvest(): void {
+  let count = 0
+  for (const cell of store.labCells) {
+    if (!cell.isMature || cell.seedType === null) continue
+    if (store.harvestCell(cell.id)) count += 1
+  }
+  bulkHarvestInfo.value = count > 0 ? `${count} olgun hücre hasat edildi.` : 'Hasat edilecek olgun hücre yok.'
+}
+
+function handleBulkPlant(): void {
+  if (isSeedLocked(selectedSeedType.value)) return
+  if (selectedSeed.value.isMutationOnly && !isSeedDiscovered(selectedSeedType.value)) return
+  for (const cell of store.labCells) {
+    if (cell.seedType !== null) continue
+    store.plantSeed(cell.id, selectedSeedType.value)
+  }
+}
+
+const resonancePreview = computed<{ cellId: number; mult: number } | null>(() => {
+  const emptyIds = store.labCells.filter((c) => c.seedType === null).map((c) => c.id)
+  if (emptyIds.length === 0) return null
+  let best: { cellId: number; mult: number } = { cellId: emptyIds[0], mult: 1 }
+  for (const id of emptyIds) {
+    const row = Math.floor(id / 3)
+    const col = id % 3
+    const neighbors: (typeof store.labCells)[number][] = []
+    if (row > 0) neighbors.push(store.labCells[id - 3])
+    if (row < 2) neighbors.push(store.labCells[id + 3])
+    if (col > 0) neighbors.push(store.labCells[id - 1])
+    if (col < 2) neighbors.push(store.labCells[id + 1])
+    const matureNeighbors = neighbors.filter((n) => n && n.isMature && n.seedType !== null)
+    let mult = 1
+    if (matureNeighbors.some((n) => n.seedType === 'photon_resonator')) mult *= 1.15
+    if (matureNeighbors.some((n) => n.seedType === 'graviton_trap')) mult *= 1.25
+    // Ağır sinerji tahmini: seçili tohum ağırsa ve komşuda ağır olgun varsa ×1.30
+    const isHeavySel = selectedSeedType.value === 'heavy_nucleon' || selectedSeedType.value === 'dark_matter_core' || selectedSeedType.value === 'magnetic_shield'
+    if (isHeavySel && matureNeighbors.some((n) => n.seedType === 'heavy_nucleon' || n.seedType === 'dark_matter_core' || n.seedType === 'magnetic_shield')) mult *= 1.3
+    if (id === 4) {
+      mult *= 1.5
+    } else if (matureNeighbors.some((n) => n.id === 4)) {
+      mult *= 1.2
+    }
+    if (mult > best.mult) best = { cellId: id, mult }
+  }
+  return best
+})
 
 // Parçacık kademesi (Özellik Merdiveni): Foton başlangıçta, Nükleon/Gluon/Graviton sırayla açılır
 const SEED_UNLOCK_FEATURES: Partial<Record<LabSeedType, string>> = {
@@ -55,7 +113,12 @@ const selectedSeed = computed(() => {
 function canAffordSeed(seedType: LabSeedType): boolean {
   const seed = LAB_SEEDS.find((s) => s.type === seedType)
   if (!seed) return false
-  return store.matter.gte(seed.cost)
+  const effective = store.labSeedEffectiveCost(seedType)
+  return store.matter.gte(effective)
+}
+
+function effectiveSeedCost(seedType: LabSeedType) {
+  return store.labSeedEffectiveCost(seedType)
 }
 
 function handleCellClick(cellId: number) {
@@ -309,7 +372,7 @@ function handleCollapseReactor() {
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-            <span class="text-xs font-mono font-bold text-rose-300">💥 SÜPERKRİTİK PLAZMA BOŞALIMI AKTİF!</span>
+            <span class="text-xs font-sans font-bold text-rose-300">Süperkritik plazma boşalımı aktif</span>
           </div>
           <div class="text-xs font-mono text-slate-300 flex items-center gap-3">
             <span class="flex items-center gap-1 text-cyan-300">
@@ -361,21 +424,32 @@ function handleCollapseReactor() {
               :style="{ width: `${store.labHype}%` }"
             ></div>
           </div>
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 tabular-nums">
+            <span v-if="store.labMode === 'superconductor'" class="text-amber-400">
+              ❄️ Plazma şarjı donduruldu (Süperiletken)
+            </span>
+            <span v-else>
+              +{{ hypeRatePerSec.toFixed(2) }}%/sn plazma şarj hızı ({{ matureCellCount }} olgun hücre)
+            </span>
+          </div>
         </div>
 
         <button
           @click="store.triggerSupercriticalVent()"
-          :disabled="!isHypeFull"
+          :disabled="!store.canTriggerViralDrop"
           class="w-full py-2.5 px-4 rounded-xl font-mono text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
           :class="[
-            isHypeFull
+            store.canTriggerViralDrop
               ? 'bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 text-black hover:opacity-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:scale-[1.01]'
               : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed opacity-60'
           ]"
         >
-          <Rocket class="w-4 h-4" :class="isHypeFull ? 'animate-bounce' : ''" />
-          <span v-if="isHypeFull">
-            💥 SÜPERKRİTİK BOŞALIM BAŞLAT! (60s Kütle + ×{{ store.labViralMultiplier.toFixed(1) }} Canlı Plazma Çarpanı)
+          <Rocket class="w-4 h-4" :class="store.canTriggerViralDrop ? 'animate-bounce' : ''" />
+          <span v-if="store.canTriggerViralDrop">
+            Süperkritik Boşalım Başlat (60s Kütle + ×{{ store.labViralMultiplier.toFixed(1) }} Canlı Plazma Çarpanı)
+          </span>
+          <span v-else-if="isHypeFull && store.viralCooldownRemaining > 0">
+            Reaktör Soğuyor ({{ Math.ceil(store.viralCooldownRemaining) }}sn bekleme)
           </span>
           <span v-else>
             Plazma Şarj Oluyor (%{{ Math.floor(store.labHype) }} / %100)
@@ -394,6 +468,51 @@ function handleCollapseReactor() {
             <span>Kuantum Akı Devresi (3×3 Süperiletken Matris)</span>
           </span>
           <span class="section-hint">ÇÜRÜME YOK! Parçacıklar kalıcı çalışır</span>
+        </div>
+
+        <!-- Toplu Hasat & Toplu Ek -->
+        <div class="flex items-center gap-2 mb-2.5 flex-wrap">
+          <button
+            @click="handleBulkHarvest"
+            :disabled="matureCellCount === 0"
+            v-tip="'Tüm olgun hücreleri tek tıkla hasat et'"
+            class="px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            :class="[
+              matureCellCount > 0
+                ? 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300'
+                : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-60'
+            ]"
+          >
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>Toplu Hasat ({{ matureCellCount }})</span>
+          </button>
+          <button
+            @click="handleBulkPlant"
+            :disabled="emptyCellCount === 0 || isSeedLocked(selectedSeedType) || (selectedSeed.isMutationOnly && !isSeedDiscovered(selectedSeedType))"
+            v-tip="'Seçili tohumu tüm boş hücrelere ek'"
+            class="px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            :class="[
+              emptyCellCount > 0 && !isSeedLocked(selectedSeedType) && !(selectedSeed.isMutationOnly && !isSeedDiscovered(selectedSeedType))
+                ? 'border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300'
+                : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-60'
+            ]"
+          >
+            <Layers class="w-3.5 h-3.5" />
+            <span>Toplu Ek: {{ selectedSeed.name }} ({{ emptyCellCount }})</span>
+          </button>
+          <span v-if="bulkHarvestInfo" class="text-[10px] font-mono text-emerald-400">
+            {{ bulkHarvestInfo }}
+          </span>
+        </div>
+
+        <!-- Rezonans önizlemesi: seçili tohumun en iyi boş hücredeki tahmini komşuluk bonusu -->
+        <div v-if="resonancePreview" class="mb-2.5 text-[10px] font-mono text-slate-400 tabular-nums">
+          <span v-if="resonancePreview.mult > 1" class="text-cyan-300">
+            ✨ {{ selectedSeed.name }} → Hücre {{ resonancePreview.cellId }}: tahmini komşuluk bonusu ×{{ resonancePreview.mult.toFixed(2) }} (foton +%15, graviton ×1.25, merkez ×1.5 / komşu +%20)
+          </span>
+          <span v-else>
+            {{ selectedSeed.name }} için boş hücrelerde aktif komşuluk bonusu yok.
+          </span>
         </div>
 
         <!-- Süperiletken Hat Durum Bildirimi -->
@@ -607,7 +726,7 @@ function handleCollapseReactor() {
       >
         <Crown class="w-4 h-4" />
         <span v-if="store.canCollapseReactor">
-          👑 REAKTÖRÜ TEKİLLİĞE KURBAN ET! (Kozmik Relik Lv. {{ (store.reactorCollapseCount || 0) + 1 }} Kazan)
+          Reaktörü Tekilliğe Kurban Et (Kozmik Relik Lv. {{ (store.reactorCollapseCount || 0) + 1 }} Kazan)
         </span>
         <span v-else>
           Reaktör Çöküşü Kilitli (4 Egzotik Formülün Tamamı Sentezlenmeli: {{ store.labCodexDiscoveredCount }}/4)
@@ -678,7 +797,7 @@ function handleCollapseReactor() {
                   class="text-[10px] font-mono tabular-nums"
                   :class="canAffordSeed(seed.type) ? 'text-cyan-300' : 'text-slate-500'"
                 >
-                  {{ formatNumber(seed.cost, store.settings.notation) }}
+                  {{ formatNumber(effectiveSeedCost(seed.type), store.settings.notation) }}
                 </span>
               </div>
               <div class="text-xs font-bold font-mono text-slate-200 line-clamp-1">{{ seed.name }}</div>

@@ -4,7 +4,7 @@ import { useGameStore } from '../stores/game'
 import { sounds } from '../core/audio'
 import { Radio, Zap, ChevronRight, Sparkles, Pause, Gauge } from 'lucide-vue-next'
 import { Decimal } from '../core/math'
-import confetti from 'canvas-confetti'
+import { safeConfetti } from '../core/celebrate'
 import { NEWS_DATABASE, type NewsItem, type NewsClickResult } from '../game/news'
 
 const store = useGameStore()
@@ -64,6 +64,17 @@ const currentPxPerSec = computed(() => {
 })
 
 /**
+ * Haber metnini çözümler (statik ya da dinamik). Boş metin bandı boş bırakır.
+ */
+function resolveNewsText(item: NewsItem): string {
+  try {
+    return typeof item.text === 'function' ? item.text(store) : item.text
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Tekrarı engelleyerek sıradaki haberi seç
  */
 function pickNextNews() {
@@ -78,8 +89,13 @@ function pickNextNews() {
   const candidatePool = pool.filter((item) => !recentTickers.value.includes(item.id))
   const finalPool = candidatePool.length > 0 ? candidatePool : pool
 
-  // Rastgele seç
-  const picked = finalPool[Math.floor(Math.random() * finalPool.length)]
+  // Rastgele seç — boş metinli haber gelirse dolu bulunana kadar yeniden seç
+  let picked = finalPool[Math.floor(Math.random() * finalPool.length)]
+  let guard = 0
+  while (!resolveNewsText(picked) && guard < finalPool.length) {
+    picked = finalPool[Math.floor(Math.random() * finalPool.length)]
+    guard++
+  }
   currentNews.value = picked
 
   // Son görülenlere ekle (maksimum 15 adet sakla)
@@ -206,7 +222,7 @@ function handleTickerClick(e: MouseEvent) {
         }
         if (result.effect === 'confetti') {
           sounds.playMythicCollect()
-          confetti({
+          safeConfetti({
             particleCount: 65,
             spread: 60,
             origin: { y: 0.15 },

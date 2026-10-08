@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import type { FloatingAnomaly, AnomalyType } from '../models/types'
-import confetti from 'canvas-confetti'
+import { safeConfetti } from '../core/celebrate'
 import {
   Flame,
   Zap,
@@ -47,11 +47,11 @@ function getCapsuleGlow(type: AnomalyType | string) {
 }
 
 function getAnomalyEdition(type: AnomalyType | string) {
+  // ADR-0049 P1: edition sadece nadir anlarda. Sıradan anomaliler sakin kapsül.
   if (!(store.settings.holoCardsEnabled ?? true)) return ''
   if (type === 'void') return 'edition-poly'
   if (type === 'heart_frenzy') return 'edition-poly'
-  if (type === 'fyp') return 'edition-foil'
-  return 'edition-holo'
+  return ''
 }
 
 function getTiltConfig(type: AnomalyType | string) {
@@ -130,8 +130,8 @@ function handleAnomalyClick(anomaly: FloatingAnomaly, event: MouseEvent) {
   const originX = Math.max(0, Math.min(1, clientX / window.innerWidth))
   const originY = Math.max(0, Math.min(1, clientY / window.innerHeight))
 
-  // 1. Canvas Konfeti
-  confetti({
+  // 1. Canvas Konfeti (manuel tıklama — sayfa görünürken kutlar)
+  safeConfetti({
     particleCount: anomaly.type === 'void' ? 80 : 50,
     spread: anomaly.type === 'void' ? 95 : 75,
     origin: { x: originX, y: originY },
@@ -214,13 +214,13 @@ function handleAnomalyKey(anomaly: FloatingAnomaly, event: KeyboardEvent) {
             anomaly.remainingTime <= 3.5 ? 'panic-pulse' : ''
           ]"
         >
-          <!-- Dönen Lazer Çerçeve (Border Beam Lazer) -->
-          <div class="anomaly-beam-border"></div>
+          <!-- Dönen Lazer Çerçeve — ADR-0049 P1: yalnızca Void tekilliğinde -->
+          <div v-if="anomaly.type === 'void'" class="anomaly-beam-border"></div>
 
           <!-- İç Kart İçeriği (solid zemin: mobil GPU dostu, blur yok) -->
           <div class="relative rounded-2xl bg-[#0a0d14] px-3.5 py-2.5 flex items-center gap-3 border border-white/[0.08] overflow-hidden">
-            <!-- Holografik Işıltı Sweep (Shimmer Line) -->
-            <div class="crisis-shimmer"></div>
+            <!-- Holografik Sweep — ADR-0049 P1: yalnızca Void'de -->
+            <div v-if="anomaly.type === 'void'" class="crisis-shimmer"></div>
 
             <!-- Sol İkon + Countdown Halkası -->
             <div class="relative w-11 h-11 shrink-0">
@@ -388,7 +388,7 @@ function handleAnomalyKey(anomaly: FloatingAnomaly, event: KeyboardEvent) {
               <div class="flex items-center justify-between gap-1">
                 <span class="flex items-center gap-1.5 min-w-0">
                   <span
-                    class="text-[9px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-xs truncate"
+                    class="text-[10px] font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-xs truncate"
                     :class="getTagStyle(anomaly.type)"
                   >
                     {{ getCategoryTag(anomaly.type) }}

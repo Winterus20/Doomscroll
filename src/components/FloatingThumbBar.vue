@@ -15,7 +15,9 @@ const canAffordTickspeed = computed(() => store.matter.gte(store.tickspeedCost))
 const canAffordAny = computed(() => {
   if (canAffordTickspeed.value) return true
   for (let i = 1; i <= store.unlockedDimensionsCount; i++) {
-    if (store.matter.gte(store.getDimensionCost(i))) return true
+    const pack = store.getDimensionCost(i)
+    if (store.matter.gte(pack)) return true
+    if (store.matter.gte(pack.div(10))) return true
   }
   return false
 })
@@ -57,13 +59,11 @@ function handleConsume(e: MouseEvent | TouchEvent) {
 
 function handleTickspeed() {
   if (!canAffordTickspeed.value) return
-  sounds.playBuy()
   store.buyTickspeed()
 }
 
 function handleMaxAll() {
   if (!canAffordAny.value) return
-  sounds.playBuy()
   store.maxAll()
 }
 </script>
