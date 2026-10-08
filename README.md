@@ -1,11 +1,13 @@
-# Doomscroll: The Endless Reels
+# UROBOROS (The Cosmic Feast)
 
-> Gece 02:47'de "sadece 2 dakika Reels izleyip uyuyacağım" diye yatağa girip,
-> başparmağının hipnotik yukarı kaymasıyla sabahın 06:15'ine sürüklenen,
-> evreni içine çeken sonsuz dopamin tekilliği.
+> Laboratuvarda karbon salınımını sıfırlamak isteyen bir bilim insanının
+> kuantum filtresi, Planck ölçeğinde uzay-zamanı yırtar ve mikro-karadelik
+> doğar. Oda, şehir, Dünya, Güneş derken tüm Samanyolu'nu yutan sonsuz
+> bir kozmik tekillik: Uroboros.
 
 **Antimatter Dimensions + Cookie Clicker + Synergism + Trimps** sentezi; yeni nesil
-çok katmanlı bir incremental / idle oyunu.
+çok katmanlı bir incremental / idle oyunu. Ana kaynak **YUTULAN KÜTLE (g)**,
+hedef Faz 0'da **0 → 1.79e308 g** ve ilk **Kozmik Çöküş**.
 
 ---
 
@@ -13,10 +15,10 @@
 
 ```powershell
 npm install        # bağımlılıklar (vitest dahil)
-npm run dev        # geliştirme sunucusu (http://localhost:5173)
+npm run dev        # geliştirme sunucusu (http://localhost:3000)
 npm run build      # vue-tsc (tip kontrolü) + vite build
 npm run preview    # derlenmiş paketi önizle
-npm test           # 92 birim testi (vitest)
+npm test           # 199 birim testi, 11 dosya (vitest)
 ```
 
 | Komut | Ne yapar |
@@ -67,15 +69,17 @@ src/
 │   ├── auth/           Firebase yapılandırma, kimlik, bulut kayıt
 │   └── music/          prosedürel Lo-Fi müzik motoru
 ├── game/            SAF VERİ + saf fonksiyonlar (Pinia'sız, doğrudan test edilebilir)
-│   ├── achievements.ts  68 başarım + check(ctx) predicate'leri
-│   ├── challenges.ts    8 Gece Kriz meydan okuması
-│   ├── unlocks.ts       20 rungsuzluk merdiveni
-│   └── dimension_identity.ts
+│   ├── achievements.ts  75+ başarım + check(ctx) predicate'leri
+│   ├── challenges.ts    8 kozmik meydan okuma
+│   ├── unlocks.ts       16 basamaklı dekad merdiveni (1e3 → 1e308)
+│   ├── pacing.ts        9 dekad bandı + Dekad Yükselişi çarpanı
+│   ├── news.ts          100+ haber bandı iletisi
+│   └── dimension_identity.ts  D1-D8 kimlikleri (ad / ölçek / lore / pasif)
 ├── stores/
 │   ├── game.ts       ana durum (ekonomi, prestij, tick)
 │   └── auth.ts       kimlik + bulut senkronizasyonu
 ├── models/          tüm tipler
-└── components/      9 sekme + overlay'ler + modaller
+└── components/      ~29 bileşen (sekmeler + overlay'ler + modaller)
 ```
 
 **Neden `src/game/` ayrı?** Bu klasördeki modüller Pinia store'una bağımlı değildir;
@@ -87,6 +91,8 @@ için `npm test` doğrudan bunları test eder — store'u yeniden düzenlemek ge
 ## Kayıt Sistemi
 
 - **3 bağımsız slot** (`DOOMSCROLL_SAVE_V1`, `DOOMSCROLL_SAVE_SLOT_2/3`)
+  (anahtar adları eski temadan kalma legacy isimlerdir, geriye dönük uyumluluk
+  için korunur — slot 1 her zaman eski anahtarla %100 uyumludur)
 - Her slot için **otomatik yedek rotasyonu** (6 kayıtta bir)
 - **Bozuk kayıt karantinaya alınır** — autosave kanıtı silmez
 - `saveVersion` migration zinciri + **gelecek sürüm koruması**
