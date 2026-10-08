@@ -1,3 +1,3 @@
 # Aktif Görev (In-Progress)
 
-Aktif görev yok. Plaket kart taşma + boy eşitliği düzeltmesi tamamlanıp `completed.md` dosyasına işlendi.
+Aktif görev yok. Plaket Sıradaki + ödül şerit çakışması tamamlanıp `completed.md` dosyasına işlendi.

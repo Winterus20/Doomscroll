@@ -1,5 +1,13 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Plaket Sıradaki + ödül şerit çakışması
+
+### Kapsam:
+- `AchievementsTab.vue`: ödüllü karttaki yeşil sol şerit, kart aynı zamanda "Sıradaki" ise basılmıyor — amber halka tek vurgu olarak kalıyor, renk çakışması bitti.
+
+### Doğrulama:
+- `npm run build` temiz (1706 modül, 0 hata).
+
 ## [2026-10-08] — Plaket kart taşma + boy eşitliği düzeltmesi
 
 ### Kapsam:

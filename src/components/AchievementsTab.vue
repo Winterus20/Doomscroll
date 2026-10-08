@@ -236,7 +236,7 @@ const rewardedTotal = computed(() => ACHIEVEMENTS.filter((a) => a.reward).length
               isUnlocked(ach.id)
                 ? 'bg-amber-500/[0.05] border-amber-500/25'
                 : 'bg-black/30 border-white/[0.04] opacity-60',
-              ach.reward ? 'border-l-2 border-l-emerald-400/70' : '',
+              ach.reward && !isNext(ach.id, cat.id) ? 'border-l-2 border-l-emerald-400/70' : '',
               isNext(ach.id, cat.id) ? 'ring-1 ring-amber-400/60 border-amber-400/40 opacity-100' : ''
             ]"
           >
