@@ -1,5 +1,26 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Bot kilidi açılınca açık botlar otomatik vites yükseltir
+
+### Kapsam:
+- `src/stores/game.ts`: `unlockBulkMode()` artık kilidi açarken `unlocked && enabled` botları (singularity hariç) `bulk` + interval + timer sıfırlar; `unlockMaxMode()` aynı şekilde `max` moduna geçirir. Kapalı botlara dokunulmaz.
+
+### Doğrulama:
+- `npm run build` temiz (1707 modül, 0 hata).
+
+## [2026-10-08] — Konfeti kapısı (yalnızca kullanıcı eyleminde kutlama)
+
+### Kapsam:
+- `src/core/celebrate.ts` (yeni): `isPageVisible()` + `safeConfetti()` tek kapı — gizli sekmede asla konfeti yok.
+- `src/stores/game.ts`: tüm doğrudan `confetti()` çağrıları `safeConfetti()`'ye çevrildi (20 nokta); `activeGameTab` + `setActiveGameTab()` eklendi (kayıt edilmez); `checkAchievements()` gizli sekmede sessiz (toast kuyruğu yine birikir); lab oto-sentezi yalnızca `lab` sekmesinde + görünürken kutlar; `completeChallenge(celebrate)` eklendi — `update()` oto-tamamlama ve bot yolu `false` geçiyor, manuel butonlar kutlamaya devam ediyor; `singularityReset` bayrağı challenge yoluna taşınıyor.
+- `src/components/Header.vue`: dekad konfetisi `safeConfetti` + görünürlük kapısından geçiyor.
+- `src/components/AnomalyOverlay.vue`, `CommentTicker.vue`: tıklama konfetileri aynı kapıdan geçiyor (manuel eylem korunur).
+- `src/App.vue`: `activeTab` store'a senkronlanıyor (switch + watch immediate + kilit geri dönüşü).
+
+### Doğrulama:
+- `npm run build` temiz (1707 modül, 0 hata).
+- `npm test -- --run` 199/199 geçti.
+
 ## [2026-10-08] — Plaket Sıradaki + ödül şerit çakışması
 
 ### Kapsam:

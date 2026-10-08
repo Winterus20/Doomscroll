@@ -4,13 +4,7 @@ import { sounds } from '../core/audio'
 import { musicEngine } from '../core/music-engine'
 import { SaveSystem } from '../core/save'
 import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, SaveVersionError } from '../core/save-version'
-import confetti from 'canvas-confetti'
-
-function safeConfetti(opts?: confetti.Options) {
-  if (typeof document !== 'undefined') {
-    confetti(opts)
-  }
-}
+import { safeConfetti, isPageVisible } from '../core/celebrate'
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_CATEGORIES,
@@ -1038,19 +1032,27 @@ function dimensionCostForBucket(
   return baseCost.times(Decimal.pow(fullMult, bucket))
 }
 
-function calcDimensionPackTotal(
+function calcDimensionExactTotal(
   tier: number,
   baseCost: Decimal,
   fullMult: Decimal,
-  startBucket: number,
-  packs: number
+  bought: number,
+  packs: number,
+  flat: Decimal
 ): Decimal {
   if (packs <= 0) return D_0
   let total = D_0
-  for (let i = 0; i < packs; i++) {
-    total = total.plus(dimensionCostForBucket(tier, startBucket + i, baseCost, fullMult))
+  let remaining = 10 * packs
+  let cursor = bought
+  while (remaining > 0) {
+    const bucket = Math.floor(cursor / 10)
+    const unitPrice = dimensionCostForBucket(tier, bucket, baseCost, fullMult).div(10)
+    const take = Math.min(10 - (cursor % 10), remaining)
+    total = total.plus(unitPrice.times(take))
+    cursor += take
+    remaining -= take
   }
-  return total
+  return total.times(flat)
 }
 
 function calcMaxDimensionPacks(
@@ -1130,6 +1132,40 @@ function calcMaxPacks(
     else break
   }
   return n
+}
+
+// ---- Tickspeed tekil maliyet: tickspeedCost getter ile birebir (floor sırası dahil) ----
+function tickspeedStepCost(
+  step: number,
+  base: Decimal,
+  ratio: Decimal,
+  infl: Decimal,
+  isPrivate: boolean,
+  hasDiscount: boolean,
+  effMult: number
+): Decimal {
+  let c = base.times(Decimal.pow(ratio, step)).times(infl)
+  if (isPrivate) c = c.times(0.85).floor()
+  if (hasDiscount) c = c.times(0.95).floor()
+  if (effMult !== 1) c = c.times(effMult).floor()
+  return c
+}
+
+function calcTickspeedExactTotal(
+  start: number,
+  count: number,
+  base: Decimal,
+  ratio: Decimal,
+  infl: Decimal,
+  isPrivate: boolean,
+  hasDiscount: boolean,
+  effMult: number
+): Decimal {
+  let total = D_0
+  for (let i = 0; i < count; i++) {
+    total = total.plus(tickspeedStepCost(start + i, base, ratio, infl, isPrivate, hasDiscount, effMult))
+  }
+  return total
 }
 
 // ---- Performans: saf-fonksiyon memo'ları (Vue computed iç fonksiyonları her çağrıda yeniden hesaplar) ----
@@ -1375,6 +1411,9 @@ export const useGameStore = defineStore('game', {
     // QoL: simülasyon sırasında ses/konfeti spam'ini bastıran bayrak (kayıt edilmez)
     offlineSimActive: false,
     offlineAchTick: 0, // offline simülasyonda başarım kontrolü seyreltme sayacı
+    // QoL: aktif oyun sekmesi (kayıt edilmez) — otomatik olaylar yalnızca
+    // ilgili sekme açıkken kutlar (örn. lab oto-sentezi `lab` sekmesinde).
+    activeGameTab: 'dimensions' as string,
 
     // QoL: saniyelik üretim geçmişi (Rapor sparkline, max 600 örnek; kayıt edilmez)
     dpsHistory: [] as number[],
@@ -2260,7 +2299,8 @@ export const useGameStore = defineStore('game', {
 
         const infl = challengeCostInflationMult(state)
         const eff = memoChallengeEffects(state.completedChallenges)
-        const flat = eff.dimCostMult !== 1 ? infl.times(eff.dimCostMult) : infl
+        const dimDiscount = hasAchievementReward(state.achievements, 'dim_cost_x085') ? 0.85 : 1
+        const flat = infl.times(eff.dimCostMult).times(dimDiscount)
 
         let units = 0
         let spent = D_0
@@ -3176,11 +3216,18 @@ export const useGameStore = defineStore('game', {
       this.emitProductionSurge(mpsBefore, playSound)
     },
 
-    // 10'luk İstasyon Satın Alımı
+    // 10'luk İstasyon Satın Alımı (kısmi kova-aware: 5/10 dolu kovadan alımda sınır doğru fiyatlanır)
     buyDimension(tier: number, playSound = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
       const dim = this.dimensions[tier - 1]
-      const cost = this.getDimensionCost(tier)
+      if (!dim) return false
+      const infl = challengeCostInflationMult({
+        activeChallenge: this.activeChallenge,
+        challengeCostInflation: this.challengeCostInflation
+      })
+      const eff = memoChallengeEffects(this.completedChallenges)
+      const flat = infl.times(eff.dimCostMult).times(this.achievementDimCostMult)
+      const cost = calcDimensionExactTotal(tier, dim.baseCost, dim.costMult, dim.bought, 1, flat)
 
       if (this.matter.gte(cost)) {
         const mpsBefore = this.matterPerSecond
@@ -3198,7 +3245,7 @@ export const useGameStore = defineStore('game', {
       return false
     },
 
-    // Bir İstasyondan Alınabildiği Kadar Satın Al (matematiksel: döngüsüz geometrik seri)
+    // Bir İstasyondan Alınabildiği Kadar Satın Al (kısmi kova-aware: hizalı tahmin + net toplamla düzeltme)
     buyMaxDimension(tier: number, playSound = true, feedbackSurge = true): boolean {
       if (tier > this.unlockedDimensionsCount) return false
       const dim = this.dimensions[tier - 1]
@@ -3209,24 +3256,46 @@ export const useGameStore = defineStore('game', {
         challengeCostInflation: this.challengeCostInflation
       })
       const eff = memoChallengeEffects(this.completedChallenges)
-      const flat = infl.times(eff.dimCostMult)
+      const flat = infl.times(eff.dimCostMult).times(this.achievementDimCostMult)
       const budget = this.matter.div(flat)
-      const packs = calcMaxDimensionPacks(
+      const cap = maxBuyPacksCap(this.singularities)
+      let packs = calcMaxDimensionPacks(
         tier,
         dim.baseCost,
         dim.costMult,
         startBucket,
         budget,
-        maxBuyPacksCap(this.singularities)
+        cap
       )
-      if (packs <= 0) return false
-      const total = calcDimensionPackTotal(tier, dim.baseCost, dim.costMult, startBucket, packs).times(flat)
-      if (this.matter.lt(total)) return false
+      let total = packs > 0
+        ? calcDimensionExactTotal(tier, dim.baseCost, dim.costMult, dim.bought, packs, flat)
+        : D_0
+      while (packs > 0 && this.matter.lt(total)) {
+        packs--
+        total = packs > 0
+          ? calcDimensionExactTotal(tier, dim.baseCost, dim.costMult, dim.bought, packs, flat)
+          : D_0
+      }
       const mpsBefore = this.matterPerSecond
-      this.matter = this.matter.minus(total)
-      dim.amount = dim.amount.plus(10 * packs)
-      dim.bought += 10 * packs
-      this.registerChallengeBuy(packs)
+      if (packs > 0) {
+        this.matter = this.matter.minus(total)
+        dim.amount = dim.amount.plus(10 * packs)
+        dim.bought += 10 * packs
+        this.registerChallengeBuy(packs)
+      }
+      // Kalanla alınabilen tekiller de süpürülür (en fazla 9 adet: sonraki paket zaten karşılanamıyor)
+      let swept = 0
+      for (let guard = 0; guard < 9; guard++) {
+        const bucket = Math.floor(dim.bought / 10)
+        const unitCost = dimensionCostForBucket(tier, bucket, dim.baseCost, dim.costMult).div(10).times(flat)
+        if (this.matter.lt(unitCost)) break
+        this.matter = this.matter.minus(unitCost)
+        dim.amount = dim.amount.plus(1)
+        dim.bought += 1
+        swept++
+      }
+      if (swept > 0) this.registerChallengeBuy(swept / 10)
+      if (packs <= 0 && swept <= 0) return false
 
       if (playSound) {
         sounds.playBuy(tier)
@@ -3265,21 +3334,37 @@ export const useGameStore = defineStore('game', {
         activeChallenge: this.activeChallenge,
         challengeCostInflation: this.challengeCostInflation
       })
+      const isPrivate = this.currentStance === 'private_mode'
+      const hasDiscount = hasAchievementReward(this.achievements, 'tickspeed_discount')
+      const eff = memoChallengeEffects(this.completedChallenges)
+      const effMult = eff.tickspeedCostMult
       let flat = infl
-      if (this.currentStance === 'private_mode') {
+      if (isPrivate) {
         flat = flat.times(0.85)
       }
-      if (hasAchievementReward(this.achievements, 'tickspeed_discount')) {
+      if (hasDiscount) {
         flat = flat.times(0.95)
       }
-      const eff = memoChallengeEffects(this.completedChallenges)
-      if (eff.tickspeedCostMult !== 1) {
-        flat = flat.times(eff.tickspeedCostMult)
+      if (effMult !== 1) {
+        flat = flat.times(effMult)
       }
       const budget = this.matter.div(flat)
-      const n = calcMaxPacks(base, ratio, start, budget, maxBuyPacksCap(this.singularities))
+      const cap = maxBuyPacksCap(this.singularities)
+      let n = calcMaxPacks(base, ratio, start, budget, cap)
       if (n <= 0) return false
-      const total = calcGeometricTotal(base, ratio, start, n).times(flat)
+      let total = calcTickspeedExactTotal(start, n, base, ratio, infl, isPrivate, hasDiscount, effMult)
+      while (n > 0 && this.matter.lt(total)) {
+        n--
+        total = calcTickspeedExactTotal(start, n, base, ratio, infl, isPrivate, hasDiscount, effMult)
+      }
+      if (n <= 0) return false
+      while (n < cap) {
+        const nextTotal = calcTickspeedExactTotal(start, n + 1, base, ratio, infl, isPrivate, hasDiscount, effMult)
+        if (nextTotal.lte(this.matter)) {
+          n++
+          total = nextTotal
+        } else break
+      }
       if (this.matter.lt(total)) return false
       const mpsBefore = this.matterPerSecond
       this.matter = this.matter.minus(total)
@@ -3295,17 +3380,18 @@ export const useGameStore = defineStore('game', {
     },
 
     // Tüm İstasyonları ve Frekansı Optimize Al (Max All)
+    // Sıra: ucuz üreticiden pahalıya (D1 -> D8), küresel çarpan (Tickspeed) en son.
+    // Tersi sıra pahalı üst kademenin kasayı eritip D1'i aç bırakıyordu.
     maxAll(): void {
       const mpsBefore = this.matterPerSecond
       let boughtAny = false
-      if (this.buyMaxTickspeed(false, false)) {
-        boughtAny = true
-      }
-
-      for (let t = this.unlockedDimensionsCount; t >= 1; t--) {
+      for (let t = 1; t <= this.unlockedDimensionsCount; t++) {
         if (this.buyMaxDimension(t, false, false)) {
           boughtAny = true
         }
+      }
+      if (this.buyMaxTickspeed(false, false)) {
+        boughtAny = true
       }
 
       if (boughtAny) {
@@ -3381,7 +3467,7 @@ export const useGameStore = defineStore('game', {
 
       if (playSound) {
         sounds.playSacrifice()
-        confetti({
+        safeConfetti({
           particleCount: 110,
           spread: 90,
           origin: { y: 0.6 },
@@ -3449,7 +3535,7 @@ export const useGameStore = defineStore('game', {
 
       if (playSound) {
         sounds.playShift()
-        confetti({
+        safeConfetti({
           particleCount: 50,
           spread: 70,
           origin: { y: 0.8 },
@@ -3497,7 +3583,7 @@ export const useGameStore = defineStore('game', {
 
       if (playSound) {
         sounds.playGalaxy()
-        confetti({
+        safeConfetti({
           particleCount: 90,
           spread: 100,
           origin: { y: 0.8 },
@@ -3587,7 +3673,7 @@ export const useGameStore = defineStore('game', {
     // playSound=false → Şafak Nöbeti Botu sessiz çöküşü (confeti/ses yok)
     singularityReset(playSound = true): boolean {
       if (this.activeChallenge) {
-        return this.completeChallenge()
+        return this.completeChallenge(playSound)
       }
       if (!this.canSingularity) return false
 
@@ -3621,7 +3707,7 @@ export const useGameStore = defineStore('game', {
 
       if (playSound) {
         sounds.playSingularity()
-        confetti({
+        safeConfetti({
           particleCount: 180,
           spread: 120,
           origin: { y: 0.5 },
@@ -3668,7 +3754,8 @@ export const useGameStore = defineStore('game', {
     },
 
     // Hedefe ulaşınca (challengeGoalReached) çağrılır: süre kaydı + ödül + temiz fresh koşu.
-    completeChallenge(): boolean {
+    // celebrate=false → update() içinden otomatik tamamlama sessiz geçer (kullanıcı eylemi değil).
+    completeChallenge(celebrate = true): boolean {
       if (!this.activeChallenge) return false
       if (!this.challengeGoalReached) return false
       const id = this.activeChallenge
@@ -3704,13 +3791,15 @@ export const useGameStore = defineStore('game', {
       this.challengeCostInflation = 0
       this.challengeNotificationDoom = 0
       this.challengeDim1Growth = new Decimal(1)
-      sounds.playSingularity()
-      confetti({
-        particleCount: 180,
-        spread: 120,
-        origin: { y: 0.5 },
-        colors: ['#f59e0b', '#06b6d4', '#ec4899', '#ffffff']
-      })
+      if (celebrate && isPageVisible() && !this.offlineSimActive) {
+        sounds.playSingularity()
+        safeConfetti({
+          particleCount: 180,
+          spread: 120,
+          origin: { y: 0.5 },
+          colors: ['#f59e0b', '#06b6d4', '#ec4899', '#ffffff']
+        })
+      }
       return true
     },
 
@@ -3793,7 +3882,7 @@ export const useGameStore = defineStore('game', {
       cell.isMature = false
 
       sounds.playHarvest()
-      confetti({
+      safeConfetti({
         particleCount: 45,
         spread: 55,
         origin: { y: 0.6 },
@@ -3846,7 +3935,7 @@ export const useGameStore = defineStore('game', {
       this.labHype = 0
 
       sounds.playViralDrop()
-      confetti({
+      safeConfetti({
         particleCount: 160,
         spread: 110,
         origin: { y: 0.55 },
@@ -3876,7 +3965,7 @@ export const useGameStore = defineStore('game', {
 
       if (typeof window !== 'undefined') {
         sounds.playSingularity()
-        confetti({
+        safeConfetti({
           particleCount: 200,
           spread: 140,
           origin: { y: 0.5 },
@@ -4202,23 +4291,41 @@ export const useGameStore = defineStore('game', {
     },
 
     // Toplu modu global aç (tüm botlar için bulk seçilebilir olur)
+    // Açık olan botlar otomatik ×10'a geçer (kapalılara dokunulmaz).
     unlockBulkMode(): boolean {
       if (this.autobuyerBulkUnlocked) return false
       if (!this.canUnlockBulk) return false
       this.matter = this.matter.minus(AUTOBUYER_BULK_COST)
       this.autobuyerBulkUnlocked = true
+      Object.keys(this.autobuyers).forEach((id) => {
+        const bot = this.autobuyers[id]
+        if (bot && bot.unlocked && bot.enabled && id !== 'singularity') {
+          bot.mode = 'bulk'
+          bot.interval = getAutobuyerInterval(id, 'bulk')
+          bot.timer = 0
+        }
+      })
       sounds.playBuy(3)
       return true
     },
 
     // Max modu global aç (bulk açık olmalı + galaxy ister)
+    // Açık olan botlar otomatik MAKS'a geçer (kapalılara dokunulmaz).
     unlockMaxMode(): boolean {
       if (this.autobuyerMaxUnlocked) return false
       if (!this.canUnlockMax) return false
       this.matter = this.matter.minus(AUTOBUYER_MAX_COST)
       this.autobuyerMaxUnlocked = true
+      Object.keys(this.autobuyers).forEach((id) => {
+        const bot = this.autobuyers[id]
+        if (bot && bot.unlocked && bot.enabled && id !== 'singularity') {
+          bot.mode = 'max'
+          bot.interval = getAutobuyerInterval(id, 'max')
+          bot.timer = 0
+        }
+      })
       sounds.playBuy(4)
-      confetti({
+      safeConfetti({
         particleCount: 60,
         spread: 70,
         origin: { y: 0.6 },
@@ -4257,7 +4364,7 @@ export const useGameStore = defineStore('game', {
           this.neuralNodesBought = { ...this.neuralNodesBought, [id]: currentLvl + 1 }
         }
         sounds.playBuy(4)
-        confetti({
+        safeConfetti({
           particleCount: 50,
           spread: 60,
           origin: { y: 0.7 },
@@ -4474,7 +4581,7 @@ export const useGameStore = defineStore('game', {
       if (this.isComboActive) {
         this.stats.combosTriggered++
         sounds.playCombo()
-        confetti({
+        safeConfetti({
           particleCount: anomaly.type === 'void' ? 160 : 130,
           spread: 100,
           origin: { y: 0.4 },
@@ -4484,7 +4591,7 @@ export const useGameStore = defineStore('game', {
         })
       } else if (anomaly.type === 'void') {
         sounds.playMythicCollect()
-        confetti({
+        safeConfetti({
           particleCount: 90,
           spread: 85,
           origin: { x: anomaly.x / 100, y: anomaly.y / 100 },
@@ -4492,7 +4599,7 @@ export const useGameStore = defineStore('game', {
         })
       } else {
         sounds.playCrisisCollect(anomaly.type)
-        confetti({
+        safeConfetti({
           particleCount: 40,
           spread: 60,
           origin: { x: anomaly.x / 100, y: anomaly.y / 100 },
@@ -4535,7 +4642,7 @@ export const useGameStore = defineStore('game', {
         this.slackers.splice(index, 1)
         sounds.playSilenceGuilt()
 
-        confetti({
+        safeConfetti({
           particleCount: 45,
           spread: 50,
           origin: { y: 0.8 },
@@ -4648,10 +4755,12 @@ export const useGameStore = defineStore('game', {
       // başarım (öz. dim_cost_x085) sonrası cache'i düşürmek güvenli taraftır.
       _dimCostCache.clear()
       // QoL: çevrimdışı simülasyonda ses/konfeti çalmaz (yükleme ekranında patlamasın)
+      // + gizli tarayıcı sekmesinde kutlama yok (toast kuyruğu yine birikir).
       if (this.offlineSimActive) return
+      if (!isPageVisible()) return
       if (completedRow) {
         sounds.playSingularity()
-        confetti({
+        safeConfetti({
           particleCount: 130,
           spread: 100,
           origin: { y: 0.5 },
@@ -4659,7 +4768,7 @@ export const useGameStore = defineStore('game', {
         })
       } else if (unlockedAnyReward) {
         sounds.playCombo()
-        confetti({
+        safeConfetti({
           particleCount: 60,
           spread: 70,
           origin: { y: 0.6 },
@@ -4677,6 +4786,12 @@ export const useGameStore = defineStore('game', {
     dismissAchievementToast(id: string): void {
       const i = this.achievementToastQueue.indexOf(id)
       if (i !== -1) this.achievementToastQueue.splice(i, 1)
+    },
+
+    // Aktif oyun sekmesi takibi (App.vue switchTab'den beslenir, kayıt edilmez).
+    // Otomatik kutlamalar bu alana bakarak ilgili sekmede değilken sessiz geçer.
+    setActiveGameTab(tab: string): void {
+      this.activeGameTab = tab
     },
 
     // Özellik Merdiveni: hayat boyu yüksek su seviyelerini yükselt ve
@@ -4717,9 +4832,9 @@ export const useGameStore = defineStore('game', {
         this.syncUnlocks()
       }
 
-      // G2: Challenge hedefi sağlandığında otomatik tamamla.
+      // G2: Challenge hedefi sağlandığında otomatik tamamla (sessiz — kullanıcı eylemi değil).
       if (this.activeChallenge && this.challengeGoalReached) {
-        this.completeChallenge()
+        this.completeChallenge(false)
         return
       }
       // Aktif challenge koşu sayacı (offline süre dahil — sayaç dürüsttür)
@@ -4850,9 +4965,11 @@ export const useGameStore = defineStore('game', {
 
                   if (!this.discoveredFormulas.includes(recipe.result)) {
                     this.discoveredFormulas.push(recipe.result)
-                    if (!this.offlineSimActive) {
+                    // Oto-sentez kutlaması yalnızca Lab sekmesinde + görünür sayfada.
+                    // Başka sekmedeyken formül yine keşfedilir, rozet kalır, efekt atlanır.
+                    if (!this.offlineSimActive && isPageVisible() && this.activeGameTab === 'lab') {
                       sounds.playCombo()
-                      confetti({
+                      safeConfetti({
                         particleCount: 75,
                         spread: 70,
                         origin: { y: 0.6 },
@@ -4889,9 +5006,9 @@ export const useGameStore = defineStore('game', {
                               (c1.seedType === recipe.parent2 && c2.seedType === recipe.parent1)
                 if (match && Math.random() < synthChance * 0.75) {
                   this.discoveredFormulas.push(recipe.result)
-                  if (!this.offlineSimActive) {
+                  if (!this.offlineSimActive && isPageVisible() && this.activeGameTab === 'lab') {
                     sounds.playCombo()
-                    confetti({
+                    safeConfetti({
                       particleCount: 90,
                       spread: 80,
                       origin: { y: 0.55 },
@@ -4986,7 +5103,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
               // G1 (kritik): challenge içinde bot SP basıp koşuyu baypas edemez —
               // eşik aşılınca challenge tamamlanır.
               if (this.shouldAutoSingularity()) {
-                if (this.activeChallenge) this.completeChallenge()
+                if (this.activeChallenge) this.completeChallenge(false)
                 else this.singularityReset(false)
               }
             }
@@ -5114,7 +5231,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
       if (!this.nightWatchUnlocked && this.matter.gte(NIGHT_WATCH_THRESHOLD)) {
         this.nightWatchUnlocked = true
         if (!this.offlineSimActive) {
-          confetti({
+          safeConfetti({
             particleCount: 220,
             spread: 140,
             origin: { y: 0.4 },
@@ -5177,7 +5294,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
       this.napCount++
       this.neuralBots = new Decimal(1) // Nöral çekirdek korunur
       sounds.playSacrifice()
-      confetti({
+      safeConfetti({
         particleCount: 120,
         spread: 90,
         origin: { y: 0.6 },
