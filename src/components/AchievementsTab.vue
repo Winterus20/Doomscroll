@@ -227,11 +227,11 @@ const rewardedTotal = computed(() => ACHIEVEMENTS.filter((a) => a.reward).length
           </span>
         </button>
 
-        <div v-show="!isCollapsed(cat.id)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div v-show="!isCollapsed(cat.id)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 items-stretch">
           <div
             v-for="ach in visibleAchievements(cat.id)"
             :key="ach.id"
-            class="p-3 rounded-xl border flex flex-col gap-1.5 transition-all"
+            class="p-3 rounded-xl border flex flex-col gap-1.5 transition-all min-w-0 overflow-hidden h-full"
             :class="[
               isUnlocked(ach.id)
                 ? 'bg-amber-500/[0.05] border-amber-500/25'
@@ -240,29 +240,28 @@ const rewardedTotal = computed(() => ACHIEVEMENTS.filter((a) => a.reward).length
               isNext(ach.id, cat.id) ? 'ring-1 ring-amber-400/60 border-amber-400/40 opacity-100' : ''
             ]"
           >
-            <div class="flex items-center gap-2">
-              <span class="text-xl leading-none" :class="{ 'grayscale': !isUnlocked(ach.id) }">
+            <div class="flex items-start gap-2 min-w-0">
+              <span class="text-xl leading-none shrink-0 mt-px" :class="{ 'grayscale': !isUnlocked(ach.id) }">
                 {{ isUnlocked(ach.id) || !ach.secret ? ach.icon : '❓' }}
               </span>
-              <span class="text-xs font-bold" :class="isUnlocked(ach.id) ? 'text-amber-200' : 'text-slate-400'">
+              <span class="text-xs font-bold flex-1 min-w-0 break-words leading-tight line-clamp-2 min-h-[2em]" :class="isUnlocked(ach.id) ? 'text-amber-200' : 'text-slate-400'">
                 {{ isUnlocked(ach.id) || !ach.secret ? ach.name : '???' }}
               </span>
-              <span v-if="isNext(ach.id, cat.id)" class="ds-badge ds-badge-amber ml-auto shrink-0">★ Sıradaki</span>
+              <span v-if="isNext(ach.id, cat.id)" class="ds-badge ds-badge-amber shrink-0">★ Sıradaki</span>
             </div>
-            <div class="text-[11px] leading-snug" :class="isUnlocked(ach.id) ? 'text-slate-300' : 'text-slate-500'">
+            <div class="text-[11px] leading-snug break-words line-clamp-2 min-h-[2.1rem]" :class="isUnlocked(ach.id) ? 'text-slate-300' : 'text-slate-500'">
               {{ isUnlocked(ach.id) || !ach.secret ? ach.desc : 'Gizli başarım — olay ufkunu kurcala, belki bulursun.' }}
             </div>
-            <div v-if="ach.reward" class="mt-auto pt-1">
+            <div class="mt-auto pt-1 min-w-0 min-h-[1.75rem]">
               <span
-                class="ds-badge tabular-nums"
+                v-if="ach.reward"
+                class="ds-badge tabular-nums max-w-full text-left leading-snug break-words [white-space:normal]"
                 :class="isUnlocked(ach.id) ? 'ds-badge-emerald' : 'ds-badge-cyan'"
               >
-                <Gift class="w-3 h-3" aria-hidden="true" />
-                {{ isUnlocked(ach.id) ? '✔ ' : '' }}{{ ach.reward.desc }}
+                <Gift class="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span class="min-w-0">{{ isUnlocked(ach.id) ? '✔ ' : '' }}{{ ach.reward.desc }}</span>
               </span>
-            </div>
-            <div v-else-if="ach.secret && !isUnlocked(ach.id)" class="mt-auto pt-1">
-              <span class="ds-badge ds-badge-purple">
+              <span v-else-if="ach.secret && !isUnlocked(ach.id)" class="ds-badge ds-badge-purple">
                 GİZLİ · ÖDÜLSÜZ
               </span>
             </div>

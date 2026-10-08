@@ -1,5 +1,13 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-08] — Plaket kart taşma + boy eşitliği düzeltmesi
+
+### Kapsam:
+- `AchievementsTab.vue`: ızgara 4→3 sütun (dar kartta rozet sığmıyordu), ödül rozetinde `nowrap` ezildi + satır içi kayma (`[white-space:normal]`, `break-words`, `max-w-full`), başlık satırı `items-start` + esnek isim alanı, kartlara `min-w-0 overflow-hidden h-full`, ızgaraya `items-stretch`, başlık/açıklama `line-clamp-2` + minimum yükseklik, alt rozet yuvası her kartta sabit (`min-h-[1.75rem]`, ödülsüz kartta boşluk bırakır) — satır içi boylar eşit, ödüller alt çizgide hizalı.
+
+### Doğrulama:
+- `npm run build` temiz (1706 modül, 0 hata).
+
 ## [2026-10-08] — Plaket UI/UX revizyonu (filtre + arama + sıradaki hedef + toast aksiyonu)
 
 ### Kapsam:
