@@ -1,6 +1,6 @@
 {
   // =============================================================================
-  //  Doomscroll: The Endless Reels — Firebase proje yapılandırması
+  //  UROBOROS (The Cosmic Feast) — Firebase proje yapılandırması
   //  İlgili ADR: brain/decisions/0028-firestore-security-rules-and-cloud-write-guards.md
   //
   //  NOT: Firebase CLI bu dosyayı JSONC (yorum destekli) olarak okur; aşağıdaki

@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // =============================================================================
-//  Doomscroll: The Endless Reels — Firestore Security Rules
+//  UROBOROS (The Cosmic Feast) — Firestore Security Rules
 //  Sahip: src/core/auth/cloud-save-service.ts, src/models/auth-types.ts
 //  Surum: v0.26.0 (ADR-0028)
 // =============================================================================
