@@ -205,5 +205,88 @@ describe('Crisis 2.0: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi'
     store.deserialize(legacySave as any)
     expect(store.reactorHeat).toBe(65)
     expect(store.reactorPhase).toBe('sweet_spot')
+    expect(store.reactorCoolantCharges).toBe(3)
+    expect(store.reactorMomentum).toBe(1.0)
+  })
+
+  it('Crisis 3.0: Manyetik Tahliye 3 kartuş harcadıktan sonra engellenmelidir', () => {
+    const store = useGameStore()
+    expect(store.reactorCoolantCharges).toBe(3)
+
+    // 1. kullanım (ısı 80 -> 45)
+    store.reactorHeat = 80
+    expect(store.castCrisisIntervention('magnetic_vent')).toBe(true)
+    expect(store.reactorCoolantCharges).toBe(2)
+
+    // İç cooldown'u sıfırlayarak 2. kullanım
+    store.reactorCooldowns['magnetic_vent'] = 0
+    store.reactorHeat = 80
+    expect(store.castCrisisIntervention('magnetic_vent')).toBe(true)
+    expect(store.reactorCoolantCharges).toBe(1)
+
+    // 3. kullanım
+    store.reactorCooldowns['magnetic_vent'] = 0
+    store.reactorHeat = 80
+    expect(store.castCrisisIntervention('magnetic_vent')).toBe(true)
+    expect(store.reactorCoolantCharges).toBe(0)
+
+    // 4. kullanım: Kartuş tükendiği için engellenmelidir!
+    store.reactorCooldowns['magnetic_vent'] = 0
+    store.reactorHeat = 80
+    expect(store.castCrisisIntervention('magnetic_vent')).toBe(false)
+    expect(store.reactorHeat).toBe(80) // Isı düşmemeli
+
+    // 35 saniye sonra 1 kartuş dolmalı
+    store.update(35)
+    expect(store.reactorCoolantCharges).toBe(1)
+  })
+
+  it('Crisis 3.0: Cooldown devam ederken aynı müdahale tekrar basılamamalıdır', () => {
+    const store = useGameStore()
+    store.reactorHeat = 10
+    expect(store.castCrisisIntervention('quantum_compression')).toBe(true)
+    expect(store.reactorCooldowns['quantum_compression']).toBe(20)
+
+    // Cooldown aktifken ikinci tetikleme başarısız olmalıdır
+    expect(store.castCrisisIntervention('quantum_compression')).toBe(false)
+
+    // 20 sn update sonrası tekrar kullanılabilmelidir
+    store.update(20)
+    expect(store.reactorCooldowns['quantum_compression']).toBe(0)
+    expect(store.castCrisisIntervention('quantum_compression')).toBe(true)
+  })
+
+  it('Crisis 3.0: Zaman Genleşmesi buff sürelerini azami 120 saniyenin üzerine uzatamamalıdır', () => {
+    const store = useGameStore()
+    store.activeBuffs.push({
+      id: 'buff-cap-test',
+      type: 'espresso',
+      name: 'Cap Test',
+      duration: 110,
+      remaining: 110,
+      multiplier: 2
+    })
+
+    store.reactorHeat = 10
+    expect(store.castCrisisIntervention('time_dilation')).toBe(true)
+    // 110 + 15 = 125 olmamalı, 120'de durmalı!
+    expect(store.activeBuffs[0].remaining).toBe(120)
+  })
+
+  it('Crisis 3.0: Tatlı Noktada kaldıkça momentum artmalı, Meltdown durumunda 1.0 a sıfırlanmalıdır', () => {
+    const store = useGameStore()
+    store.reactorHeat = 85 // Sweet Spot (%61-90)
+    expect(store.reactorPhase).toBe('sweet_spot')
+    expect(store.reactorMomentum).toBe(1.0)
+
+    // 10 saniye Tatlı Noktada kalış (+%20 momentum -> 1.2x)
+    store.update(10)
+    expect(store.reactorMomentum).toBeGreaterThan(1.15)
+    expect(store.reactorMassMult).toBeGreaterThan(8.0) // 8.0 * momentum
+
+    // Meltdown tetiklendiğinde momentum sıfırlanmalıdır
+    store.triggerReactorMeltdown()
+    expect(store.reactorMomentum).toBe(1.0)
+    expect(store.reactorMassMult).toBe(0.5) // Meltdown yarıya indirme
   })
 })

@@ -484,32 +484,36 @@ export const CRISIS_INTERVENTIONS = [
     name: 'Kuantum Sıkıştırma',
     icon: '⚡',
     heatChange: 25,
+    baseCooldown: 20,
     desc: 'Olay ufkunda kuantum tekilliği sıkıştırır; ekrana anında 1 adet Altın Kozmik Dalgalanma (Anomali) fırlatır.',
-    tacticalTip: 'Hızlı anomali zincirleri ve kombo çarpanlarını başlatmak için idealdir.'
+    tacticalTip: 'Hızlı anomali zincirleri ve kombo çarpanlarını başlatmak için idealdir. (Bekleme: 20s)'
   },
   {
     id: 'time_dilation' as CrisisInterventionType,
     name: 'Zaman Genleşmesi',
     icon: '⏳',
     heatChange: 20,
-    desc: 'Gravitasyonel zaman kuyusu oluşturur; ekranda aktif tüm geçici güçlendirmelerin süresine +15 saniye ekler.',
-    tacticalTip: 'Süpernova (7×) ve Kütle Patlaması (300×/777×) zirvelerini dondurup uzatır!'
+    baseCooldown: 25,
+    desc: 'Gravitasyonel zaman kuyusu oluşturur; ekranda aktif tüm geçici güçlendirmelerin süresine +15 saniye ekler (azami 120s tavan).',
+    tacticalTip: 'Süpernova (7×) ve Kütle Patlaması zirvelerini uzatır; 120s tavanı aşamaz. (Bekleme: 25s)'
   },
   {
     id: 'magnetic_vent' as CrisisInterventionType,
     name: 'Manyetik Tahliye',
     icon: '🧲',
     heatChange: -35,
-    desc: 'Reaktör plazmasını tahliye ederek ısıyı 35 puan soğutur; tüm Kozmik Parazitleri temizler ve %175 primle bozdurur.',
-    tacticalTip: 'Aşırı ısınmayı önlemek ve birikmiş parazit kütlesini nakde çevirmek için soğutma valfidir.'
+    baseCooldown: 2,
+    desc: '1 Kriyojenik Kartuş harcayarak plazmayı tahliye eder; ısıyı 35 puan soğutur, parazitleri temizler ve %175 primle bozdurur.',
+    tacticalTip: 'Kriyojenik kartuş harcar (35s dolum). Aşırı ısınmayı önlemek ve Tatlı Noktada kalmak için soğutma valfidir.'
   },
   {
     id: 'planck_surge' as CrisisInterventionType,
     name: 'Planck Patlaması',
     icon: '💥',
     heatChange: 45,
+    baseCooldown: 45,
     desc: 'Planck ölçeğindeki vakum enerjisini serbest bırakır; 20 sn boyunca Çekim Hızını 4× ve Manuel Yutma gücünü 10× yapar.',
-    tacticalTip: 'Yüksek risk, devasa getiri! Isı sınırına dikkat edin; Tatlı Noktada patlatın.'
+    tacticalTip: 'Yüksek risk, devasa getiri! Isı sınırına dikkat edin; Tatlı Noktada patlatın. (Bekleme: 45s)'
   }
 ]
 
@@ -1422,7 +1426,7 @@ export const useGameStore = defineStore('game', {
     // ilk tetiklemeyi beklemesiz yapar; eski kayıtlarda da aynı varsayılır.
     lastViralAt: -VIRAL_DROP_COOLDOWN_SECONDS,
 
-    // Mini-Oyun 2: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi (Crisis 2.0)
+    // Mini-Oyun 2: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi (Crisis 3.0)
     reactorHeat: 0,
     reactorMeltdownTimer: 0,
     activeCrisisDilemma: null as CrisisDilemma | null,
@@ -1430,6 +1434,10 @@ export const useGameStore = defineStore('game', {
     caffeineEnergy: 0, // Geriye dönük uyumluluk state alanı
     maxCaffeineEnergy: 100,
     crisisBackfireDebuff: 0, // saniye cinsinden debuff sayacı
+    reactorCoolantCharges: 3, // Kriyojenik Soğutucu Rezervi (maks 3)
+    reactorCoolantTimer: 0, // Kartuş dolum sayacı (sn)
+    reactorMomentum: 1.0, // Tatlı Nokta Rezonans Momenti (1.0x - 5.0x)
+    reactorCooldowns: {} as Record<string, number>,
 
     // Otomatik Kaydırma Botları (Autobuyers - Hibrit tekli/toplu/max)
     autobuyers: {
@@ -2513,7 +2521,7 @@ export const useGameStore = defineStore('game', {
 
     reactorMassMult(): number {
       const phase = this.reactorPhase
-      if (phase === 'sweet_spot') return 8.0
+      if (phase === 'sweet_spot') return 8.0 * (this.reactorMomentum || 1.0)
       if (phase === 'meltdown') return 0.5
       return 1.0
     },
@@ -4100,33 +4108,41 @@ export const useGameStore = defineStore('game', {
       return true
     },
 
-    // Crisis 2.0: Olay Ufku Reaktörü Meltdown Tetiklemesi
+    // Crisis 3.0: Olay Ufku Reaktörü Meltdown Tetiklemesi
     triggerReactorMeltdown(): void {
       this.reactorMeltdownTimer = 10
       this.reactorHeat = 100
       this.caffeineEnergy = 100
+      this.reactorMomentum = 1.0 // Meltdown anında tüm birikmiş rezonans momenti buharlaşır
       sounds.playMeltdownWarning()
     },
 
-    // Crisis 2.0: 4 Taktiksel Müdahale (Grimoire 2.0)
+    // Crisis 3.0: 4 Taktiksel Müdahale (Cooldown & Kartuş Korumalı)
     castCrisisIntervention(interventionType: CrisisInterventionType): boolean {
       if (this.reactorMeltdownTimer > 0) return false // Meltdown kilitlenmesi
 
-      this.stats.spellsCast = (this.stats.spellsCast || 0) + 1
+      if (!this.reactorCooldowns) {
+        this.reactorCooldowns = {}
+      }
 
-      if (interventionType === 'quantum_compression') {
-        this.spawnAnomaly(true)
-        this.reactorHeat = Math.min(100, this.reactorHeat + 25)
-        sounds.playCrisisDecision()
-      } else if (interventionType === 'time_dilation') {
-        this.activeBuffs.forEach((b) => {
-          b.remaining += 15
-          b.duration += 15
-        })
-        this.reactorHeat = Math.min(100, this.reactorHeat + 20)
-        sounds.playCrisisDecision()
-      } else if (interventionType === 'magnetic_vent') {
+      // 1. Cooldown kontrolü
+      if ((this.reactorCooldowns[interventionType] || 0) > 0) {
+        return false
+      }
+
+      // 2. Manyetik Tahliye özel kartuş kontrolü
+      if (interventionType === 'magnetic_vent') {
+        const currentCharges = typeof this.reactorCoolantCharges === 'number' ? this.reactorCoolantCharges : 3
+        if (currentCharges <= 0) {
+          return false // Soğutucu rezervi boş!
+        }
+        this.reactorCoolantCharges = Math.max(0, currentCharges - 1)
+        if (this.reactorCoolantCharges < 3 && (this.reactorCoolantTimer || 0) <= 0) {
+          this.reactorCoolantTimer = 35 // Bir sonraki kartuş için 35 sn sayacı
+        }
+        this.reactorCooldowns[interventionType] = 2 // Çift tıklama spam koruması
         this.reactorHeat = Math.max(0, this.reactorHeat - 35)
+
         if (this.slackers.length > 0) {
           this.slackers.forEach((s) => {
             const refund = s.leechedDopamine.times(1.75)
@@ -4137,11 +4153,30 @@ export const useGameStore = defineStore('game', {
           this.slackers = []
         }
         sounds.playVentCooling()
+      } else if (interventionType === 'quantum_compression') {
+        this.reactorCooldowns[interventionType] = 20
+        this.spawnAnomaly(true)
+        this.reactorHeat = Math.min(100, this.reactorHeat + 25)
+        sounds.playCrisisDecision()
+      } else if (interventionType === 'time_dilation') {
+        this.reactorCooldowns[interventionType] = 25
+        // Azami 120s tavan koruması (buff cap)
+        this.activeBuffs.forEach((b) => {
+          const headroom = Math.max(0, 120 - b.remaining)
+          const addition = Math.min(15, headroom)
+          b.remaining += addition
+          b.duration += addition
+        })
+        this.reactorHeat = Math.min(100, this.reactorHeat + 20)
+        sounds.playCrisisDecision()
       } else if (interventionType === 'planck_surge') {
+        this.reactorCooldowns[interventionType] = 45
         const existing = this.activeBuffs.find((b) => b.type === 'planck_surge')
         if (existing) {
-          existing.remaining += 20
-          existing.duration += 20
+          const headroom = Math.max(0, 120 - existing.remaining)
+          const addition = Math.min(20, headroom)
+          existing.remaining += addition
+          existing.duration += addition
         } else {
           this.activeBuffs.push({
             id: `buff-planck-${Date.now()}`,
@@ -4156,6 +4191,7 @@ export const useGameStore = defineStore('game', {
         sounds.playCrisisDecision()
       }
 
+      this.stats.spellsCast = (this.stats.spellsCast || 0) + 1
       this.caffeineEnergy = this.reactorHeat
 
       if (this.reactorHeat >= 100) {
@@ -5146,18 +5182,56 @@ export const useGameStore = defineStore('game', {
         }
       }
 
-      // 7. Crisis 2.0: Olay Ufku Kararsızlık Reaktörü Isı Fiziği & İkilem Döngüsü
+      // 7. Crisis 3.0: Olay Ufku Kararsızlık Reaktörü Isı Fiziği, Momentum & Kartuş Döngüsü
       if (this.reactorMeltdownTimer > 0) {
         this.reactorMeltdownTimer -= deltaSeconds
+        this.reactorMomentum = 1.0 // Meltdown süresince momentum sıfır
         if (this.reactorMeltdownTimer <= 0) {
           this.reactorMeltdownTimer = 0
           this.reactorHeat = 25 // Meltdown bittiğinde 25'e stabilizasyon
         }
       } else {
+        const currentPhase = this.reactorPhase
         // Doğal Soğuma: saniyede -1.2 ısı
         this.reactorHeat = Math.max(0, this.reactorHeat - 1.2 * deltaSeconds)
+
+        // Tatlı Nokta (%61-90) Momentum Dinamiği:
+        if (currentPhase === 'sweet_spot') {
+          // Tatlı noktada kaldıkça saniyede +%2 momentum birikir (1.0x -> 5.0x)
+          this.reactorMomentum = Math.min(5.0, (this.reactorMomentum || 1.0) + 0.02 * deltaSeconds)
+        } else if (currentPhase === 'meltdown') {
+          this.reactorMomentum = 1.0
+        } else {
+          // Durgun veya rezonans fazında momentum yavaşça (%5/sn) erir
+          if ((this.reactorMomentum || 1.0) > 1.0) {
+            this.reactorMomentum = Math.max(1.0, (this.reactorMomentum || 1.0) - 0.05 * deltaSeconds)
+          }
+        }
       }
       this.caffeineEnergy = this.reactorHeat
+
+      // Kriyojenik Soğutucu Kartuş Dolumu (35 sn per kartuş, max 3)
+      if (typeof this.reactorCoolantCharges !== 'number') {
+        this.reactorCoolantCharges = 3
+      }
+      if (this.reactorCoolantCharges < 3) {
+        this.reactorCoolantTimer = (this.reactorCoolantTimer || 35) - deltaSeconds
+        if (this.reactorCoolantTimer <= 0) {
+          this.reactorCoolantCharges = Math.min(3, this.reactorCoolantCharges + 1)
+          this.reactorCoolantTimer = this.reactorCoolantCharges < 3 ? 35 : 0
+        }
+      } else {
+        this.reactorCoolantTimer = 0
+      }
+
+      // Müdahale Cooldown sayaçlarının düşürülmesi
+      if (this.reactorCooldowns) {
+        for (const spellKey of Object.keys(this.reactorCooldowns)) {
+          if (this.reactorCooldowns[spellKey] > 0) {
+            this.reactorCooldowns[spellKey] = Math.max(0, this.reactorCooldowns[spellKey] - deltaSeconds)
+          }
+        }
+      }
 
       if (this.crisisBackfireDebuff > 0) {
         this.crisisBackfireDebuff = Math.max(0, this.crisisBackfireDebuff - deltaSeconds)
@@ -5717,6 +5791,10 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         reactorHeat: this.reactorHeat,
         reactorMeltdownTimer: this.reactorMeltdownTimer,
         dilemmaCooldown: this.dilemmaCooldown,
+        reactorCoolantCharges: this.reactorCoolantCharges,
+        reactorCoolantTimer: this.reactorCoolantTimer,
+        reactorMomentum: this.reactorMomentum,
+        reactorCooldowns: { ...(this.reactorCooldowns || {}) },
         // ADR-0029: bu dört alan v12'de kaydedilmiyordu. maxCaffeineEnergy yükleme
         // sırasında clamp tavanı olarak kullanıldığı için (clampSavedNumber) kayıp
         // her zaman 100'e düşüyordu; viral üçlüsü ise canlı koşu ilerlemesiydi.
@@ -5963,6 +6041,19 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
         this.dilemmaCooldown = typeof data.dilemmaCooldown === 'number'
           ? Math.max(0, data.dilemmaCooldown)
           : 0
+
+        this.reactorCoolantCharges = typeof data.reactorCoolantCharges === 'number'
+          ? clampSavedNumber(data.reactorCoolantCharges, 3, 0, 3)
+          : 3
+        this.reactorCoolantTimer = typeof data.reactorCoolantTimer === 'number'
+          ? Math.max(0, data.reactorCoolantTimer)
+          : 0
+        this.reactorMomentum = typeof data.reactorMomentum === 'number'
+          ? clampSavedNumber(data.reactorMomentum, 1.0, 1.0, 5.0)
+          : 1.0
+        this.reactorCooldowns = data.reactorCooldowns && typeof data.reactorCooldowns === 'object'
+          ? { ...data.reactorCooldowns }
+          : {}
 
         if (typeof data.maxCaffeineEnergy === 'number') {
           this.maxCaffeineEnergy = clampSavedNumber(data.maxCaffeineEnergy, 100, 1, 100000)

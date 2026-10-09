@@ -1,5 +1,19 @@
 ﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-09] — Kriz & Olay Ufku Reaktörü 3.0 (Hibrit Termal Yönetim ve Exploit Çözümü)
+
+### Kapsam:
+- src/stores/game.ts: Sonsuz spam exploit'i kökten çözüldü (3 Kriyojenik Kartuş rezervi, 20-45s bireysel cooldown'lar, 120s buff tavanı ve Tatlı Nokta Rezonans Momenti 1.0x-5.0x).
+- src/components/CrisisTab.vue: TabHero Kriyojenik Rezerv 3'lü pil, Rezonans Momenti rozeti, kartlarda canlı cooldown sayacı ve buton durumları.
+- src/stores/crisis-reactor.test.ts: 4 yeni birim testi (kartuş tükenmesi, cooldown, buff tavanı, momentum). 15/15 yeşil.
+- src/models/types.ts: SerializedPlayerState içine yeni termal alanlar ve save/load tam geriye dönük uyumluluk.
+
+### Doğrulama:
+- npm test: 224/224 test yeşil (12 dosya).
+- npm run build: vue-tsc ve vite build 0 hata ile tertemiz.
+- Playwright canlı tarayıcı testi: Taktil cooldown sayacı ve buton kilitleri başarıyla doğrulandı.
+
+
 ## [2026-10-08] — Lab P0+P1 rebalance (QoL + denge + reviewer düzeltmeleri)
 
 ### Kapsam:

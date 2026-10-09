@@ -377,6 +377,11 @@ export interface SerializedPlayerState {
   reactorHeat?: number
   reactorMeltdownTimer?: number
   dilemmaCooldown?: number
+  /** Crisis 3.0: Kriyojenik Rezerv, Momentum ve Cooldown Sayaçları */
+  reactorCoolantCharges?: number
+  reactorCoolantTimer?: number
+  reactorMomentum?: number
+  reactorCooldowns?: Record<string, number>
   /** v13: enerji tavanı (v12'de kaydedilmiyordu, yüklemede clamp tavanı olarak kullanılıyordu) */
   maxCaffeineEnergy?: number
   /** v13: Viral Zirve koşu ilerlemesi (daha önce kaydedilmiyordu) */

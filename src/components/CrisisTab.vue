@@ -12,7 +12,9 @@ import {
   Magnet,
   Activity,
   Gauge,
-  Clock
+  Clock,
+  Snowflake,
+  TrendingUp
 } from 'lucide-vue-next'
 import type { CrisisInterventionType } from '../models/types'
 import TabHero from './TabHero.vue'
@@ -101,8 +103,30 @@ const phaseConfig = computed(() => {
 
 const isMeltdownActive = computed(() => store.reactorMeltdownTimer > 0)
 
+function getCooldown(type: CrisisInterventionType): number {
+  return store.reactorCooldowns?.[type] || 0
+}
+
+function canCastIntervention(type: CrisisInterventionType): boolean {
+  if (isMeltdownActive.value) return false
+  if (isInterventionLocked(type)) return false
+  if (getCooldown(type) > 0) return false
+  if (type === 'magnetic_vent' && (store.reactorCoolantCharges ?? 3) <= 0) return false
+  return true
+}
+
+function getButtonLabel(type: CrisisInterventionType): string {
+  if (isMeltdownActive.value) return 'Reaktör Kilitli (Meltdown)'
+  if (type === 'magnetic_vent' && (store.reactorCoolantCharges ?? 3) <= 0) {
+    return `Kartuş Boş (${Math.ceil(store.reactorCoolantTimer || 35)}s)`
+  }
+  const cd = getCooldown(type)
+  if (cd > 0) return `Soğuyor (${Math.ceil(cd)}s)`
+  return 'Müdahaleyi Gerçekleştir'
+}
+
 function handleIntervention(type: CrisisInterventionType) {
-  if (isInterventionLocked(type) || isMeltdownActive.value) return
+  if (!canCastIntervention(type)) return
   store.castCrisisIntervention(type)
 }
 </script>
@@ -130,6 +154,50 @@ function handleIntervention(type: CrisisInterventionType) {
             <span class="text-xs text-slate-500 tabular-nums">Isı Seviyesi</span>
           </div>
           <span class="text-[10px] font-mono text-cyan-400 ml-1 tabular-nums">(-1.2%/sn Soğuma)</span>
+        </div>
+
+        <!-- Kriyojenik Rezerv (Kartuşlar) -->
+        <div
+          class="stat-box flex items-center gap-2 select-none cursor-help"
+          v-tip="'Kriyojenik Soğutucu Rezervi: Manyetik Tahliye her kullanımda 1 kartuş harcar. 35 saniyede 1 kartuş otomatik şarj olur.'"
+        >
+          <Snowflake class="w-4 h-4 text-cyan-400 shrink-0" />
+          <div class="flex items-center gap-1">
+            <div
+              v-for="i in 3"
+              :key="i"
+              class="w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all"
+              :class="i <= (store.reactorCoolantCharges ?? 3)
+                ? 'bg-cyan-500/25 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]'
+                : 'bg-black/50 border-slate-700/60 opacity-40'"
+            >
+              <div
+                v-if="i <= (store.reactorCoolantCharges ?? 3)"
+                class="w-1.5 h-1.5 rounded-full bg-cyan-300"
+              ></div>
+            </div>
+          </div>
+          <span class="text-[11px] font-mono font-bold text-cyan-300 tabular-nums">
+            {{ store.reactorCoolantCharges ?? 3 }}/3
+          </span>
+          <span
+            v-if="(store.reactorCoolantCharges ?? 3) < 3"
+            class="text-[10px] font-mono text-cyan-400/80 tabular-nums animate-pulse"
+          >
+            ({{ Math.ceil(store.reactorCoolantTimer || 35) }}s)
+          </span>
+        </div>
+
+        <!-- Rezonans Momenti Rozeti (Tatlı Nokta Dinamiği) -->
+        <div
+          v-if="(store.reactorMomentum && store.reactorMomentum > 1.0) || store.reactorPhase === 'sweet_spot'"
+          class="stat-box flex items-center gap-1.5 border-purple-500/40 bg-purple-950/30 select-none cursor-help shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+          v-tip="'Tatlı Nokta Rezonans Momenti: Reaktör %61-90 arasında kaldığı her saniye küresel kütle akışına +%2 momentum biriktirir (Max 5.0×). Meltdown anında sıfırlanır!'"
+        >
+          <TrendingUp class="w-4 h-4 text-purple-400 shrink-0" />
+          <span class="text-xs font-mono font-bold text-purple-300 tabular-nums">
+            {{ (store.reactorMomentum || 1.0).toFixed(2) }}× Momentum
+          </span>
         </div>
 
         <!-- Aktif Faz Rozeti -->
@@ -296,13 +364,29 @@ function handleIntervention(type: CrisisInterventionType) {
                 </div>
               </div>
 
-              <!-- Risk / Soğutma Rozeti -->
-              <span
-                class="ds-badge"
-                :class="intv.heatChange < 0 ? 'ds-badge-cyan' : intv.heatChange > 30 ? 'ds-badge-rose' : 'ds-badge-amber'"
-              >
-                {{ intv.heatChange < 0 ? 'Soğutma Valfi' : intv.heatChange > 30 ? 'Yüksek Risk' : 'Dengeli' }}
-              </span>
+              <!-- Risk / Soğutma / Cooldown Rozeti -->
+              <div class="flex items-center gap-1.5">
+                <span
+                  v-if="intv.id === 'magnetic_vent'"
+                  class="ds-badge"
+                  :class="(store.reactorCoolantCharges ?? 3) > 0 ? 'ds-badge-cyan' : 'ds-badge-rose animate-pulse'"
+                >
+                  Kartuş: {{ store.reactorCoolantCharges ?? 3 }}/3
+                </span>
+                <span
+                  v-else-if="getCooldown(intv.id) > 0"
+                  class="ds-badge ds-badge-amber animate-pulse"
+                >
+                  Bekleme: {{ Math.ceil(getCooldown(intv.id)) }}s
+                </span>
+                <span
+                  v-else
+                  class="ds-badge"
+                  :class="intv.heatChange < 0 ? 'ds-badge-cyan' : intv.heatChange > 30 ? 'ds-badge-rose' : 'ds-badge-amber'"
+                >
+                  {{ intv.heatChange < 0 ? 'Soğutma Valfi' : intv.heatChange > 30 ? 'Yüksek Risk' : 'Dengeli' }}
+                </span>
+              </div>
             </div>
 
             <!-- Açıklama -->
@@ -322,14 +406,14 @@ function handleIntervention(type: CrisisInterventionType) {
           <!-- Uygula Butonu -->
           <button
             @click="handleIntervention(intv.id)"
-            :disabled="isMeltdownActive"
+            :disabled="!canCastIntervention(intv.id)"
             class="btn-tactile mt-4 w-full py-2.5 px-4 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all border"
-            :class="isMeltdownActive
-              ? 'bg-black/30 text-slate-600 border-white/[0.05] cursor-not-allowed'
-              : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/50 cursor-pointer'"
+            :class="!canCastIntervention(intv.id)
+              ? 'bg-black/30 text-slate-500 border-white/[0.05] cursor-not-allowed'
+              : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/50 cursor-pointer shadow-[0_0_12px_rgba(168,85,247,0.2)]'"
           >
             <Sparkles class="w-3.5 h-3.5" />
-            <span>{{ isMeltdownActive ? 'Reaktör Kilitli (Meltdown)' : 'Müdahaleyi Gerçekleştir' }}</span>
+            <span>{{ getButtonLabel(intv.id) }}</span>
           </button>
         </div>
       </template>
