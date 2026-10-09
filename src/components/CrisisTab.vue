@@ -200,14 +200,6 @@ function handleIntervention(type: CrisisInterventionType) {
           </span>
         </div>
 
-        <!-- Aktif Faz Rozeti -->
-        <span
-          class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0 select-none"
-          :class="phaseConfig.badgeClass"
-        >
-          {{ phaseConfig.desc }}
-        </span>
-
         <!-- D4 Pasif Rozeti -->
         <span
           v-if="d4Passive"
@@ -218,9 +210,9 @@ function handleIntervention(type: CrisisInterventionType) {
         </span>
       </template>
 
-      <!-- İnteraktif Termal Reaktör Barı -->
+      <!-- İnteraktif Termal Reaktör Barı & Faz Durumu -->
       <template #progress>
-        <div class="space-y-1.5">
+        <div class="space-y-1.5 w-full">
           <div class="relative w-full h-4 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
             <!-- Dilim Arka Plan Bölgeleri -->
             <div class="absolute inset-0 flex text-[9px] font-mono pointer-events-none opacity-40">
@@ -244,11 +236,19 @@ function handleIntervention(type: CrisisInterventionType) {
           </div>
 
           <!-- Dilim Eşik Etiketleri -->
-          <div class="flex justify-between text-[10px] font-mono text-slate-500 px-1">
+          <div class="flex justify-between text-[10px] font-mono text-slate-400 px-1">
             <span>Durgun (%0-30)</span>
             <span>Rezonans (%31-60)</span>
             <span class="text-purple-400 font-bold">Tatlı Nokta (%61-90)</span>
             <span class="text-rose-400">Meltdown (%100)</span>
+          </div>
+
+          <!-- Aktif Faz Getiri Bilgisi -->
+          <div class="flex items-center justify-between text-[11px] font-mono px-1 pt-1 border-t border-white/[0.08] mt-1 text-slate-300">
+            <span class="text-slate-400">Reaktör Çıktısı:</span>
+            <span class="font-bold text-right" :style="{ color: phaseConfig.color }">
+              {{ phaseConfig.desc }}
+            </span>
           </div>
         </div>
       </template>

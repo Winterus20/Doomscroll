@@ -32,23 +32,23 @@ withDefaults(
       <div class="reticle-ring"></div>
     </div>
 
-    <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-3 z-10">
-      <div class="min-w-0">
+    <div class="relative flex flex-col xl:flex-row xl:items-start justify-between gap-4 z-10">
+      <div class="flex-1 min-w-[280px] max-w-full">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
           <component :is="icon" class="w-5 h-5 shrink-0" :class="iconClass" />
-          <h2 class="text-base font-extrabold text-slate-100 tracking-tight truncate">
+          <h2 class="text-base font-extrabold text-slate-100 tracking-tight">
             {{ title }}
           </h2>
           <span v-if="badge" class="ds-badge" :class="badgeClass">{{ badge }}</span>
         </div>
-        <p v-if="subtitle" class="text-xs text-slate-400 max-w-2xl leading-relaxed">
+        <p v-if="subtitle" class="text-xs text-slate-400 max-w-3xl leading-relaxed">
           {{ subtitle }}
         </p>
-        <div v-if="$slots.progress" class="mt-3 max-w-xl">
+        <div v-if="$slots.progress" class="mt-3 w-full max-w-2xl">
           <slot name="progress"></slot>
         </div>
       </div>
-      <div v-if="$slots.stats" class="flex items-center gap-2 shrink-0 flex-wrap">
+      <div v-if="$slots.stats" class="flex items-center gap-2 flex-wrap xl:justify-end shrink-0 max-w-full">
         <slot name="stats"></slot>
       </div>
     </div>
