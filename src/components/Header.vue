@@ -834,14 +834,6 @@ onUnmounted(() => {
         <span v-if="nextGoal.value" class="tabular-nums font-bold">{{ nextGoal.value }}</span>
       </div>
 
-      <!-- 0-state onboarding: ilk eylem çağrısı (ilk D1 alınana kadar) -->
-      <div
-        v-if="showFirstSwipeHint"
-        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/[0.07] border border-purple-500/25 text-[11px] font-mono font-semibold text-purple-200"
-      >
-        <ArrowUp class="w-3.5 h-3.5 text-purple-400 arrow-nudge" />
-        <span>İlk parçacığı vakumlamak için <span class="font-bold">YUT</span>'a bas</span>
-      </div>
       </div>
     </div>
 
