@@ -1,5 +1,21 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-10] — Bot / Otomatikte Sürekli Ekran Sallanması (Screen Shake Spam) Kökten Çözüldü
+
+### Kök Nedenler ve Yapılan İyileştirmeler:
+1. **Autobuyer Otomatik Tetikleme İzolasyonu (`src/stores/game.ts`):**
+   - Botlar otomatik olarak Akış Sıçraması (Dimension Shift / Boost) bastığında (`dimensionShift(false)`), `playSound === false` olmasına rağmen koşulsuz fırlatılan `doomscroll:macro-surge` (ve bunun tetiklediği orta sarsıntı) ve `celebrateFormatUnlock` sarsıntısı artık `playSound` korumasına alındı. Botlar otomatik çalışırken bu görsel ve işitsel sarsıntı zincirleri tetiklenmez.
+2. **Kütle Patlamasında Dekad Sarsıntısı Spam Koruması (`src/components/Header.vue`):**
+   - `checkDecade()` fonksiyonunda her tek dekad (10 katlık artış) için fırlatılan `doomscroll:shake (soft)` tamamen kaldırıldı; yalnızca tiz bildirim sesi bırakıldı.
+   - 10'arlı büyük dekadlar (1e10, 1e20, 1e30...) için 4000ms'lik katı cooldown (`lastDecadeShakeAt`) eklendi. Botlar çalışırken kütle üssel roketlendiğinde ekranın her saniye titremesi engellendi.
+3. **Merkezi Anti-Spam Sarsıntı Sınırı (`src/components/JuiceLayer.vue`):**
+   - `handleShakeEvent` içine hız kontrolü (`lastShakeAt`) eklendi: Soft sarsıntılarda en az 600ms, orta sarsıntılarda en az 400ms aralık zorunlu kılındı.
+   - `store.settings.screenShake === false` ve `juiceMode === 'calm'` durumlarında sarsıntı tamamen kapatıldı ve açıkta kalan sınıflar anında temizlendi.
+4. **Kullanıcı Ayarı - Ekran Sarsıntısı (Screen Shake) Toggle'ı (`src/components/SettingsModal.vue` & `types.ts`):**
+   - Görsel & Ekran ayarlarına "Ekran Sarsıntısı (Screen Shake)" açık/kapalı seçeneği eklendi.
+5. **Birim Testleri (`src/core/screen-shake.test.ts`):**
+   - 2 yeni birim testi eklendi (ayar kapalıyken sarsıntı eklenmemesi ve anti-spam hız sınırı). 226/226 test yeşil.
+
 ## [2026-10-10] — UROBOROS Saf Kuantum-Kozmik Dönüşümü & Antimatter Dimensions Kütle Prestiji
 
 ### Kapsam:
