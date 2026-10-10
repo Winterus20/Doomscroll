@@ -1,14 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, it, expect } from 'vitest'
 import { useGameStore } from './game'
 import { Decimal } from '../core/math'
 import type { SerializedPlayerState } from '../models/types'
 
 describe('Autobuyers Hybrid Lifecycle & Cosmic Cockpit', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('Faz 0: Başlangıçta tüm botlar kilitli ve single moddadır', () => {
     const store = useGameStore()
     expect(store.singularities).toBe(0)

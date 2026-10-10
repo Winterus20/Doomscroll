@@ -1,5 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, expect, it } from 'vitest'
 import {
   useGameStore,
   dimensionCostForBucket,
@@ -65,10 +64,6 @@ function cost(tier: number, bucket: number): Decimal {
 }
 
 describe('ADR-0051 Kademeli Maliyet İvmelenmesi', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('(a) B0 eşiği altındaki tüm fiyatlar eski formülle birebir aynı (ADR-0023/ADR-0026 korunur)', () => {
     for (const tier of TIERS) {
       for (let bucket = 0; bucket < B0_BUCKET_THRESHOLD; bucket++) {

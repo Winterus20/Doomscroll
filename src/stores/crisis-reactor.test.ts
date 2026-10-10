@@ -1,13 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, it, expect } from 'vitest'
 import { useGameStore } from './game'
 import { Decimal } from '../core/math'
 
 describe('Crisis 2.0: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('başlangıçta reaktör ısısı 0 ve dormant fazında olmalıdır', () => {
     const store = useGameStore()
     expect(store.reactorHeat).toBe(0)

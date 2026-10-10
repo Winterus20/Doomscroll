@@ -2,10 +2,14 @@ import { fileURLToPath } from 'node:url'
 import { configDefaults, defineConfig } from 'vitest/config'
 
 /**
- * Vitest is only wired for the pure, framework-free game-data modules under
- * `src/game/`. No component rendering, so `node` environment and zero
- * DOM shims are enough — which keeps the suite fast and the dependency list
- * to a single devDependency.
+ * Vitest — iki katmanlı test harness'in hızlı katmanı.
+ *
+ * Kapsama:
+ * - `src/**` — birim + store testleri (`*.test.ts`), DOM'suz `node` ortamı.
+ * - `tests/**` — ADR sözleşme spec'leri (`*.spec.ts`, örn. lab-rebalance).
+ *   Eskiden include dışıydı; `src/game/lab-rebalance.test.ts` shimiyle
+ *   dolambaçlı koşuyordu. Shim silindi, spec tek kaynaktır.
+ * - `src/test/setup.ts` her testten önce Pinia'yı sıfırlar (izolasyon).
  */
 export default defineConfig({
   // Mirror the app alias so future tests can use '@/...' like the source does.
@@ -16,8 +20,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.spec.ts'],
     exclude: [...configDefaults.exclude, 'dist/**', 'brain/**'],
+    setupFiles: ['src/test/setup.ts'],
+    // Store duman testi (smoke.test.ts) binlerce tick sürer; varsayılan
+    // 5 sn yetmez. Yavaşlık = bulgu değil, simülasyon maliyetidir.
+    testTimeout: 60_000,
     // Data-only suite: no DOM, no globals, explicit imports from 'vitest'.
     globals: false
   }

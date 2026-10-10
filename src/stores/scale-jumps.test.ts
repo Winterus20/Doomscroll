@@ -1,5 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, expect, it } from 'vitest'
 import { useGameStore } from './game'
 import { D_0, D_1, Decimal } from '../core/math'
 
@@ -28,10 +27,6 @@ function product(parts: Array<{ mult: Decimal }>): Decimal {
 }
 
 describe('ADR-0052 sıçrama sayaçları ve kapsamları', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('shift: sayacı artırır, galaksiyi korur, koşuyu sıfırlar, günlüğe yazar', () => {
     const store = richStore()
     store.galaxies = 2
@@ -116,10 +111,6 @@ describe('ADR-0052 sıçrama sayaçları ve kapsamları', () => {
 })
 
 describe('ADR-0052 çarpan döküm paritesi', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('getDimensionBreakdown çarpımı getDimensionMultiplier ile birebir (tier 1-8)', () => {
     const store = richStore()
     store.dimensionShifts = 2

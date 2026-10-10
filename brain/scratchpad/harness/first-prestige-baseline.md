@@ -9,6 +9,10 @@
 
 ## 1. How to build & run
 
+> Kısa yol (tek kapı): `npm run harness:smoke` (derle + 30 dk aktif sim + 6 assert, ~30 sn),
+> `npm run harness:full` (ADR-0023 band denetimi), `npm run verify` (typecheck + test + smoke).
+> Aşağıdaki ham komutlar özel ölçümler içindir.
+
 ```powershell
 # build the bundle (esbuild, canvas-confetti aliased to a no-op stub)
 node brain/scratchpad/harness/build.mjs

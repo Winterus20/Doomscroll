@@ -1,13 +1,8 @@
-import { describe, expect, it, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, expect, it } from 'vitest'
 import { useGameStore } from './game'
 import { Decimal } from '../core/math'
 
 describe('Denge ve Mimari Doğrulama Testleri', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('challengeGoalReached: C1 hedefi 1e40 iken 1e40 seviyesinde tetiklenir (1e308 beklemez)', () => {
     const store = useGameStore()
     store.activeChallenge = 'c1'

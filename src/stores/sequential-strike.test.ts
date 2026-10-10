@@ -1,12 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, it, expect, vi } from 'vitest'
 import { useGameStore } from './game'
 
 describe('Balatro Sütun 2: Sıralı Nedensellik (Sequential Triggering)', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
   it('varsayılan durumda en az taban ve final kademelerini üretir', () => {
     const store = useGameStore()
     const stages = store.swipeBreakdown

@@ -1,5 +1,28 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-10] ✔ — Test Harness Konsolidasyonu (ADR-0053, Tek Kapı)
+
+### Problem:
+İki katmanlı harness dağınık ve keşfedilemezdi: Vitest `tests/` klasörünü
+görmüyordu (lab-rebalance shim ile dolambaçlı koşuyordu), 6 store testi aynı
+Pinia kurulumunu tekrarlıyordu, `isNan` kuralını pinleyen test yoktu, sim
+harness `npm run` ile çalışmıyordu ve sonuçlar göz kararı okunuyordu.
+
+### Çözüm:
+- `vitest.config.ts`: include `src` + `tests`, `setupFiles: src/test/setup.ts`, `testTimeout` 60 sn.
+- Yeni: `src/test/helpers.ts` + `src/test/setup.ts`, `src/core/math.test.ts` (6),
+  `src/stores/smoke.test.ts` (2, gerçek store'da 5 dk aktif oyun).
+- Silindi: `src/game/lab-rebalance.test.ts` shimi (spec tek kaynak).
+- 6 store testinden tekrarlı Pinia kurulumu silindi (global setup'a taşındı).
+- `package.json`: `esbuild ^0.25.0` devDep; `typecheck`, `test:watch`,
+  `harness:build/smoke/assert/full`, `verify` scriptleri.
+- Yeni: `brain/scratchpad/harness/assert-results.mjs` (`--smoke`/`--full`, exit 1).
+
+### Doğrulama:
+- `npm run test`: **17 dosya, 257 test yeşil**.
+- `npm run harness:smoke`: **6/6 assert geçti** (log10=89.7, shifts=8, ~30 sn).
+- `npm run build`: **0 tip hatası**.
+
 ## [2026-10-10] ✔ — Kademeli Maliyet İvmelenmesi (Progressive Cost Acceleration — ADR-0051)
 
 ### Problem:

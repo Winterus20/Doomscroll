@@ -19,6 +19,10 @@
 ## 3. Bulut Kayıt, Test ve Ses Altyapısı
 - **Cloud Save:** Firebase Auth + Firestore ile bulut kayıt; misafir ve Google ile giriş desteklenir.
 - **Bulut Çakışma Yönetimi:** `CloudConflictModal` ile yerel/bulut zaman damgası karşılaştırılır, kullanıcı seçimi korunur.
-- **Birim Testleri:** Vitest (`node` ortamı) ile `src/game/` veri modülleri test edilir (`unlocks`, `pacing`, `challenges`, `achievements`).
+- **Birim Testleri:** Vitest (`node` ortamı) ile saf oyun verisi (`src/game/`),
+  store orkestrasyonu (`src/stores/*.test.ts`), çekirdek (`src/core/*.test.ts`) ve
+  ADR sözleşme spec'leri (`tests/*.spec.ts`) test edilir; `src/test/setup.ts`
+  her testte Pinia'yı sıfırlar. Hızlı kapı: `npm run test`; derin kapı:
+  `npm run harness:smoke` / `harness:full` (`assert-results.mjs`).
 - **Müzik Motoru:** `src/core/music-engine.ts` Web Audio osilatörleriyle prosedürel müzik üretir; harici ses dosyası yoktur.
 - Detaylı faz ve görev durumu için `brain/tasks/todo.md` dosyasına bakılır.
