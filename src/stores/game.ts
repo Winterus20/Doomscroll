@@ -1572,6 +1572,7 @@ export const useGameStore = defineStore('game', {
       customAudioUrl: '',
       confirmDialogs: true,
       reduceAnimations: false,
+      screenShake: true,
       crtEffect: true,
       juiceMode: 'balanced' as const,
       screenOverlayEffects: true,
@@ -3662,7 +3663,7 @@ export const useGameStore = defineStore('game', {
       // burada kalıcılaşır; son 0.5 sn'de aşılan basamaklar yeniden kilitlenmez.
       this.syncUnlocks()
       const capAfter = resolvedUnlockedDimensionCount(this)
-      if (capAfter > capBefore) {
+      if (capAfter > capBefore && playSound) {
         this.celebrateFormatUnlock(capAfter)
       }
 
@@ -3691,7 +3692,8 @@ export const useGameStore = defineStore('game', {
         })
       }
 
-      if (typeof window !== 'undefined') {
+      // Otomatik botlar çalışırken makro sarsıntı ve arpej zincirini tetikleme (sadece manuel basışta)
+      if (typeof window !== 'undefined' && playSound) {
         window.dispatchEvent(
           new CustomEvent('doomscroll:macro-surge', {
             detail: {
@@ -6351,6 +6353,7 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
           musicEngine.intensity = this.settings.musicIntensity ?? 0.5
           // P0 Balatro: eski kayıtlarda eksik alanlar varsayılanla dolar
           if (this.settings.crtEffect === undefined) this.settings.crtEffect = true
+          if (this.settings.screenShake === undefined) this.settings.screenShake = true
           if (this.settings.juiceMode === undefined) this.settings.juiceMode = 'balanced'
           if (this.settings.screenOverlayEffects === undefined) this.settings.screenOverlayEffects = true
           if (this.settings.holoCardsEnabled === undefined) this.settings.holoCardsEnabled = true
