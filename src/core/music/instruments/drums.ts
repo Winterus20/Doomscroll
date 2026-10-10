@@ -36,8 +36,8 @@ export function playSoftKick(host: SynthContext, time: number, volume: number): 
   click.stop(time + 0.02)
   host.cleanup(osc, gain)
   host.cleanup(click, clickGain)
-  // SP-404 vinyl simulator sidechain ducking pompası
-  host.triggerDuck(time, 0.58)
+  // SP-404 vinyl simulator sidechain ducking pompası (nazik 2-3 dB)
+  host.triggerDuck(time, 0.74)
 }
 
 /**
@@ -384,4 +384,78 @@ export function playShaker(host: SynthContext, time: number, volume: number): vo
   noise.start(time, Math.random())
   noise.stop(time + 0.035)
   host.cleanup(noise, bp, gain)
+}
+
+/**
+ * Tape Stop / Plak Yavaşlaması (Auto-DJ parça geçiş efekti)
+ * Bant makinesinin durması: tiz gürültü süpürmesi + perdesi çöken mekanik uğultu
+ */
+export function playTapeStopSweep(host: SynthContext, time: number, volume = 0.12): void {
+  const ctx = host.ctx
+  if (!ctx || !host.masterGain || !host.noiseBuffer) return
+
+  const peak = volume * host.volume
+
+  // 1. Filtreli gürültü süpürmesi: 6.2kHz'dan 240Hz'a alçalan "bant durması" tınısı
+  const noise = ctx.createBufferSource()
+  noise.buffer = host.noiseBuffer
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.Q.value = 1.4
+  bp.frequency.setValueAtTime(6200, time)
+  bp.frequency.exponentialRampToValueAtTime(240, time + 0.55)
+  const ng = ctx.createGain()
+  ng.gain.setValueAtTime(0.0001, time)
+  ng.gain.exponentialRampToValueAtTime(peak, time + 0.02)
+  ng.gain.exponentialRampToValueAtTime(0.0001, time + 0.6)
+  noise.connect(bp)
+  bp.connect(ng)
+  ng.connect(host.masterGain)
+
+  noise.start(time, Math.random())
+  noise.stop(time + 0.65)
+  host.cleanup(noise, bp, ng)
+
+  // 2. Mekanik uğultu: motorun yavaşlayarak durması, 420Hz -> 60Hz perde çöküşü
+  const osc = ctx.createOscillator()
+  const og = ctx.createGain()
+  osc.type = 'sawtooth'
+  osc.frequency.setValueAtTime(420, time)
+  osc.frequency.exponentialRampToValueAtTime(60, time + 0.5)
+  og.gain.setValueAtTime(0.0001, time)
+  og.gain.exponentialRampToValueAtTime(peak * 0.5, time + 0.03)
+  og.gain.exponentialRampToValueAtTime(0.0001, time + 0.55)
+  osc.connect(og)
+  og.connect(host.masterGain)
+
+  osc.start(time)
+  osc.stop(time + 0.6)
+  host.cleanup(osc, og)
+}
+
+/**
+ * İğne Bırakma Tıkırtısı (record needle drop)
+ * Plak çaların kolunun yere değmesi: kısa, kuru, tiz tıkırtı
+ */
+export function playVinylClick(host: SynthContext, time: number, volume = 0.08): void {
+  const ctx = host.ctx
+  if (!ctx || !host.masterGain || !host.noiseBuffer) return
+
+  const noise = ctx.createBufferSource()
+  noise.buffer = host.noiseBuffer
+  const hp = ctx.createBiquadFilter()
+  hp.type = 'highpass'
+  hp.frequency.value = 2400
+  const g = ctx.createGain()
+  const peak = volume * host.volume
+  g.gain.setValueAtTime(peak, time)
+  g.gain.exponentialRampToValueAtTime(0.0001, time + 0.03)
+
+  noise.connect(hp)
+  hp.connect(g)
+  g.connect(host.masterGain)
+
+  noise.start(time, Math.random())
+  noise.stop(time + 0.04)
+  host.cleanup(noise, hp, g)
 }

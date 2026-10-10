@@ -2273,3 +2273,36 @@ Düz SP dükkânı seçim yaratmıyordu; aktif (tıklama) oyun geç oyunda anlam
 3. **Doğrulama:**
    - `npx vitest run` $\to$ 188/188 test yeşil.
    - `npm run build` $\to$ 0 hata, başarılı derleme.
+
+---
+
+## [2026-10-10] - 02:47 AM Lo-Fi Chill Radyosu: Auto-DJ Set Yapısı (v0.38.1)
+
+### Araştırma Temelli Kök Neden Analizi:
+Oyun içi lo-fi radyosu (`src/core/music/tracks/lofi-chill.ts`) teknik altyapısı sağlamdı (Rhodes fiziksel modellemesi, tape wow, vinil cızırtısı) ancak internet araştırması (Soundfly "Three Examples of Dilla Swing", Dan Charnas "Dilla Time" analizleri, Richar Pryn "How to Structure Lofi Music", lo-fi chord voicing rehberleri) ve uzman değerlendirmesi 5 kritik eksik ortaya çıkardı:
+1. **Dilla zamanlaması tersydi:** kick erken (-6ms), snare geç (+10ms) çalıyordu. Dilla hissinin kalbinde kick'lerin laid-back (geç), snare'ların ahead (erken) gelmesi gerekir.
+2. **Swing %17 ile çok hafifti:** MPC "%66 sweet spot" ≈ 0.30 swing; mevcut his "yarım kalmış" sallantı.
+3. **Radyo/DJ akışı yoktu:** 6 caz bankası vardı ama parça geçişleri keskindi; intro, beat girişi ve plak dönüşü geçişleri yoktu.
+4. **Yapı 4 cycle'da sabitti:** Standart → Ritmik → Zirve → Breakdown döngüsü uzun oynanışta monotonlaşıyordu.
+5. **Register ve motif tutarsızlığı:** Bank 4 (Paper Cranes) akorları orta register dışına çıkıyordu; 6 bankanın hepsi aynı call-response melodisini çalıyordu.
+
+### Uygulanan Çözüm:
+1. **Auto-DJ Set Yapısı ([`src/core/music/tracks/lofi-chill.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/music/tracks/lofi-chill.ts) — tam yeniden yazım):**
+   - 8 bölümlü "radyo seti": INTRO (plak düştü, sadece Rhodes) → BEAT IN → GROOVE (yürüyen bas) → PEAK (Nujabes tarzı üst oktav parıltıları) → BREAKDOWN (gece boşluğu) → SECOND HALF → LATE GROOVE → VINYL RESET (plak yavaşlaması → iğne tıkırtısı → sonraki parça).
+   - Her "parça" artık 8 loop (~100 sn) sürüyor ve 6 caz bankası arasında tam bir set turu yapıyor; `npm run dev` sonrası set en baştan (intro) başlıyor.
+   - Her bankaya kendi 4 ölçümlük melodik motifi atandı (6 farklı motif); Bank 4 akorları orta register'a (F3-C5) çekildi ve seslendirme hataları (C5 → B4, E7b9 düzeltmesi) giderildi.
+   - Strum'a "tembel üçüncü nota" (30ms gecikmeli vuruş) eklendi — Dilla'nın uyuyan elleri.
+2. **Yeni radyo geçiş efektleri ([`src/core/music/instruments/drums.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/music/instruments/drums.ts)):**
+   - `playTapeStopSweep`: 6.2kHz → 240Hz filtreli gürültü süpürmesi + 420→60Hz mekanik uğultu (bant/plak durması).
+   - `playVinylClick`: iğne bırakma tıkırtısı (parça açılışı ve kapanışı).
+3. **Dilla zamanlaması ve mix düzeltmeleri ([`src/core/music/index.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/music/index.ts)):**
+   - `kickTime` +12ms (laid-back), `snareTime` -9ms (ahead) — kaynak: Soundfly Ian Chang / "Dilla Time".
+   - Lo-Fi swing 0.17 → 0.30 (MPC %66 sweet spot).
+   - Sidechain ducking 0.58 → 0.74 (nazik 2-3 dB pompa — lo-fi mixing rehberleri).
+4. **Analog karakter ([`src/core/music/audio-graph.ts`](file:///c:/Users/Yigit/Documents/Incremental/src/core/music/audio-graph.ts)):**
+   - Kaset bandı "tape hiss" yatağı (3.6kHz band-pass, çok ince seviye).
+   - Reverb bus'una 25ms pre-delay: direkt çağışlar net, kuyruk arkadan gelir.
+
+### Doğrulama:
+- `npm run build` (`vue-tsc && vite build`) → 0 hata, production paketi derlendi.
+- Ses kontrollü test tarifi: müzik açıkken intro (davulsuz) → ~13 sn sonra beat girişi → zirve → çöküş → son bölümde plak yavaşlaması (perde çöküşü) ve yeni parçaya geçiş duyulmalı.

@@ -13,6 +13,9 @@ export class AudioGraph {
   public reverbGain: GainNode | null = null
   public crackleGain: GainNode | null = null
   public crackleSource: AudioBufferSourceNode | null = null
+  public tapeHissSource: AudioBufferSourceNode | null = null
+  public tapeHissGain: GainNode | null = null
+  public reverbPreDelay: DelayNode | null = null
   public rainGain: GainNode | null = null
   public rainSource: AudioBufferSourceNode | null = null
   public tapeLfo: OscillatorNode | null = null
@@ -95,11 +98,14 @@ export class AudioGraph {
       this.masterGain.connect(this.analyser)
       this.analyser.connect(this.ctx.destination)
 
-      // 2. Convolution Reverb (üretilmiş stereo impulse)
+      // 2. Convolution Reverb (üretilmiş stereo impulse) + 25ms pre-delay (netlik)
+      this.reverbPreDelay = this.ctx.createDelay(0.2)
+      this.reverbPreDelay.delayTime.setValueAtTime(0.025, this.ctx.currentTime)
       this.reverbNode = this.ctx.createConvolver()
       this.reverbNode.buffer = this.makeImpulse(2.2, 2.8)
       this.reverbGain = this.ctx.createGain()
       this.reverbGain.gain.setValueAtTime(0.32, this.ctx.currentTime)
+      this.reverbPreDelay.connect(this.reverbNode)
       this.reverbNode.connect(this.reverbGain)
       this.reverbGain.connect(this.compressor)
 
@@ -118,6 +124,9 @@ export class AudioGraph {
 
       // 5. Vinil / Kaset Cızırtısı
       this.setupVinylCrackle(enabled)
+
+      // 5b. Kaset bandı hiss yatağı (analog karakter)
+      this.setupTapeHiss(enabled)
 
       // 6. Yağmur + oda tonu
       this.setupRainAmbience(enabled)
@@ -258,6 +267,53 @@ export class AudioGraph {
     this.crackleGain.connect(this.masterGain)
 
     this.crackleSource.start(0)
+  }
+
+  /**
+   * Kaset bandı hiss yatağı: analog manyetik bant karakteri
+   * Lo-Fi ve diğer synth parçalarında çok ince bir arka plan dokusu
+   */
+  private setupTapeHiss(enabled: boolean): void {
+    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return
+
+    this.tapeHissSource = this.ctx.createBufferSource()
+    this.tapeHissSource.buffer = this.noiseBuffer
+    this.tapeHissSource.loop = true
+
+    // 1-8kHz bandında ince tebeşir sessizliği (yumuşak, tiz değil)
+    const bp = this.ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 3600
+    bp.Q.value = 0.35
+
+    const lp = this.ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 9000
+
+    this.tapeHissGain = this.ctx.createGain()
+    this.tapeHissGain.gain.setValueAtTime(enabled ? 0.0022 : 0.0001, this.ctx.currentTime)
+
+    this.tapeHissSource.connect(bp)
+    bp.connect(lp)
+    lp.connect(this.tapeHissGain)
+    this.tapeHissGain.connect(this.masterGain)
+
+    this.tapeHissSource.start(0, Math.random())
+    this.cleanup(this.tapeHissSource, bp, lp)
+  }
+
+  public updateTapeHissState(
+    enabled: boolean,
+    isPlaying: boolean,
+    currentTrack: MusicTrackId
+  ): void {
+    if (!this.tapeHissGain || !this.ctx) return
+    const audible = enabled && isPlaying && currentTrack !== 'custom'
+    this.tapeHissGain.gain.setTargetAtTime(
+      audible ? 0.0022 : 0.0001,
+      this.ctx.currentTime,
+      0.4
+    )
   }
 
   private setupRainAmbience(enabled: boolean): void {
@@ -512,6 +568,7 @@ export class AudioGraph {
     const sleepMute = currentTrack === 'ambient_drone'
     const target = enabled && vinylCrackle && isPlaying && !sleepMute ? 0.05 : 0.0001
     this.crackleGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.1)
+    this.updateTapeHissState(enabled, isPlaying, currentTrack)
     this.updateRainState(enabled, rainEnabled, isPlaying, currentTrack, rainLevel)
   }
 
@@ -536,8 +593,10 @@ export class AudioGraph {
   }
 
   public sendToReverb(node: AudioNode): void {
-    if (this.reverbNode) {
-      node.connect(this.reverbNode)
+    // Pre-delay üzerinden gönder: direkt çağışlar net, kuyruk arkadan gelir
+    const target = this.reverbPreDelay ?? this.reverbNode
+    if (target) {
+      node.connect(target)
     }
   }
 

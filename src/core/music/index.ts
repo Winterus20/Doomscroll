@@ -78,7 +78,7 @@ export class MusicEngine implements SynthContext {
   public sendToDelay(node: AudioNode): void {
     this.graph.sendToDelay(node)
   }
-  public triggerDuck(time: number, depth = 0.55): void {
+  public triggerDuck(time: number, depth = 0.72): void {
     this.graph.triggerDuck(time, depth)
   }
   public cleanup(
@@ -97,10 +97,12 @@ export class MusicEngine implements SynthContext {
     return Math.max(0.01, base * (1 + (Math.random() - 0.5) * variation * 2))
   }
   public kickTime(base: number): number {
-    return this.humanTime(base - 0.006)
+    // Dilla zamanlaması: kick laid-back (geriden gelir) — bant hissi ve sallantı
+    return this.humanTime(base + 0.012)
   }
   public snareTime(base: number): number {
-    return this.humanTime(base + 0.01)
+    // Dilla zamanlaması: snare ahead (öne çıkar) — gecikmiş kick'leri sürükler
+    return this.humanTime(base - 0.009)
   }
 
   // -------------------------------------------------------------
@@ -139,6 +141,8 @@ export class MusicEngine implements SynthContext {
     this.isPlaying = true
     this.nextNoteTime = ctx.currentTime + 0.06
     this.currentStep = 0
+    // Radyo açılışı: her başlatmada set en baştan (intro) başlar
+    this.loopCount = 0
     this.updateFilterAndDelayForTrack()
 
     this.schedulerTimer = window.setInterval(() => {
@@ -204,7 +208,7 @@ export class MusicEngine implements SynthContext {
   private getSwingForTrack(): number {
     switch (this.currentTrack) {
       case 'lofi_chill':
-        return 0.17
+        return 0.3 // MPC %66 swing sweet spot (triplet hissi)
       case 'subway_groove':
         return 0.12
       case 'synthwave':

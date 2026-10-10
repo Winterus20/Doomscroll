@@ -16,7 +16,8 @@ export const MUSIC_TRACKS: MusicTrackInfo[] = [
     subtitle: 'Yorgan Altı & Rhodes Melankolisi',
     icon: '🌙',
     bpm: 76,
-    description: 'Caz 7li/9lu Auto-DJ (ii-V-I-vi), %58 swing, Rhodes + tape wobble ve yağmur dokusu.'
+    description:
+      '8 bölümlü Auto-DJ set (intro → beat girişi → groove → zirve → gece boşluğu → 2. yarı → geç döngü → plak dönüşü), 6 caz bankası, %30 swing, Dilla zamanlaması, Rhodes + tape wow ve yağmur dokusu.'
   },
   {
     id: 'synthwave',
