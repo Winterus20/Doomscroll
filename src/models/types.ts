@@ -2,7 +2,9 @@ import { Decimal } from '../core/math'
 import type { NotationType } from '../core/format'
 
 export type StanceType = 'trend' | 'spam' | 'private_mode'
+
 export type AnomalyType = 'fyp' | 'heart_frenzy' | 'sponsor' | 'void'
+
 export type BuffType = AnomalyType | 'espresso' | 'planck_surge' | 'resonance_boost'
 
 export interface DimensionData {
@@ -41,6 +43,7 @@ export interface GuiltWrinkler {
 }
 
 /** Geriye dönük tip uyumluluğu */
+
 export type InternetTroll = GuiltWrinkler
 
 export interface AutobuyerConfig {
@@ -130,6 +133,7 @@ export type MusicTrackId = 'lofi_chill' | 'synthwave' | 'ambient_drone' | 'subwa
 export type NeuralBranch = 'root' | 'passive' | 'active' | 'hybrid'
 
 /**
+
  * Nöral Ağaç düğümü (kalıcı SP yetenek ağacı).
  * effect, neuralEffects getter'ında sayısal etkiye çevrilen tanımlayıcı id'dir.
  * Tekrarlanabilir düğümler maxLevel + costMult alanlerini kullanır.
@@ -244,6 +248,32 @@ export interface PastSingularityRecord {
   peakMatter: Decimal
   timestamp: number
   challengeId?: string | null
+}
+
+/** Ölçek sıçrama günlüğü kaydı (ADR-0052; shift/galaxy/singularity — son 100) */
+export interface ScaleJumpRecord {
+  id: number
+  layer: 'shift' | 'galaxy' | 'singularity'
+  timestamp: number
+  runSeconds: number
+  peakLogMatter: number
+  shifts: number
+  galaxies: number
+  singularities: number
+  spGained: Decimal
+}
+
+/** Kayıtlı hâli (Decimal'lar string) */
+export interface SerializedScaleJumpRecord {
+  id: number
+  layer: 'shift' | 'galaxy' | 'singularity'
+  timestamp: number
+  runSeconds: number
+  peakLogMatter: number
+  shifts: number
+  galaxies: number
+  singularities: number
+  spGained: string
 }
 
 export interface PlayerStats {
@@ -455,6 +485,18 @@ export interface SerializedPlayerState {
     peakMatter: string
     timestamp: number
     challengeId?: string | null
+  }>
+  /** Ölçek sıçrama günlüğü (ADR-0052, v17) */
+  jumpLog?: Array<{
+    id: number
+    layer: 'shift' | 'galaxy' | 'singularity'
+    timestamp: number
+    runSeconds: number
+    peakLogMatter: number
+    shifts: number
+    galaxies: number
+    singularities: number
+    spGained: string
   }>
   achievements?: string[]
   achievementsSeenCount?: number

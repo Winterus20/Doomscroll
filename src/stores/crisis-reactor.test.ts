@@ -173,7 +173,7 @@ describe('Crisis 2.0: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi'
     expect(store.reactorHeat).toBe(10)
   })
 
-  it('save/load migration eski caffeineEnergy alanını güvenle reactorHeat e dönüştürmelidir', () => {
+  it('v17 politikası: v16 kayıt reddedilir (göç yok, wipe)', () => {
     const store = useGameStore()
     const legacySave = {
       version: 16,
@@ -202,7 +202,39 @@ describe('Crisis 2.0: Olay Ufku Kararsızlık Reaktörü ve Hibrit Kriz Sistemi'
       }
     }
 
-    store.deserialize(legacySave as any)
+    expect(() => store.deserialize(legacySave as any)).toThrow()
+  })
+
+  it('v17 kaydı reactorHeat alanını doğrudan yükler (göçsüz)', () => {
+    const store = useGameStore()
+    const v17Save = {
+      version: 17,
+      matter: '1000',
+      reactorHeat: 65,
+      dimensions: store.dimensions.map((d) => ({ amount: d.amount.toString(), bought: d.bought })),
+      tickspeedBought: 0,
+      dimensionShifts: 0,
+      galaxies: 0,
+      singularityPoints: '0',
+      currentStance: 'trend',
+      activeBuffs: [],
+      slackers: [],
+      lastUpdate: Date.now(),
+      settings: store.settings,
+      stats: {
+        manualClicks: 0,
+        totalMatterProduced: '1000',
+        highestMatter: '1000',
+        totalPlaytime: 0,
+        singularityCount: 0,
+        fastestSingularity: 0,
+        anomaliesClicked: 0,
+        combosTriggered: 0,
+        slackersFired: 0
+      }
+    }
+
+    store.deserialize(v17Save as any)
     expect(store.reactorHeat).toBe(65)
     expect(store.reactorPhase).toBe('sweet_spot')
     expect(store.reactorCoolantCharges).toBe(3)

@@ -89,10 +89,10 @@ describe('Autobuyers Hybrid Lifecycle & Cosmic Cockpit', () => {
     expect(store.autobuyers.singularity.unlocked).toBe(true)
   })
 
-  it('Deserialize Garantisi: Eski prestijli kayıt yüklendiğinde kokpit onarılır', () => {
+  it('Deserialize Garantisi: Prestijli kayıt yüklendiğinde kokpit onarılır (v17)', () => {
     const store = useGameStore()
     const mockSave: Partial<SerializedPlayerState> = {
-      version: 16,
+      version: 17,
       singularities: 5,
       matter: '100',
       autobuyers: {

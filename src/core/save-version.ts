@@ -14,14 +14,18 @@
  * v16 — Global Wipe / Temiz Sıfırlama: Kullanıcı talebiyle tüm eski kayıtlar
  * sıfırlandı. Asgari desteklenen sürüm 16'ya çekildi; v15 ve öncesi tüm kayıtlar
  * temizlenerek sıfırdan başlatılır.
+ *
+ * v17 — Ölçek Sıçrama Motoru (ADR-0052): shift/galaxy/singularity tek motor +
+ * katman kayıt defteri; ölü `singularityHoldActive` kaldırıldı, `jumpLog` eklendi.
+ * Geriye dönük uyumluluk YOK: v16 ve öncesi kayıtlar açılmaz, sıfırdan başlanır.
  */
-export const SAVE_VERSION = 16
+export const SAVE_VERSION = 17
 
 /**
  * Asgari desteklenen kayıt sürümü.
  * Bunun altındaki kayıtlar otomatik olarak sıfırlanır (Global Reset / Wipe).
  */
-export const MIN_SUPPORTED_SAVE_VERSION = 16
+export const MIN_SUPPORTED_SAVE_VERSION = 17
 
 /**
  * Daha yeni bir build'in kaydı — eski build'de açılmamalı.

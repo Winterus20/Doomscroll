@@ -1,32 +1,31 @@
-import LZString from 'lz-string'
-import type { SerializedPlayerState, SaveSlotMeta } from '../models/types'
-import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, readSaveVersion } from './save-version'
-import { Decimal } from './math'
+/**
+ * Kayit sistemi cephesi: disariya acik SaveSystem API'si degismez.
+ * Icmantilar src/core/save/ altindadir (serializer: sikistirma/cozumleme,
+ * slots: slot anahtarlari ve ham okuma/yazma). Surum ve migrate karari buradadir.
+ */
+import LZString from "lz-string"
+import type { SerializedPlayerState, SaveSlotMeta } from "../models/types"
+import { SAVE_VERSION, MIN_SUPPORTED_SAVE_VERSION, readSaveVersion } from "./save-version"
+import { Decimal } from "./math"
+import { serializeState, tryParseRaw, isShapeSane, MAX_SAVE_STRING_LENGTH } from "./save/serializer"
+import {
+  LEGACY_MAIN_KEY,
+  LEGACY_OLD_KEY,
+  ACTIVE_SLOT_KEY,
+  QUARANTINE_SUFFIX,
+  resolveSlotKey,
+  resolveBackupKey,
+  quarantineRaw,
+  clearSingleSlot
+} from "./save/slots"
 
-const SAVE_KEY_PREFIX = 'DOOMSCROLL_SAVE_SLOT_'
-const LEGACY_MAIN_KEY = 'DOOMSCROLL_SAVE_V1'
-const LEGACY_OLD_KEY = 'QUANTUM_HORIZON_SAVE_V1'
-const BACKUP_KEY = 'DOOMSCROLL_SAVE_V1_BAK'
-const ACTIVE_SLOT_KEY = 'DOOMSCROLL_ACTIVE_SLOT'
 const BACKUP_EVERY_N_SAVES = 6 // 10 sn'lik kayıt ritminde ~1 dakikada bir yedek rotasyonu
-/** Fazla büyük girdi (LZ ham veya sıkıştırılmış) reddedilir — bellek şişirme koruması. */
-const MAX_SAVE_STRING_LENGTH = 500_000
-/** Ayrıştırılmış kaydın üst seviye anahtar sayısı üst sınırı. */
-const MAX_SAVE_TOP_LEVEL_KEYS = 200
-/** Ayrıştırılmış kayıttaki herhangi bir dizinin uzunluk üst sınırı. */
-const MAX_SAVE_ARRAY_LENGTH = 5000
 
 let saveSuppressed = false
 /** Slot başına periyodik yedek sayacı (tek global sayaç slot 2/3 rotasyonunu bozuyordu). */
 const saveCounters = new Map<number, number>()
 let lastSaveOk = true
 let lastSaveTime = Date.now()
-
-/**
- * ADR-0029: bozuk kayıt, autosave (~10 sn) tarafından üstüne yazılmadan ÖNCE
- * ayrı bir karantina anahtarına kopyalanır. Aksi halde tek örnek kayıp olurdu.
- */
-const QUARANTINE_SUFFIX = '_CORRUPT'
 
 export interface LoadResult {
   state: SerializedPlayerState | null
@@ -56,27 +55,6 @@ export interface InspectResult {
   }
 }
 
-function resolveSlotKey(slot: number): string {
-  // Slot 1 eski DOOMSCROLL_SAVE_V1 anahtarıyla %100 uyumludur
-  return slot === 1 ? LEGACY_MAIN_KEY : `${SAVE_KEY_PREFIX}${slot}`
-}
-
-/** Slot başına yedek anahtarı. Slot 1 geriye dönük uyum için eski adı korur. */
-function resolveBackupKey(slot: number): string {
-  return slot === 1 ? BACKUP_KEY : `${SAVE_KEY_PREFIX}${slot}_BAK`
-}
-
-/** Bozuk ham veriyi ayrı anahtara taşır; asıl slot olduğu gibi bırakılır. */
-function quarantineRaw(slot: number, raw: string): boolean {
-  try {
-    localStorage.setItem(resolveSlotKey(slot) + QUARANTINE_SUFFIX, raw)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** Karantinaya alınmış bozuk kaydın var olup olmadığı (kurtarma teklifi için). */
 export function hasQuarantinedSave(slot?: number): boolean {
   try {
     const s = slot ?? SaveSystem.getActiveSlot()
@@ -87,56 +65,6 @@ export function hasQuarantinedSave(slot?: number): boolean {
 }
 
 /** Yalnızca ilgili slotu temizler — diğer slotlara dokunmaz (eski-sürüm wipe için). */
-function clearSingleSlot(slot: number): void {
-  try {
-    localStorage.removeItem(resolveSlotKey(slot))
-    localStorage.removeItem(resolveBackupKey(slot))
-    localStorage.removeItem(resolveSlotKey(slot) + QUARANTINE_SUFFIX)
-    if (slot === 1) {
-      localStorage.removeItem(LEGACY_OLD_KEY)
-    }
-  } catch {
-    // Temizlik yolunda sessiz geç
-  }
-}
-
-/** Ayrıştırılmış kaydın şekil sınırlarını denetler (şişirilmiş/bozuk veri koruması). */
-function isShapeSane(parsed: unknown): boolean {
-  if (!parsed || typeof parsed !== 'object') return false
-  const obj = parsed as Record<string, unknown>
-  const keys = Object.keys(obj)
-  if (keys.length > MAX_SAVE_TOP_LEVEL_KEYS) return false
-  for (const k of keys) {
-    const v = obj[k]
-    if (Array.isArray(v) && v.length > MAX_SAVE_ARRAY_LENGTH) return false
-  }
-  return true
-}
-
-function tryParseRaw(raw: string | null): SerializedPlayerState | null {
-  if (!raw) return null
-  if (raw.length > MAX_SAVE_STRING_LENGTH) {
-    console.error('Kayıt dizesi çok büyük, reddedildi.')
-    return null
-  }
-  try {
-    let json = LZString.decompressFromBase64(raw)
-    if (!json) json = raw
-    if (json.length > MAX_SAVE_STRING_LENGTH) {
-      console.error('Kayıt içeriği çok büyük, reddedildi.')
-      return null
-    }
-    const parsed = JSON.parse(json) as SerializedPlayerState
-    if (!isShapeSane(parsed)) {
-      console.error('Kayıt şekli sınır dışı, reddedildi.')
-      return null
-    }
-    return parsed
-  } catch (e) {
-    console.error('Kayıt ayrıştırılamadı:', e)
-    return null
-  }
-}
 
 export const SaveSystem = {
   /** Aktif kayıt slotunu döner (1, 2 veya 3). Varsayılan 1. */
@@ -169,8 +97,7 @@ export const SaveSystem = {
     const key = resolveSlotKey(slot)
 
     try {
-      const json = JSON.stringify(state)
-      const compressed = LZString.compressToBase64(json)
+      const compressed = serializeState(state)
 
       // Periyodik yedek rotasyonu — slot başına sayaçla (TÜM SLOTLAR için).
       // Önceden tek global sayaç vardı; slot 2/3 kaydı sayacı ilerletemeyince
@@ -410,8 +337,7 @@ export const SaveSystem = {
   },
 
   exportSave(state: SerializedPlayerState): string {
-    const json = JSON.stringify(state)
-    return LZString.compressToBase64(json)
+    return serializeState(state)
   },
 
   /**
