@@ -45,8 +45,9 @@ cost(b) = merdiven_maliyeti(b)                         b ≤ B0
 ```
 
 - `B0_BUCKET_THRESHOLD = 30` — ivmelenmenin basladigi kova (1 kova = 10 alim).
-- `COST_ACCEL_DECADES_PER_STEP = 0.02` — esigin her kova üstü eklenen maliyet
-  ivmesi (ondalik basamak / kova).
+- `COST_ACCEL_DECADES_PER_STEP = 0.011` — esigin her kova üstü eklenen maliyet
+  ivmesi (ondalik basamak / kova). (Ilk deger 0.02 idi; harness kalibrasyonu
+  duvarin asiri sert oldugunu gösterdi, 0.011'e dusuruldu — bkz §8.)
 
 ### Neden bu formül (referans: AD Break Infinity)
 
@@ -109,3 +110,22 @@ save migration gerekmez. Mevcut kayit yükleme testleri degismeden geçer (233/2
 Kova 50'de D1 maliyeti ×10^3.8, kova 100'de ×10^48.3, kova 300'de ×10^726 pahalilasir
 (eski oran sabit 3 ondalik kalirken). Gec oyun dekadlari kontrol edek şekilde uzar;
 runaway buy-loop kirilir ve tekillik (1.79e308) gerçek bir sinira donüsür.
+
+## 8. Ölçülen Etki (harness kalibrasyonu, active seed 1)
+
+| S | Toplam (tekillik) | 50→60 | 100→110 | 150→160 | 200→210 | 250→260 | Sonuç |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 0 (önce) | 10:29:42 | 99.1 sn | 314.8 sn | 3391 sn | 1609 sn | **2.3 sn** | runaway |
+| 0.02 | ulasilamadi (12s cap, max 1e218) | — | — | — | — | — | duvar asiri sert ❌ |
+| 0.005 | 11:05:50 (+36dk) | 99.1 sn | 282.8 sn | 3272 sn | 1345 sn | **132.1 sn** (57×) | kabul edilebilir |
+| **0.011** | **11:38:27 (+1s09dk)** | 99.1 sn | 312.2 sn | 3420 sn | 1537 sn | **158.8 sn** (69×) | **secilen deger ✓** |
+
+- Erken oyun birebir korunur: 50→60 tüm kosularda **99.1 sn** (B0 alti dokunulmaz).
+- Runaway kirildi: en kötü segment 2.3 sn → 158.8 sn (**69× yavas**).
+- S=0.02 oyuncuyu ~1e216'da kalici olarak durdurdu (tekillige 12 saatte ulasilamadi);
+  bu yüzden S asagi kalibre edildi. S=0.011, duvari hissettiren ama kosuyu bitirilebilir
+  tutan orta noktadir.
+- Ek düzeltme (ayni kapsamda): `buyMaxDimension` önizleme döngüsü, kova-kova
+  ivmelenmede `buyDimensionUnits` ile birebir ayni semantikle sinirlanir (kovaya
+  takilinca durur, yeni kovaya tasmaz); önizleme artik gerçek alimla ayni adedi
+  gösterir (test c genisletildi).

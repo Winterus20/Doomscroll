@@ -1063,7 +1063,7 @@ export const B0_BUCKET_THRESHOLD = 30
  * Eşiğin her kova üstü için eklenen maliyet ivmesi (ondalık basamak / kova).
  * 0.02 → kova 50'de bir sonraki kova 1 ondalık, kova 80'de 2 ondalık daha pahalı.
  */
-export const COST_ACCEL_DECADES_PER_STEP = 0.005
+export const COST_ACCEL_DECADES_PER_STEP = 0.011
 
 /**
  * Kademeli ivmelenme çarpanı: cost(b) = merdiven_maliyeti × 10^(S·d(d-1)/2), d = b - B0.
@@ -2481,11 +2481,9 @@ export const useGameStore = defineStore('game', {
           if (affordable <= 0) break
           spent = spent.plus(unitCost.times(affordable))
           units += affordable
-          if (affordable === remainingInBucket) {
-            bucket += 1
-            remainingInBucket = 10
-            continue
-          }
+          // buyDimensionUnits ile birebir aynı semantik: mevcut kova ad-adet
+          // sınırına takılınca döngü biter (yeni kovaya geçilmez). Aksi halde
+          // önizleme, kova-kova ivmelendiğinde gerçek alımdan fazla birim gösterir.
           break
         }
 

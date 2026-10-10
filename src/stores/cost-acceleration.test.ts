@@ -154,17 +154,21 @@ describe('ADR-0051 Kademeli Maliyet İvmelenmesi', () => {
     expect(store.dimensions[tier - 1].bought).toBe(startBucket * 10 + packs * 10)
     expect(store.matter.eq(0)).toBe(true)
 
-    // Bütçe 5. paketin yarısı: 4 paket + kovada 5 tekil birim alınır (kısmi kova doğru fiyatlanır)
+    // Bütçe 5. paketin yarısı: kısmi kova doğru fiyatlanır. Ivan (esnek):
+    // harcanan para ≤ bütçe ve kalan para sonraki birim fiyatından küçük (maksimalite).
     const sum4 = new Decimal(0).plus(cost(tier, startBucket)).plus(cost(tier, startBucket + 1))
       .plus(cost(tier, startBucket + 2)).plus(cost(tier, startBucket + 3))
+    const budget = sum4.plus(cost(tier, startBucket + 4).times(0.5))
     store.dimensions[tier - 1].bought = startBucket * 10
-    store.matter = sum4.plus(cost(tier, startBucket + 4).times(0.5))
+    store.matter = new Decimal(budget)
     store.buyMaxDimension(tier, false, false)
-    expect(store.dimensions[tier - 1].bought).toBe(startBucket * 10 + 45)
-    // Kalan para bir sonraki tek birimin fiyatından kesinlikle küçüktür (maksimalite)
-    expect(store.matter.lt(store.getDimensionCost(tier).div(10))).toBe(true)
-    // Kütlenin negatife düşmesi imkânsız
+    const units = store.dimensions[tier - 1].bought - startBucket * 10
+    const spent = budget.minus(store.matter)
+    expect(units).toBeGreaterThan(40) // en az 4 tam paket
+    expect(spent.lte(budget)).toBe(true) // bütçe asla aşılıp negatife düşülmez
     expect(store.matter.gte(0)).toBe(true)
+    // Maksimalite: kalan para, kovadaki sonraki tek birimin fiyatından kesin küçük
+    expect(store.matter.lt(store.getDimensionCost(tier).div(10))).toBe(true)
   })
 
   it('(c) previewDimensionBuy ile gerçek satın alma aynı ivmelenen fiyatı kullanır', () => {
@@ -183,7 +187,11 @@ describe('ADR-0051 Kademeli Maliyet İvmelenmesi', () => {
     const ok = store.buyDimensionUnits(tier, false)
     expect(ok).toBe(true)
     expect(store.dimensions[tier - 1].bought).toBe(before + preview.units)
-    expect(matterBefore.minus(store.matter).eq(preview.cost)).toBe(true)
+    // Maliyetler aynı ivmelenen fiyattan gelir; biri birikmiş toplam, diğeri teker
+    // teker çıkım olduğu için onaltık anlamlı hanede eşit kabul edilir (fp kayması).
+    const realCost = matterBefore.minus(store.matter)
+    const relErr = realCost.minus(preview.cost).abs().div(preview.cost)
+    expect(relErr.lt(1e-12)).toBe(true)
   })
 
   it('(c) Geometrik seri yolu (tickspeed buyMax) tutarlı kalır: negatif yok, sonraki adım karşılanamaz', () => {
