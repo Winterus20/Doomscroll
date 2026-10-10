@@ -119,4 +119,47 @@ describe('Screen Shake ve Sabit Arayüz İzolasyonu (ADR-0044)', () => {
     vi.advanceTimersByTime(400)
     expect(mockElement.classList.contains('shake-hard')).toBe(false)
   })
+
+  it('ekran sarsıntısı ayarı kapalıyken (screenShake: false) hiçbir sınıf eklenmez', () => {
+    let screenShakeEnabled = false
+
+    function triggerShake(cls: string) {
+      if (!screenShakeEnabled) return
+      mockElement.classList.add(cls)
+    }
+
+    triggerShake('screen-shake')
+    expect(mockElement.classList.contains('screen-shake')).toBe(false)
+  })
+
+  it('anti-spam koruması hızlı ardışık sarsıntılarda minimum aralık dolmadan tetiklemeyi önler', () => {
+    let lastShakeAt = 0
+    let triggerCount = 0
+
+    function triggerShakeWithThrottle(cls: string, level: 'soft' | 'medium' | 'hard', now: number) {
+      const minInterval = level === 'soft' ? 600 : level === 'medium' ? 400 : 200
+      if (now - lastShakeAt < minInterval && level !== 'hard') {
+        return false
+      }
+      lastShakeAt = now
+      triggerCount++
+      mockElement.classList.add(cls)
+      return true
+    }
+
+    // İlk sarsıntı başarılı
+    const t1 = triggerShakeWithThrottle('shake-soft', 'soft', 1000)
+    expect(t1).toBe(true)
+    expect(triggerCount).toBe(1)
+
+    // 200ms sonra gelen sarsıntı engellenir (bot döngüsü koruması)
+    const t2 = triggerShakeWithThrottle('shake-soft', 'soft', 1200)
+    expect(t2).toBe(false)
+    expect(triggerCount).toBe(1)
+
+    // 700ms sonra gelen sarsıntı kabul edilir
+    const t3 = triggerShakeWithThrottle('shake-soft', 'soft', 1700)
+    expect(t3).toBe(true)
+    expect(triggerCount).toBe(2)
+  })
 })

@@ -1894,10 +1894,10 @@ export const useGameStore = defineStore('game', {
       )
     },
 
-    // Tekillik bekleme modu: Break Singularity alınmadıysa e308 üstünde
-    // Shift/Galaxy botları ateşlenmez (tekillik penceresi korunur).
-    singularityHoldActive(state): boolean {
-      return state.matter.gte(D_INFINITY) && !this.hasBreakSingularity
+    // Tekillik hazır modunda kilitlenme kaldırıldı: Tekilliğe basılabiliyorken de
+    // Ölçek Sıçraması ve Kozmik Çöküş (Galaksi) kilitlenmez, kesintisiz çalışır.
+    singularityHoldActive(): boolean {
+      return false
     },
 
     // --- OTONOMİ KOKPİTİ GETTER'LARI ---
@@ -5319,11 +5319,9 @@ const effectiveMode: AutobuyerMode = bot.mode || 'single'
                 this.buyTickspeed(false)
               }
             } else if (key === 'shift') {
-              // Break Singularity alınmadıysa tekillikte bekler; alındıysa
-              // e308 üstünde de normal çalışır (sınırın ötesinde rampa sürer).
-              if (this.canShift && !this.singularityHoldActive) this.dimensionShift(false)
+              if (this.canShift) this.dimensionShift(false)
             } else if (key === 'galaxy') {
-              if (this.canBuyGalaxy && !this.singularityHoldActive) this.buyGalaxy(false)
+              if (this.canBuyGalaxy) this.buyGalaxy(false)
             } else if (key === 'singularity') {
               // G1 (kritik): challenge içinde bot SP basıp koşuyu baypas edemez —
               // eşik aşılınca challenge tamamlanır.

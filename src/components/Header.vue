@@ -117,6 +117,7 @@ const decadeFlash = ref(false)
 let smoothRaf = 0
 let decadeTimer: number | null = null
 let lastDecade = 0
+let lastDecadeShakeAt = 0
 let lastSmoothCheck = 0
 
 function currentDecade(): number {
@@ -215,7 +216,7 @@ function checkDecade() {
         decadeFlash.value = false
         decadeTimer = null
       }, 900)
-      // Büyük dekadlar (10'arlı): konfeti + orta sarsıntı + şok dalgası + payoff.
+      // Büyük dekadlar (10'arlı): konfeti + kontrollü sarsıntı + şok dalgası + payoff.
       // Gizli sekmede kutlama yok (rAF durur + dönüşte lastDecade senkronlanır).
       if (dec % 10 === 0 && dec > 0) {
         if (isPageVisible()) {
@@ -223,7 +224,12 @@ function checkDecade() {
         }
         try {
           sounds.playPayoff()
-          window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'medium' } }))
+          const now = Date.now()
+          // Botlar veya hızlı üretim esnasında aralıksız sarsıntıyı önlemek için 4sn cooldown
+          if (now - lastDecadeShakeAt >= 4000) {
+            lastDecadeShakeAt = now
+            window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'medium' } }))
+          }
           const r = counterRef.value?.getBoundingClientRect()
           if (r) {
             window.dispatchEvent(
@@ -234,10 +240,7 @@ function checkDecade() {
           }
         } catch { /* yoksay */ }
       } else {
-        // Tek dekad: hafif sarsıntı + tiz tick — "yeni büyüklük" hissi.
-        try {
-          window.dispatchEvent(new CustomEvent('doomscroll:shake', { detail: { level: 'soft' } }))
-        } catch { /* yoksay */ }
+        // Tek dekad: tiz tick — "yeni büyüklük" hissi (ekran sarsıntısı kapalı: botlar aktifken titreşimi önler)
         sounds.playTallyTick(0.7)
       }
     } else {

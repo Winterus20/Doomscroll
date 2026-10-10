@@ -65,6 +65,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let animId: number | null = null
 let shakeTimeout: ReturnType<typeof setTimeout> | null = null
+let lastShakeAt = 0
 const particles: Particle[] = []
 const shockwaves: Shockwave[] = []
 const sparks: Spark[] = []
@@ -403,8 +404,14 @@ function handleShockwaveEvent(e: Event) {
 }
 
 function handleShakeEvent(e: Event) {
-  // Azaltılmış hareket: sarsıntı sınıfı HİÇ eklenmez (ve açık kalan temizlenir)
-  if (shouldReduceMotion()) {
+  // Azaltılmış hareket veya kullanıcı ayarında sarsıntı kapalıysa: HİÇ eklenmez (ve açık kalan temizlenir)
+  if (shouldReduceMotion() || store.settings.screenShake === false) {
+    clearBodyShake()
+    return
+  }
+
+  // Sakin modda sarsıntı kapalıdır
+  if (juiceModeCache === 'calm') {
     clearBodyShake()
     return
   }
@@ -416,6 +423,18 @@ function handleShakeEvent(e: Event) {
   const level = (e as CustomEvent<{ level?: string }>).detail?.level ?? 'medium'
   const cls = level === 'hard' ? 'shake-hard' : level === 'soft' ? 'shake-soft' : 'screen-shake'
   const ms = level === 'hard' ? 400 : level === 'soft' ? 200 : 250
+
+  const now = Date.now()
+  // Anti-Spam Koruması: Botlar veya hızlı döngüler çalışırken ekranın aralıksız titremesini önle
+  // Soft sarsıntılar için en az 600ms, orta sarsıntılar için en az 400ms aralık zorunludur
+  // İstisna: Mevcut durumdan daha sert bir seviyeye ('hard') yükselme her zaman uygulanır
+  const minInterval = level === 'soft' ? 600 : level === 'medium' ? 400 : 200
+  const isUpgradingToHard = level === 'hard' && !target.classList.contains('shake-hard')
+
+  if (now - lastShakeAt < minInterval && !isUpgradingToHard) {
+    return
+  }
+  lastShakeAt = now
 
   const hasHard = target.classList.contains('shake-hard')
   const hasMedium = target.classList.contains('screen-shake')
@@ -475,6 +494,14 @@ watch(
   shouldReduceMotion,
   (reduced) => {
     if (reduced) suppressActiveEffects()
+  }
+)
+
+// Ekran sarsıntısı kapatılırsa aktif sarsıntı sınıfını anında temizle
+watch(
+  () => store.settings.screenShake,
+  (enabled) => {
+    if (enabled === false) clearBodyShake()
   }
 )
 

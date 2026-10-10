@@ -178,6 +178,11 @@ function toggleAnimations() {
   sounds.playClick()
 }
 
+function toggleScreenShake() {
+  store.settings.screenShake = !(store.settings.screenShake ?? true)
+  sounds.playClick()
+}
+
 function setJuiceMode(mode: 'calm' | 'balanced' | 'tilt') {
   store.settings.juiceMode = mode
   sounds.playClick()
@@ -752,6 +757,21 @@ function executeHardReset() {
               :class="store.settings.reduceAnimations ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
             >
               {{ store.settings.reduceAnimations ? 'Azaltıldı' : 'Tam Animasyon' }}
+            </button>
+          </div>
+
+          <!-- Ekran Sarsıntısı (Screen Shake) -->
+          <div class="glass-panel-card p-3.5 rounded-xl flex items-center justify-between">
+            <div>
+              <div class="text-xs font-mono font-semibold text-slate-200">Ekran Sarsıntısı (Screen Shake)</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Sıçrama, kriz ve büyük kilometre taşlarında taktil ekran titreşimi</div>
+            </div>
+            <button
+              @click="toggleScreenShake"
+              class="px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 border"
+              :class="(store.settings.screenShake ?? true) ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-black/40 text-slate-500 border-white/[0.06]'"
+            >
+              {{ (store.settings.screenShake ?? true) ? 'Açık' : 'Kapalı' }}
             </button>
           </div>
 
