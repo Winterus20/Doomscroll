@@ -225,106 +225,106 @@ function log10Of(matter: Decimal): number {
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   {
     id: 'crisis_spawn',
-    name: 'Gece Krizleri',
-    hint: '1.000 Dopamin biriktir',
+    name: 'Kozmik Dalgalanmalar',
+    hint: '1.000 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(3) },
     order: 10
   },
   {
     id: 'autobuyers',
-    name: 'Otomatik Botlar Sekmesi',
-    hint: '1.000.000.000 (1e9) Dopamin biriktir',
+    name: 'Otonom Çekim Botları Sekmesi',
+    hint: '1.000.000.000 (1e9) g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(9) },
     order: 90
   },
   {
     id: 'stance_spam',
-    name: 'Çılgın Kaydırma Duruşu',
-    hint: '1e14 Dopamin biriktir',
+    name: 'Obur Çekim Duruşu',
+    hint: '1e14 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(14) },
     order: 140
   },
   {
     id: 'stance_private',
-    name: 'Düşük Parlaklık Duruşu',
-    hint: '1e18 Dopamin biriktir',
+    name: 'Vakum Kalkanı Duruşu',
+    hint: '1e18 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(18) },
     order: 180
   },
   {
     id: 'colony',
-    name: 'Nöral İzleme Kolonisi',
-    hint: '1e22 Dopamin biriktir',
+    name: 'Kuantum Rezonans Kolonisi',
+    hint: '1e22 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(22) },
     order: 220
   },
   {
     id: 'crisis',
-    name: 'Gece Kriz Yönetimi Sekmesi',
-    hint: '1e28 Dopamin biriktir',
+    name: 'Olay Ufku Kriz Yönetimi Sekmesi',
+    hint: '1e28 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(28) },
     order: 280
   },
   {
     id: 'spell_espresso',
-    name: 'Çift Espresso Shot Kararı',
-    hint: '1e34 Dopamin biriktir',
+    name: 'Zaman Genleşmesi Müdahalesi',
+    hint: '1e34 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(34) },
     order: 340
   },
   {
     id: 'spell_noise',
-    name: 'Gürültü Önleyici Kulaklık Kararı',
-    hint: '1e42 Dopamin biriktir',
+    name: 'Manyetik Tahliye Müdahalesi',
+    hint: '1e42 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(42) },
     order: 420
   },
   {
     id: 'spell_sleep',
-    name: "'Yarın Erken Kalkmam Gerekmiyor' Yalanı",
-    hint: '1e52 Dopamin biriktir',
+    name: 'Planck Patlaması Müdahalesi',
+    hint: '1e52 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(52) },
     order: 520
   },
   {
     id: 'lab',
     name: 'Kuantum Parçacık Reaktörü Sekmesi',
-    hint: '1e65 Kütle biriktir',
+    hint: '1e65 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(65) },
     order: 650
   },
   {
     id: 'seed_nucleon',
     name: 'Ağır Nükleon Çekirdeği (⚛️)',
-    hint: '1e80 Kütle biriktir',
+    hint: '1e80 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(80) },
     order: 800
   },
   {
     id: 'seed_gluon',
     name: 'Gluon Bağlayıcı (🌀)',
-    hint: '1e100 Kütle biriktir',
+    hint: '1e100 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(100) },
     order: 1000
   },
   {
     id: 'seed_graviton',
     name: 'Graviton Tuzağı (🕳️)',
-    hint: '1e125 Kütle biriktir',
+    hint: '1e125 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(125) },
     order: 1250
   },
   {
     id: 'guilt_slackers',
-    name: 'Vicdan Azapları',
-    hint: '1e160 Dopamin biriktir',
+    name: 'Kozmik Parazitler (Wrinklers)',
+    hint: '1e160 g Kütle biriktir',
     req: { kind: 'dopamine', amount: decadeGate(160) },
     order: 1600
   },
   {
     id: 'night_watch',
-    name: 'Kolektif Gece Nöbeti',
-    hint: `1e${ARC_LOG10_MAX} Dopamin biriktir — Şafak eşiği`,
+    name: 'Büyük Kozmik Çöküş',
+    hint: `1e${ARC_LOG10_MAX} g Kütle biriktir — Tekillik eşiği`,
     req: { kind: 'dopamine', amount: decadeGate(ARC_LOG10_MAX) },
     order: ARC_LOG10_MAX * 10
   },

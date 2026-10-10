@@ -268,11 +268,11 @@ function challengeCostInflationMult(state: {
 }
 
 const GUILT_NAMES = [
-  'Yarın Erken Kalkacaksın!',
-  'Gözlerin Kan Çanağı Oldu',
-  'Telefon Yüzüne Düşmek Üzere',
-  'Son 2 Saatlik Uyku Kaldı',
-  'Kuş Sesleri Gelmeye Başladı...'
+  'Kuantum Radyasyon Paraziti',
+  'Olay Ufku Kütle Kaçağı',
+  'Gravitasyonel Enerji Emicisi',
+  'Hawking Işıması Paraziti',
+  'Kozmik Kütleçekim Sülüğü'
 ]
 
 export const LAB_SEEDS = [
@@ -2196,14 +2196,7 @@ export const useGameStore = defineStore('game', {
       const hasBreak = (state.singularityUpgrades?.break_singularity || 0) >= 1 ||
                        (state.neuralNodesBought?.break_singularity || 0) >= 1
 
-      // 1. EVRE: Planck Duvarı Henüz Yıkılmadı (İlk ~5 koşu)
-      // Ne kadar kütle üretilirse üretilsin, tam olarak 1 SP verilir.
-      if (!hasBreak) {
-        return D_1
-      }
-
-      // 2. EVRE: Planck Duvarı Yıkıldı (Break Singularity Aktif)
-      // Taban 3 SP + Kütle 1e308'i aştıkça üstel büyüme
+      // Antimatter Dimensions mantığı: Kütle ne kadar fazlaysa o kadar çok SP kazanılır!
       const logMatter = state.matter.log10().toNumber()
       const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
       const spMult = memoChallengeEffects(state.completedChallenges).spMult
@@ -2211,9 +2204,41 @@ export const useGameStore = defineStore('game', {
       const totalMult = dawnSpeedMult * spMult * relicSpMult
 
       const logDiff = Math.max(0, logMatter - 308)
-      const rawGain = Decimal.pow(10, logDiff / 45).times(3).times(totalMult)
+      // Break Singularity yokken divisor = 100, taban 1x
+      // Break Singularity varken divisor = 45, taban 3x (daha agresif üstel büyüme)
+      const divisor = hasBreak ? 45 : 100
+      const basePoints = hasBreak ? 3 : 1
+
+      const rawGain = Decimal.pow(10, logDiff / divisor).times(basePoints).times(totalMult)
       const floored = Decimal.floor(rawGain)
-      return floored.gte(3) ? floored : new Decimal(3)
+      const minGain = hasBreak ? 3 : 1
+      return floored.gte(minGain) ? floored : new Decimal(minGain)
+    },
+
+    /**
+     * Bir sonraki Tekillik Puanı (SP) için gereken hedef kütle (Antimatter Dimensions tarzı).
+     */
+    nextSingularityPointAt(state): Decimal {
+      if (state.activeChallenge) return D_INFINITY
+      const hasBreak = (state.singularityUpgrades?.break_singularity || 0) >= 1 ||
+                       (state.neuralNodesBought?.break_singularity || 0) >= 1
+      const dawnSpeedMult = memoNeuralEffects(state.neuralNodesBought || {}).dawnSpeedMult
+      const spMult = memoChallengeEffects(state.completedChallenges).spMult
+      const relicSpMult = this.reactorRelicBonuses.spGainMult
+      const totalMult = Math.max(0.001, dawnSpeedMult * spMult * relicSpMult)
+
+      const divisor = hasBreak ? 45 : 100
+      const basePoints = hasBreak ? 3 : 1
+
+      const currentGain = this.singularityGain
+      const nextTarget = currentGain.plus(1)
+      const ratio = nextTarget.div(basePoints * totalMult)
+      if (ratio.lte(1)) {
+        return D_INFINITY
+      }
+      const logRatio = ratio.log10().toNumber()
+      const neededLog = 308 + divisor * logRatio
+      return Decimal.pow(10, neededLog)
     },
 
     // İstasyon Çarpanı Hesabı (Göz Damlası, Milestone, Sacrifice ve Bass Boost ile güçlenir)
@@ -4722,7 +4747,7 @@ export const useGameStore = defineStore('game', {
           this.activeBuffs.push({
             id: `buff-frenzy-void-${Date.now()}`,
             type: 'heart_frenzy',
-            name: '👆 Başparmak Histerisi (300× Kaydır)',
+            name: '🌌 Kütle Patlaması (300× Çekim)',
             duration: Math.floor(15 * durMult),
             remaining: Math.floor(15 * durMult),
             multiplier: 300

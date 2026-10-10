@@ -40,66 +40,66 @@ export interface DecadeBand {
 export const DECADE_BANDS: DecadeBand[] = [
   {
     id: 'awaken',
-    name: 'Uyanış',
+    name: 'Kuantum Uyanışı',
     from: 0,
     to: 8,
-    blurb: 'Başparmağın uyanıyor. Kedi videoları ve ilk kazançlar.'
+    blurb: 'Su damlasındaki moleküler bağların çözülüşü ve ilk atomik parçalanma.'
   },
   {
     id: 'crisis',
-    name: 'Kriz Gecesi',
+    name: 'Olay Ufku Dalgalanması',
     from: 8,
     to: 20,
-    blurb: 'Algoritma ilk kez sana geri döndü. Gece Krizleri başlıyor.'
+    blurb: 'Uzay-zaman eğriliyor. İlk Kozmik Dalgalanmalar ve gravitasyonel fırtınalar başlıyor.'
   },
   {
     id: 'fabric',
-    name: 'Doku',
+    name: 'Kuantum Dokusu',
     from: 20,
     to: 40,
-    blurb: 'Ritmin bir düzen buluyor: laboratuvar, tohumlar, vicdan azapları.'
+    blurb: 'Kuantum reaktörü devrede; egzotik parçacıklar ve olay ufkuna yapışan parazitler.'
   },
   {
     id: 'resolution',
-    name: 'Çözünürlük',
+    name: 'Planck Yırtılması',
     from: 40,
     to: 70,
-    blurb: '720p, 1080p. D5 açılıyor, yama dükkanı rafları doluyor.'
+    blurb: 'Mikro-karadelik laboratuvarı ve şehri yutuyor. Planck duvarı zorlanıyor.'
   },
   {
     id: 'automation',
-    name: 'Otomasyon',
+    name: 'Otonom Çekim',
     from: 70,
     to: 110,
-    blurb: 'Artık sen çalıştırmıyorsun. Toplu ve max modu, koloni devrede.'
+    blurb: 'Otonom çekim botları ve kuantum rezonans kolonisi tam kapasiteye ulaştı.'
   },
   {
     id: 'banishment',
-    name: 'Sürgü',
+    name: 'Gezegensel Yutuş',
     from: 110,
     to: 160,
-    blurb: 'D7 ve akış kümeleri. Nöro-Link, 4K HDR. Gece derinleşiyor.'
+    blurb: 'Gezegenler, uydular ve Güneş tekilliğin çekim kuyusuna kapılıyor.'
   },
   {
     id: 'diffusion',
-    name: 'Yayılım',
+    name: 'Galaktik Yayılım',
     from: 160,
     to: 210,
-    blurb: 'D8 açık, Kozmik çözünürlük. Artık akış senden büyük.'
+    blurb: 'D8 Samanyolu katmanı devrede. Tüm galaktik disk olay ufkunda dönüyor.'
   },
   {
     id: 'lastspurt',
-    name: 'Son Koşu',
+    name: 'Tekillik Eşiği',
     from: 210,
     to: 265,
-    blurb: 'Şafağa sayılı dakikalar. Her karar, her sıçrama sonuç veriyor.'
+    blurb: 'Kozmik Çöküşe sayılı anlar. Tüm evren tekillik merkezine doğru çekiliyor.'
   },
   {
     id: 'threshold',
-    name: 'Eşik',
+    name: 'Büyük Kozmik Çöküş',
     from: 265,
     to: ARC_LOG10_MAX,
-    blurb: '1.79e308. Güneş doğuyor — Sabah 06:00 Çöküşü.'
+    blurb: '1.79e308 g Kütle. Evrensel Tekillik ve Uroboros Kozmik Çöküşü.'
   }
 ]
 

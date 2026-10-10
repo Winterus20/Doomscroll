@@ -121,10 +121,10 @@ const showNapConfirm = ref(false)
           <Hourglass class="w-3 h-3" />
           10 dk sonra: ~{{ projectedBots }} bot
         </span>
-        <span>Toplu Uyku: {{ store.napCount }}×</span>
+        <span>Toplu Çöküş: {{ store.napCount }}×</span>
       </div>
 
-      <!-- TOPLU UYKU butonu -->
+      <!-- TOPLU ÇÖKÜŞ butonu -->
       <button
         @click="nap"
         class="btn-tactile w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer border transition-all"
@@ -135,10 +135,10 @@ const showNapConfirm = ref(false)
       >
         <Moon class="w-4 h-4" />
         <span v-if="store.canPowerNap">
-          TOPLU UYKU — ×{{ formatNumber(store.powerNapGain) }} Kalıcı Çarpan Kazan
+          TOPLU ÇÖKÜŞ — ×{{ formatNumber(store.powerNapGain) }} Kalıcı Çarpan Kazan
         </span>
         <span v-else>
-          Toplu Uyku için {{ formatNumber(store.minNapBots) }} bot gerekli
+          Toplu Çöküş için {{ formatNumber(store.minNapBots) }} bot gerekli
           <template v-if="timeToNapMinutes"> (~{{ timeToNapMinutes }} dk)</template>
         </span>
       </button>

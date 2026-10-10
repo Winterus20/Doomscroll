@@ -1,6 +1,16 @@
-﻿# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
+# Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
-## [2026-10-09] — Kriz & Olay Ufku Reaktörü 3.0 (Hibrit Termal Yönetim ve Exploit Çözümü)
+## [2026-10-10] — UROBOROS Saf Kuantum-Kozmik Dönüşümü & Antimatter Dimensions Kütle Prestiji
+
+### Kapsam:
+- **Saf UROBOROS Tematik Arınması:** Doomscroll/yatak/telefon/uyku kalıntıları tamamen temizlendi. `pacing.ts`'teki 9 dekad bandı, `unlocks.ts`'teki tüm ipuçları/başlıklar, `GUILT_NAMES` (Kozmik Radyasyon Parazitleri) ve `AnomalyOverlay.vue` (Süpernova 7×, Kütle Patlaması 777×) saf kuantum-kozmik tekillik anlatısına kavuşturuldu.
+- **Antimatter Dimensions Tarzı Kütle Ölçekli Prestij (`singularityGain`):** Yapay "Break Singularity yoksa 1 SP" barajı kaldırıldı. Artık 1.79e308 g kütleden itibaren oyuncunun yuttuğu kütle ne kadar fazlaysa logaritmik formülle katbekat daha fazla Tekillik Puanı (SP) kazanılıyor.
+- **Canlı Sonraki SP Eşiği (`nextSingularityPointAt`):** Hem `Header.vue`'da hem de `SingularityTab.vue`'da oyuncunun bir sonraki +1 SP'yi alabilmesi için gereken kütle canlı rozet ve tooltip olarak gösteriliyor.
+- **Denge & Test Senkronizasyonu:** `src/stores/balance.test.ts` güncellendi, 224/224 test yeşil.
+
+### Doğrulama:
+- `npx vitest run`: 224/224 test yeşil (12 dosya).
+- `npm run build`: vue-tsc ve vite build 0 hata ile tertemiz.
 
 ### Kapsam:
 - src/stores/game.ts: Sonsuz spam exploit'i kökten çözüldü (3 Kriyojenik Kartuş rezervi, 20-45s bireysel cooldown'lar, 120s buff tavanı ve Tatlı Nokta Rezonans Momenti 1.0x-5.0x).

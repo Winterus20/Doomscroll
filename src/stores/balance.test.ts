@@ -62,11 +62,12 @@ describe('Denge ve Mimari Doğrulama Testleri', () => {
     expect(store.singularityGain.toNumber()).toBe(1)
   })
 
-  it('break_singularity yokken kütle 1e500 e çıksa dahi kazanç 1 SP de sabit kalır', () => {
+  it('break_singularity yokken de kütle 1e500 e çıktığında Antimatter Dimensions gibi kütleye göre artan SP verir', () => {
     const store = useGameStore()
     store.matter = new Decimal('1e500')
     expect(store.hasBreakSingularity).toBe(false)
-    expect(store.singularityGain.toNumber()).toBe(1)
+    expect(store.singularityGain.toNumber()).toBeGreaterThan(1)
+    expect(store.singularityGain.toNumber()).toBe(83)
   })
 
   it('break_singularity alındığında 1.8e308 eşiğinde taban 3 SP verir', () => {

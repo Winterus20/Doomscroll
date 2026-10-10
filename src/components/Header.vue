@@ -278,22 +278,23 @@ function handleCounterVisibility() {
   }
 }
 
-// Sabah 06:00 Çöküşü hazır: 1.79e308 Dopamin eşiği aşıldı
+// Kozmik Çöküş hazır: 1.79e308 g Kütle eşiği aşıldı
 const singularityReady = computed(() => store.canSingularity)
 const singularityGainText = computed(() => format(store.singularityGain, 2, store.settings.notation))
+const nextSpMatterText = computed(() => format(store.nextSingularityPointAt, 2, store.settings.notation))
 // Break Singularity alındıysa Shift/Galaxy botları tekillikte beklemeyi bırakır
 const singularityBroken = computed(() => store.hasBreakSingularity)
 const singularityTip = computed(() =>
   singularityBroken.value
-    ? `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Sınır yıkıldı: Shift/Galaxy botları e308 üstünde de çalışıyor.`
-    : `Sabah 06:00 Çöküşü hazır! +${singularityGainText.value} SP — Shift/Galaxy botları sen kararı verene kadar bekliyor.`
+    ? `Kozmik Çöküş hazır! +${singularityGainText.value} SP (Sonraki SP: ${nextSpMatterText.value} g) — Planck sınırı yıkıldı, üstel büyüme devrede.`
+    : `Kozmik Çöküş hazır! +${singularityGainText.value} SP (Sonraki SP: ${nextSpMatterText.value} g) — Kütle arttıkça kazanç katlanır!`
 )
 
-// D1 (Masum Kedi) pasifi etkinse Kaydır tooltip'ine eklenir
+// D1 (Moleküler Bağlar) pasifi etkinse Yut tooltip'ine eklenir
 const swipeTip = computed(() =>
   store.passiveBadges.d1Sync
-    ? 'Space ile de kaydır — D1 pasifi: CPS senkron tavanı +0.5%'
-    : 'Space tuşuna basarak da kaydırabilirsiniz'
+    ? 'Space ile de yut — D1 pasifi: Çekim senkron tavanı +0.5%'
+    : 'Space tuşuna basarak da kütle yutabilirsiniz'
 )
 
 function handleSingularity() {
@@ -391,7 +392,7 @@ const canAffordAny = computed(() => {
 // her zaman tek bir odak çizer: alınabilir varsa o, yoksa en yakın kilide kalan.
 const nextGoal = computed<{ label: string; value: string; ready: boolean }>(() => {
   if (singularityReady.value) {
-    return { label: 'Sabah 06:00 — Güneşi Karşıla!', value: `+${singularityGainText.value} SP`, ready: true }
+    return { label: 'Kozmik Çöküş Hazır!', value: `+${singularityGainText.value} SP`, ready: true }
   }
   if (canAffordTickspeed.value) {
     return { label: 'Frekans hazır', value: `×${tickspeedMultiplier.value} → ${tickspeedCost.value}`, ready: true }

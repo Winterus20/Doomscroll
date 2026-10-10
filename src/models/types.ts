@@ -188,6 +188,7 @@ export interface GameSettings {
   // QoL ayarları (v10)
   confirmDialogs: boolean // Prestij/sıfırlama onay diyaloğu göster
   reduceAnimations: boolean // Animasyonları ve parçacıkları azalt
+  screenShake?: boolean // Taktil ekran sarsıntısı / titremesi açık/kapalı
   crtEffect: boolean // Gece 3 CRT: scanline + vinyet zemin efekti
   juiceMode: 'calm' | 'balanced' | 'tilt' // Balatro juice yoğunluğu
   screenOverlayEffects: boolean // Doomscroll ekran dokuları (parmak izi lekesi ve kriz çatlağı)

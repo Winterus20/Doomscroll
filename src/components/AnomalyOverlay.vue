@@ -30,11 +30,11 @@ function getIcon(type: AnomalyType | string) {
 }
 
 function getCategoryTag(type: AnomalyType | string) {
-  if (type === 'fyp') return 'Trend Akışı'
-  if (type === 'heart_frenzy') return 'Gece 3 Krizi'
-  if (type === 'void') return 'Void Tekilliği'
-  if (type === 'espresso') return 'Kafein Kararı'
-  return 'Viral Patlama'
+  if (type === 'fyp') return 'Süpernova (7× Kütle)'
+  if (type === 'heart_frenzy') return 'Kütle Patlaması (777× Çekim)'
+  if (type === 'void') return 'Hawking Işıması'
+  if (type === 'espresso') return 'Planck Rezonansı'
+  return 'Kozmik Dalgalanma'
 }
 
 

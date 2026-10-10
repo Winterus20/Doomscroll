@@ -33,6 +33,8 @@ const progressToSingularity = computed(() => {
   return Math.min(100, Math.floor((logVal / 308.25) * 100))
 })
 
+const nextSpMatterFormatted = computed(() => formatNumber(store.nextSingularityPointAt, store.settings.notation))
+
 function handleSingularityReset() {
   // Meydan okuma aktifken buton "Tamamla" moduna geçer: SP yerine challenge ödülü verir
   if (store.activeChallenge) {
@@ -101,6 +103,10 @@ const challengeButtonLabel = computed(() => {
             {{ inChallenge ? challengeButtonLabel : (store.canSingularity ? `Çöküşü Başlat (+${formatNumber(store.singularityGain, store.settings.notation)} SP)` : '1.79e308 g Kütle Gereklidir') }}
           </span>
         </button>
+        <div v-if="store.canSingularity && !inChallenge" class="text-[11px] font-mono text-slate-400 flex items-center justify-between w-full pt-1 border-t border-white/5">
+          <span>Sonraki +1 SP Eşiği:</span>
+          <span class="text-amber-300 font-bold tabular-nums">{{ nextSpMatterFormatted }} g Kütle</span>
+        </div>
       </template>
       <template #progress>
         <div class="flex justify-between text-xs font-mono mb-1.5">
