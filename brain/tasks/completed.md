@@ -1,5 +1,21 @@
 # Tamamlanan Görevler ve Değişiklik Günlüğü (Changelog)
 
+## [2026-10-10] ✔ — Kademeli Maliyet İvmelenmesi (Progressive Cost Acceleration — ADR-0051)
+
+### Problem:
+Oyunda maliyet zinciri ile üretim zinciri **aynı sabit hızda** büyüyordu (her 10 alımda maliyet ×COST_MULTS sabit, üretim ×1.595 sabit) → takas oranı hiç değişmiyor → dekadlar gittikçe daha hızlı geçiliyor → duvar algısı yok, tekilliğin anlamı kayboluyordu. Harness kanıtı: koşunun 250→260 dekad aralığı **2.3 saniye** sürüyordu (runaway buy-loop).
+
+### Çözüm:
+- **`src/stores/game.ts`:** `dimensionCostForBucket` darboğazına `dimensionCostAccelerationFactor` eklendi: `cost(b) = merdiven_maliyeti(b) × 10^(S·d(d−1)/2)`, `d = b − B0`. `B0_BUCKET_THRESHOLD = 30` eşiği altı fiyatlar ivmelenme öncesiyle **birebir aynı** (ADR-0023/ADR-0026 korunur); üstte efektif kova oranı her kovada tam `COST_ACCEL_DECADES_PER_STEP = 0.02` ondalık ivmelenir. B0'da kesintisizlik garantili (değer ve ilk oran sıçramaz).
+- `BASE_COSTS`/`COST_MULTS`/`EARLY_D*` sabitleri test doğruluğu için export edildi.
+- **`src/stores/cost-acceleration.test.ts`:** 8 yeni test — (a) eşik altı birebir identiklik, (b) monoton oran artışı, (c) UI darboğazı + maksimum alım + geometrik seri (tickspeed) tutarlılığı, (d) eşikte kesintisizlik.
+- **ADR:** `brain/decisions/0051-progressive-cost-acceleration.md`. Harness araçları: `analyze-decades.mjs`, `cost-table.mjs`.
+
+### Doğrulama:
+- `npx vitest run`: **233/233 test yeşil** (13 dosya).
+- `npm run build`: vue-tsc + vite build **0 hata**.
+- Post-accel harness koşusu (active, seed 1, dt 0.1) arka planda; sonuç `results-post-accel.json` + ADR §7'ye işlenecek.
+
 ## [2026-10-10] — Bot / Otomatikte Sürekli Ekran Sallanması (Screen Shake Spam) Kökten Çözüldü
 
 ### Kök Nedenler ve Yapılan İyileştirmeler:

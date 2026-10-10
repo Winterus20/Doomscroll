@@ -160,7 +160,8 @@ export const RESOLUTION_MILESTONES: ResolutionMilestone[] = [
   { count: 1000, name: 'Uroboros Çöküşü', shortName: 'Uroboros', mult: 32, colorClass: 'text-white bg-white/20 border-white/40', desc: '32× Çarpan' }
 ]
 
-const BASE_COSTS = [
+// Taban fiyatlar ve 10'alık kova başına çarpanlar (ADR-0051 testleri de okur).
+export const BASE_COSTS = [
   new Decimal(10),
   new Decimal(100),
   new Decimal(1e4),
@@ -171,7 +172,7 @@ const BASE_COSTS = [
   new Decimal(1e24)
 ]
 
-const COST_MULTS = [
+export const COST_MULTS = [
   new Decimal(1e3),
   new Decimal(1e4),
   new Decimal(1e5),
@@ -184,20 +185,20 @@ const COST_MULTS = [
 
 const DIMENSION_CHAIN_RATE = 0.060
 /** Erken koşu maliyet duvarı: D1/D2 için ×1000/adım yerine yumuşak merdiven (ADR-0026). */
-const EARLY_D1_COST_RATIO = 55
-const EARLY_D1_SOFT_BUCKETS = 4
-const EARLY_D2_COST_RATIO = 42
-const EARLY_D2_SOFT_BUCKETS = 3
+export const EARLY_D1_COST_RATIO = 55
+export const EARLY_D1_SOFT_BUCKETS = 4
+export const EARLY_D2_COST_RATIO = 42
+export const EARLY_D2_SOFT_BUCKETS = 3
 /** D3/D4 yumuşak merdiven: milyardan trilyona geçişteki 1e9-1e14 duvarını çözer */
-const EARLY_D3_COST_RATIO = 32
-const EARLY_D3_SOFT_BUCKETS = 3
-const EARLY_D4_COST_RATIO = 28
-const EARLY_D4_SOFT_BUCKETS = 2
+export const EARLY_D3_COST_RATIO = 32
+export const EARLY_D3_SOFT_BUCKETS = 3
+export const EARLY_D4_COST_RATIO = 28
+export const EARLY_D4_SOFT_BUCKETS = 2
 /** D5/D6 yumuşak merdiven: Shift 2 ve Shift 3'teki 1e9->1e17 ölümcül uçurumu çözer */
-const EARLY_D5_COST_RATIO = 24
-const EARLY_D5_SOFT_BUCKETS = 2
-const EARLY_D6_COST_RATIO = 20
-const EARLY_D6_SOFT_BUCKETS = 2
+export const EARLY_D5_COST_RATIO = 24
+export const EARLY_D5_SOFT_BUCKETS = 2
+export const EARLY_D6_COST_RATIO = 20
+export const EARLY_D6_SOFT_BUCKETS = 2
 /**
  * Yeni koşuda açık format sayısı tabanı (her sıçrama +1, max 8).
  * ADR-0033: 3 (D1+D2+D3). Oyuncu geri bildirimi: "milyardan trilyona geçiş çok uzun"
@@ -1047,7 +1048,40 @@ function maxBuyPacksCap(singularities: number): number {
   return singularities > 0 ? MAX_BUY_PACKS_CAP_PRESTIGE : MAX_BUY_PACKS_CAP_FIRST_RUN
 }
 
-function dimensionCostForBucket(
+// ---- Kademeli Maliyet İvmelenmesi (ADR-0051) ----
+// Antimatter Dimensions "Break Infinity" adaptasyonu: erken oyunda kova maliyeti
+// sabit oranla (COST_MULTS) büyürken geç oyunda oranın KENDİSİ kova sayısıyla
+// ivmelenir. Sonuç: bir dekad bütçesiyle giderek daha az alım yapılır, dekad
+// başına süre monoton artar ve koşunun sonunda gerçek bir maliyet duvarı doğar.
+/**
+ * İvmelenmenin başladığı kova eşiği (10 adet = 1 kova).
+ * Eşik altındaki tüm kovalarda maliyet ADR-0023 (3s30d altın standardı) ve
+ * ADR-0026 (yumuşak erken merdivenler) ile birebir aynı kalır.
+ */
+export const B0_BUCKET_THRESHOLD = 30
+/**
+ * Eşiğin her kova üstü için eklenen maliyet ivmesi (ondalık basamak / kova).
+ * 0.02 → kova 50'de bir sonraki kova 1 ondalık, kova 80'de 2 ondalık daha pahalı.
+ */
+export const COST_ACCEL_DECADES_PER_STEP = 0.005
+
+/**
+ * Kademeli ivmelenme çarpanı: cost(b) = merdiven_maliyeti × 10^(S·d(d-1)/2), d = b - B0.
+ * d = 0 (eşik) ve d = 1 (ilk adım) için çarpan tam 1 olduğundan hem maliyet değeri hem
+ * de ilk oran (cost(B0+1)/cost(B0) = fullMult) eski formülle birebir aynıdır — B0'da
+ * ani sıçrama yok. Sonraki oranlar fullMult × 10^(S·d) şeklinde doğrusal ivmelenir.
+ */
+function dimensionCostAccelerationFactor(bucket: number): Decimal {
+  if (bucket <= B0_BUCKET_THRESHOLD) return D_1
+  const d = bucket - B0_BUCKET_THRESHOLD
+  return Decimal.pow(10, (COST_ACCEL_DECADES_PER_STEP * d * (d - 1)) / 2)
+}
+
+/**
+ * Kova maliyeti — ivmelenme ÖNCESİ taban formül (ADR-0023/ADR-0026 merdivenleri).
+ * Yalnız `dimensionCostForBucket` içinden çağrılır; dışarıdan doğrudan kullanılmaz.
+ */
+function dimensionCostWithoutAcceleration(
   tier: number,
   bucket: number,
   baseCost: Decimal,
@@ -1102,6 +1136,22 @@ function dimensionCostForBucket(
       .times(Decimal.pow(fullMult, bucket - EARLY_D6_SOFT_BUCKETS))
   }
   return baseCost.times(Decimal.pow(fullMult, bucket))
+}
+
+/**
+ * Kova maliyeti — tüm satın alma yollarının (buyDimension, buyMaxDimension,
+ * buyDimensionUnits, buyOneUnit, botlar, UI fiyat gösterimi) tek darboğazı.
+ * B0 eşiği altına dokunmaz; eşik üstüne kademeli ivmelenme çarpanını uygular.
+ */
+export function dimensionCostForBucket(
+  tier: number,
+  bucket: number,
+  baseCost: Decimal,
+  fullMult: Decimal
+): Decimal {
+  const cost = dimensionCostWithoutAcceleration(tier, bucket, baseCost, fullMult)
+  if (bucket <= B0_BUCKET_THRESHOLD) return cost
+  return cost.times(dimensionCostAccelerationFactor(bucket))
 }
 
 function calcDimensionExactTotal(
